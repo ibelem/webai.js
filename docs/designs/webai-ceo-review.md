@@ -389,12 +389,14 @@ Vitest (matches the Vite-based build, supports TypeScript natively, fast).
 - T39: [→E2E] Generated react-vite project: `npm install && npm run build` succeeds
 - T40: [→E2E] Golden output: image-classification + ORT Web + html + MobileNetV2 + test image → correct top-1 label
 
-**Test model strategy:** Commit a tiny quantized MobileNetV2 (~5MB) to the repo under `tests/fixtures/`. All tests reference this model. CI downloads it once. For unit tests that only need metadata, use a minimal ONNX file with just the header (no weights, ~1KB).
+**Test model strategy (revised per Decision #36):** No real model committed to git. (a) Synthetic ONNX file (~1KB, valid header + correct shapes + random weights) committed to `tests/fixtures/` for unit tests T1-T9. (b) Golden test model (MobileNetV2 quantized, ~5MB) downloaded in CI setup step and cached, never in repo. (c) Any fixture >100KB uses git-lfs. Prevents git bloat as Phase 2+ adds audio/text model fixtures.
 
 ## Implementation Phasing (Updated)
 
 **Phase 1a -- Core Pipeline (proves the architecture):**
-- Monorepo setup (npm workspaces: packages/core + packages/cli)
+- Dev infrastructure: GitHub Actions CI, ESLint + Prettier, TypeScript strict, .nvmrc (Node >=20)
+- Monorepo setup (npm workspaces: packages/core + packages/cli, `"@webai/core": "workspace:*"`)
+- CLI bin entry in packages/cli/package.json
 - Preprocessing catalog: image-resize, image-normalize, image-to-nchw, softmax, topk, argmax
 - Task auto-detection from model shapes (Expansion #1)
 - Backend auto-selection defaulting to ORT Web (Expansion #2)
@@ -402,7 +404,8 @@ Vitest (matches the Vite-based build, supports TypeScript natively, fast).
 - 2 framework templates: html + react-vite
 - File input mode
 - CLI `generate` command (core flags: --task, --model, --engine, --backend, --framework, --mode, --lang, -o)
-- Unit tests + snapshot tests for core pipeline
+- Unit tests + snapshot tests for core pipeline (~17 representative snapshots, see Decision #38)
+- Synthetic test fixtures (1KB ONNX header) + CI download for golden test model (see Decision #36)
 - Generated README per project (Expansion #3)
 
 **Phase 1b -- Full CV + Remaining Templates:**
@@ -536,6 +539,8 @@ LAYER 1: Inference Emitter (one per engine)
 │   code: string        // Generated source code        │
 │   imports: string[]   // npm packages needed          │
 │   exports: string[]   // Exported function names      │
+│   auxiliaryFiles?: GeneratedFile[]  // Binary/config   │
+│                       // files (WebNN: WGWT + manifest)│
 │ }                                                     │
 │                                                       │
 │ Example output for ORT Web + image-classification:    │
@@ -591,7 +596,7 @@ directly. The assembler orchestrates: `config → L1(config) → L2(config, bloc
 14. **Model caching via OPFS:** Origin Private File System replaces Cache API + Service Worker for --offline flag. No per-framework SW complexity. Handles large models.
 15. **Web UI in Phase 2:** Simple dropdown-based (not visual node builder). Code preview with Monaco. "Try it" button with sandboxed iframe.
 16. **Auto-calibrated frame skipping:** Camera inference loop measures inference time and auto-adjusts frame skip rate to match model throughput.
-17. **Header-only model parsing:** Delegates to model2webnn's `parseOnnxMetadata()` / `parseTfliteMetadata()` (added in model2webnn commit 93975dc). Sync functions that skip all weight data. ONNX: skips initializer extraction, node parsing, shape propagation. TFLite: never reads buffers vector (field 4). 2GB model parses in milliseconds. No duplicate protobufjs/flatbuffers in webai.js.
+17. **Header-only model parsing:** Delegates to model2webnn's `parseOnnxMetadata()` / `parseTfliteMetadata()` (added in commit 93975dc, perf-fixed in commits 1a0a6dc + 5dff577). ONNX: zero-copy protobuf scanner reads only graph I/O fields (5, 11, 12), skips weight data via length-varint jump in O(1). TFLite: FlatBuffers reader never touches buffers vector (field 4). 2GB model parses in milliseconds. No duplicate protobufjs/flatbuffers in webai.js.
 18. **Framework template currency:** Each template uses current framework best practices (Next.js app router, Svelte 5 runes, React 19). Maintenance commitment.
 19. **Responsive design:** All generated apps responsive by default. CSS viewport-width video/canvas. Touch-friendly overlays.
 20. **Generated code versioning:** Snapshot pattern. --force required to overwrite. Documented in generated README.
@@ -601,11 +606,19 @@ directly. The assembler orchestrates: `config → L1(config) → L2(config, bloc
 24. **Engine + Backend terminology (from design review):** `--engine` selects the JS inference library (ort, litert, webnn). `--backend` selects the hardware execution path (wasm, webgpu, webnn-cpu, webnn-gpu, webnn-npu). WASM is CPU only, WebGPU is GPU only, WebNN covers CPU/GPU/NPU. Replaces the overloaded `--runtime` flag which conflated two distinct concepts.
 25. **CLI framework (from eng review):** commander. Declarative subcommands (`generate`, `compare`, `tasks`, `models`, `frameworks`), auto-generated help, built-in support for short aliases (-e, -b, -t). Layer 1, same choice as Transformers.js.
 26. **Build tool (from eng review):** tsup (esbuild-based). One `tsup.config.ts` per package. ESM+CJS dual output for `@webai/core`. ESM-only for CLI. Zero-config TypeScript compilation.
-31. **CLI performance budget (from eng review):** `webai generate` completes in under 3 seconds for any model file up to 2GB. Breakdown: model metadata parsing < 500ms (header-only via model2webnn), config resolution < 50ms, code emission < 100ms, file write < 50ms. Remaining budget covers Node.js startup + commander parsing. CI regression test: measure and assert total CLI time stays under budget.
+31. **CLI performance budget (from eng review):** `webai generate` completes in under 3 seconds for `--engine ort` and `--engine litert` with any model file up to 2GB. Breakdown: model metadata parsing < 500ms (zero-copy protobuf scanner via model2webnn, see Decision #32), config resolution < 50ms, code emission < 100ms, file write < 50ms. Remaining budget covers Node.js startup + commander parsing. CI regression test: measure and assert total CLI time stays under budget. **Exception:** `--engine webnn` is exempt from the 3s budget (see Decision #34) because model2webnn's `convert()` does full model processing.
 30. **LiteRT.js API (from eng review):** LiteRT.js (`@litertjs/core`) is the low-level inference engine, NOT the MediaPipe tasks API. API: `loadLiteRt(wasmPath)` → `loadAndCompile(modelPath, { accelerator })` → `model.run(tensor)`. Supports `accelerator: 'wasm' | 'webgpu' | 'webnn'` with `webNNOptions: { devicePreference: 'npu' | 'gpu' | 'cpu' }`. MediaPipe is a high-level framework (same layer as Transformers.js) and is not used by webai.js.
 29. **Resolver fallback warning (from eng review):** When the preprocessing resolver falls back to task defaults (no HF config, no known model profile), the CLI prints: "⚠ Using task defaults for preprocessing — verify mean/std match your model." AND the generated code includes a comment: `// WARNING: Preprocessing uses ImageNet defaults (mean=[0.485,0.456,0.406], std=[0.229,0.224,0.225]). If results look wrong, check these values against your model's training config.` Both warnings only appear when task defaults are actually used, not when HF config or model profile provided exact values.
 28. **Preprocessing dual-use (from eng review):** `@webai/core` has real, executable, Vitest-tested preprocessing functions (resizeImage, softmax, topK, etc.). The CLI's preprocess-emitter mirrors the same logic as template literals, emitting standalone JS/TS. Cross-verification: snapshot tests feed identical inputs to both the real function and eval(emitted code), assert outputs match. Two copies of the logic, one test that binds them.
 27. **Package boundary (from eng review):** `@webai/core` = knowledge (preprocessing function implementations, postprocessing functions, task profiles, config resolver, model parser). `packages/cli` = ALL codegen (preprocess emitter, postprocess emitter, inference emitters, assembler, framework IO emitters, file writer). model2webnn imports `@webai/core` for the function catalog and task profiles, not for codegen. Clean separation: core knows WHAT to do, CLI knows HOW to emit it as code.
+32. **ONNX metadata parsing perf (from eng review outside voice, RESOLVED):** Originally `parseOnnxMetadata()` called `ModelProto.decode(buffer)` which deserialized the entire protobuf. Fixed in model2webnn commits `1a0a6dc` + `5dff577`: replaced with a hand-rolled zero-copy protobuf scanner. The new implementation uses `pbVarUint`/`pbSkip`/`pbLenView` helpers to scan only GraphProto fields 5 (initializer names), 11 (inputs), 12 (outputs). Weight data (`raw_data` field 9) is skipped in O(1) via a length-varint read. A 2GB model with 200 initializers reads only a few KB of actual bytes, no heap allocations for weight data. The <3s budget now holds for all model sizes. Pre-opset-9 models handled correctly (initializer names filtered from `graph.input`).
+33. **CodeBlock auxiliary files (from eng review outside voice):** WebNN engine (`--engine webnn`) via model2webnn's `convert()` returns a `buildGraph()` function (potentially 50K+ lines for large models) plus a WGWT binary weights file plus a manifest JSON. This is fundamentally different from ORT Web / LiteRT which just reference a model file. The CodeBlock interface needs an `auxiliaryFiles` field: `CodeBlock = { id, code, imports, exports, auxiliaryFiles?: GeneratedFile[] }`. The inference-webnn.ts emitter populates `auxiliaryFiles` with the WGWT binary and manifest. Layer 2 (IO emitter) passes them through to Layer 3 (writer) without needing engine-specific knowledge. This preserves the "layers don't call each other" contract.
+34. **WebNN generation exempt from 3s budget (from eng review outside voice):** model2webnn's `convert()` does full protobuf/flatbuffers parse, free dimension resolution, shape propagation, constant folding (up to 10 iterations), MatMulNBits fixup, weight packing, and code generation. For large models this can take 10+ seconds. The 3-second CLI performance budget (Decision #31) applies to `--engine ort` and `--engine litert` only. `--engine webnn` is exempt. CLI output for WebNN shows a progress indicator during conversion. Document this in CLI help text.
+35. **Cross-verification test isolation (from eng review outside voice):** Tests T20-T23 that cross-verify emitted code against real functions use `vm.runInNewContext()` with a controlled global, not raw `eval()`. This prevents scope leaks and provides a clean execution environment. Only the JS emit path is tested via execution; the TS emit path is verified via TypeScript compiler API parse (T29-T30). Emitted preprocessing functions use typed-array-only implementations (no DOM APIs like ImageData or OffscreenCanvas) so they run in both Node and browser contexts.
+36. **Test model strategy (from eng review outside voice):** No 5MB model committed directly to git. Instead: (a) Generate a minimal synthetic ONNX file (~1KB, valid header, correct shapes, random weights) for unit tests T1-T9. Committed to `tests/fixtures/`. (b) The golden output test model (MobileNetV2 quantized, ~5MB) is downloaded in CI via a setup step and cached. Never in the repo. (c) If any model fixture exceeds 100KB, use git-lfs. This prevents git history bloat as more model formats are needed in Phase 2+.
+37. **No circular dependency (from eng review outside voice):** The plan previously stated "model2webnn depends on @webai/core for preprocessing function catalog (future)." This creates a circular npm dependency (A depends on B depends on A). Revised: model2webnn NEVER depends on @webai/core. If model2webnn needs preprocessing functions in the future, it either (a) vendors/reimplements what it needs, or (b) takes preprocessing functions as injected callbacks. Dependency direction is strictly one-way: @webai/core → model2webnn, packages/cli → model2webnn + @webai/core.
+38. **Snapshot selection criteria (from eng review outside voice):** Not all 2700 (5 frameworks x 3 engines x 9 tasks x 5 inputs x 2 modes x 2 langs) combinations get snapshots. Selection strategy: one "golden" combo per engine (3), one per framework (5), one per input mode (5), one per mode/lang variant (4). That is ~17 representative snapshots. New snapshots are added when: (a) a new engine/framework/input is added, or (b) a bug is found in a specific combination. T24-T28 cover the Phase 1a subset. Selection criteria documented in `tests/README.md`.
+39. **Dev infrastructure in Phase 1a (from eng review outside voice):** Phase 1a includes: (a) GitHub Actions CI config (lint + typecheck + test on push/PR), (b) ESLint + Prettier config (shared across packages, also formats emitted code templates), (c) npm workspace protocol (`"@webai/core": "workspace:*"` in packages/cli/package.json), (d) `packages/cli/package.json` bin entry pointing to compiled CLI, (e) Node.js >=20 in engines field + `.nvmrc`, (f) TypeScript strict mode in both packages.
 
 ### Package Structure (from eng review)
 
@@ -688,9 +701,11 @@ const result: ConvertResult = await convert(buffer, {
 // These become the CodeBlock with id='inference'
 ```
 
-**Dependency direction:** `@webai/core` depends on model2webnn for parsing.
+**Dependency direction (strictly one-way, no circular deps):**
+`@webai/core` depends on model2webnn for parsing.
 `packages/cli` depends on model2webnn for WebNN codegen + on `@webai/core` for everything else.
-model2webnn depends on `@webai/core` for preprocessing function catalog (future, when model2webnn wants to add pre/post to its output).
+model2webnn NEVER depends on `@webai/core` (see Decision #37). If model2webnn
+needs preprocessing in the future, it vendors or takes callbacks.
 
 **Op coverage gate:** If `result.coverage.unsupportedOps > 0`, CLI prints warning:
 "Warning: {N} unsupported WebNN ops ({opTypes}). Model may not run correctly.
@@ -1172,24 +1187,89 @@ user SEES, not backend behavior.
 1. **Model weight hosting:** Default assumption for Phase 1: user provides local model file path. For HuggingFace model IDs, generated code uses HF CDN URLs directly (`https://huggingface.co/{model}/resolve/main/{file}`). User can override with `--model-url` flag. Decision deadline: before Phase 1a CLI implementation.
 2. **WebNN fallback:** Default: console warning + ORT Web WASM auto-fallback in generated code. The backend auto-selection EP chain handles this naturally. No separate decision needed.
 
+## NOT in Scope (from eng review)
+
+Work considered during /plan-eng-review and explicitly deferred:
+
+- **Streaming ONNX parser in webai.js**: The slow parseOnnxMetadata is a model2webnn issue. webai.js will not vendor its own protobuf parser. Track as model2webnn issue.
+- **Full 2700-combo snapshot suite**: Testing every (framework x engine x task x input x mode x lang) combination. Only ~17 representative combos get snapshots per Decision #38.
+- **WebNN code splitting for large models**: model2webnn's convert() can produce 50K+ line buildGraph() functions. Splitting into multiple files is a model2webnn concern, not webai.js.
+- **Bundler configuration in generated projects**: Generated projects use framework defaults (Vite, Next.js built-in). No custom webpack/rollup config.
+- **E2E browser tests for all frameworks**: Only html and react-vite get Playwright E2E in Phase 1a. Other frameworks tested via build-only (npm run build succeeds).
+- **HuggingFace model download in CLI**: Phase 1 assumes local model files. HF download is deferred (Open Question #1).
+- **Monorepo release automation**: No changesets, no auto-publish. Manual npm publish per package until Phase 2.
+
+## What Already Exists (from eng review)
+
+Existing code in the reference projects that the plan reuses:
+
+| What | Where | Plan usage |
+|------|-------|------------|
+| `parseOnnxMetadata()` | model2webnn `src/parsers/onnx.ts:232` | Reused directly for task auto-detection. No rebuild. |
+| `parseTfliteMetadata()` | model2webnn `src/parsers/onnx.ts` (exports) | Reused directly. No rebuild. |
+| `detectFormat()` | model2webnn `src/parsers/format-detector.ts` | Reused for ONNX vs TFLite detection. |
+| `convert()` | model2webnn `src/index.ts:81` | Reused for WebNN codegen (inference-webnn.ts emitter). |
+| LiteRT.js API | LiteRT `litert/js/packages/core/src/` | Referenced for inference-litert.ts emitter pattern. |
+| ORT Web API | onnxruntime `js/web/` | Referenced for inference-ort.ts emitter pattern. |
+| Transformers.js pipeline patterns | transformers.js `src/` | Referenced for preprocessing patterns (resize, normalize). NOT imported. |
+
+The plan correctly reuses model2webnn parsing (no duplicate protobuf/flatbuffers). The preprocessing functions in @webai/core are new implementations (typed-array math, no Canvas dependency) because existing implementations in reference projects are tightly coupled to their frameworks.
+
+## Failure Modes (from eng review)
+
+| Codepath | Failure mode | Test covers? | Error handling? | Silent? |
+|----------|-------------|--------------|-----------------|---------|
+| ONNX metadata parse on 2GB model | Resolved: zero-copy scanner (commits 1a0a6dc + 5dff577) skips weight data in O(1) | T4-T7 cover correctness | N/A (fast path) | No — resolved |
+| model2webnn convert() for WebNN | 10+ second runtime, no progress feedback | No | No | Semi-silent (CLI just blocks) |
+| Generated code: all WebNN devices fail, WebGPU unavailable | Falls through to WASM, user sees slowest backend | T28 covers forced backend | Yes (toast fallback message) | No |
+| Emitted code references npm package not in generated package.json | Build fails at npm install | T39 (build test) catches this | No runtime handling needed | No |
+| Resolver falls back to ImageNet defaults for non-ImageNet model | Wrong preprocessing, garbage results | T20-T23 cross-verify logic | Yes (warning comment in code, Decision #29) | No |
+| Output directory exists without --force | Overwrite risk | T36 covers this | Yes (error + suggestion) | No |
+| Synthetic test ONNX fixture has wrong magic bytes | All T1-T3 tests pass vacuously | Fixture verified at creation | N/A | No |
+| LiteRT.js WASM path not provided | Runtime error in generated code | No test yet | No | **GAP** — user sees cryptic WASM error |
+
+**Critical gaps (1):**
+1. ~~ONNX metadata parsing on large models~~ — RESOLVED. model2webnn commits `1a0a6dc` + `5dff577` replaced `ModelProto.decode()` with zero-copy protobuf scanner. No longer a gap.
+2. LiteRT.js WASM path in generated code needs a sensible default or user guidance. Add to Phase 1b test requirements.
+
+## Worktree Parallelization Strategy (from eng review)
+
+| Step | Modules touched | Depends on |
+|------|----------------|------------|
+| A: Core preprocessing | packages/core/src/preprocess/, packages/core/src/postprocess/ | — |
+| B: Model parser + task detection | packages/core/src/model-parser/, packages/core/src/tasks/ | — |
+| C: Config resolver | packages/core/src/config/ | A (task profiles reference preprocess chains) |
+| D: Inference emitters (Layer 1) | packages/cli/src/emitters/ | A, B (emitters reference preprocess + task shapes) |
+| E: Framework IO emitters (Layer 2) | packages/cli/src/frameworks/ | D (consumes CodeBlock[]) |
+| F: Assembler + CLI + Writer | packages/cli/src/assembler.ts, cli.ts, writer.ts | D, E |
+| G: Dev infrastructure + CI | root config files, .github/ | — |
+
+**Parallel lanes:**
+- Lane 1: G (dev infra) — independent, can start immediately
+- Lane 2: A (preprocess) + B (model parser) in parallel — no shared modules
+- Lane 3: C (resolver) — depends on A completing
+- Lane 4: D (emitters) — depends on A + B
+- Lane 5: E (frameworks) — depends on D
+- Lane 6: F (assembler + CLI) — depends on D + E
+
+**Execution order:**
+1. Launch Lane 1 (G) + Lane 2 (A + B) in parallel worktrees
+2. Merge Lane 1. Merge A. Start Lane 3 (C). Merge B. Start Lane 4 (D) — D needs both A + B
+3. Merge D. Start Lane 5 (E)
+4. Merge E + C. Start Lane 6 (F)
+
+**Conflict flags:** Lanes A and B both write to `packages/core/` but different subdirectories (preprocess/ vs model-parser/). Low conflict risk. Lanes D and E both write to `packages/cli/` but different subdirectories. Low conflict risk.
+
+**Realistic recommendation:** 3 parallel worktrees max. Lane 1 (G) is quick and merges first. Then A+B in parallel. Then C→D→E→F sequential (tight dependencies).
+
 ## GSTACK REVIEW REPORT
 
-**Review:** /plan-design-review (2026-04-13)
-**Reviewer score:** 4/10 → 9/10
-**Status:** CLEAN (all passes resolved, 0 unresolved decisions)
+| Review | Trigger | Why | Runs | Status | Findings |
+|--------|---------|-----|------|--------|----------|
+| CEO Review | `/plan-ceo-review` | Scope & strategy | 1 | CLEAN | 6 proposals, 6 accepted, 8 deferred |
+| Design Review | `/plan-design-review` | UI/UX gaps | 1 | CLEAN (FULL) | score: 4/10 → 9/10, 4 decisions |
+| Eng Review | `/plan-eng-review` | Architecture & tests (required) | 1 | CLEAN (PLAN) | 14 issues, 0 critical gaps (1 resolved by model2webnn fix) |
 
-**Passes completed:** 7/7
-- Information Architecture: 3 → 7 (4 layout diagrams)
-- Interaction States: 2 → 8 (5 state tables)
-- User Journey: 3 → 8 (structured CLI output, 9-step journey)
-- Visual Slop Prevention: 7 → 9 (5 result element specs)
-- Design System: 3 → 8 (CSS Custom Properties, palette, typography)
-- Responsive & Accessibility: 5 → 9 (breakpoints, keyboard, ARIA, contrast)
-- Design Decisions: 4 resolved, 0 deferred
-
-**Cross-cutting changes during review:**
-- `--runtime` renamed to `--engine` + `--backend` across all documents
-- WebNN CPU/GPU/NPU device types added throughout plan, UI, code examples
-- Short CLI aliases (-e, -b, -t, -m, -f, -i, -l, -o, -v) added
-
-**Next required gate:** /plan-eng-review (implementation architecture validation)
+- **UNRESOLVED:** 0 decisions across all reviews
+- **OUTSIDE VOICE:** Claude adversarial subagent, 8 findings (F1-F8), all integrated as Decisions #32-39
+- **VERDICT:** CEO + DESIGN + ENG CLEARED — ready to implement
