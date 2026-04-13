@@ -19,13 +19,13 @@ The result: developers either import a massive library they don't need, or copy-
 
 ## What Makes This Cool
 
-A CLI and Web UI that takes a HuggingFace model (or any ONNX/TFLite file), a task type, and a target runtime, and generates the **exact minimal JavaScript code** needed to run that model end-to-end in a browser. Pre-processing, inference, post-processing. Nothing more.
+A CLI and Web UI that takes a HuggingFace model (or any ONNX/TFLite file), a task type, and a target engine, and generates the **exact minimal JavaScript code** needed to run that model end-to-end in a browser. Pre-processing, inference, post-processing. Nothing more.
 
 The generated code has zero runtime dependencies beyond the inference engine itself. It's readable, editable, and standalone. Two modes: raw (documented, instructive) and compact (minified, production-ready). The developer gets Lego bricks, not a pre-assembled castle.
 
 ## Constraints
 
-- Must work with all three inference runtimes: ONNX Runtime Web (WASM/WebGPU/WebNN), LiteRT.js (WASM/WebGPU/WebNN), and pure WebNN API
+- Must work with all three inference engines: ONNX Runtime Web (WASM/WebGPU/WebNN with CPU/GPU/NPU device types), LiteRT.js (WASM/WebGPU/WebNN), and pure WebNN API (CPU/GPU/NPU device types)
 - Pre/post-processing functions must be atomic, composable, and independently usable
 - Generated code must have no dependency on webai.js itself — it's standalone JS/TS
 - Must follow HuggingFace task taxonomy for model organization
@@ -37,8 +37,8 @@ The generated code has zero runtime dependencies beyond the inference engine its
 ## Premises
 
 1. **Code generation > library distribution** for web AI pre/post-processing. Generating minimal, standalone JS per task eliminates the bundle-size problem entirely.
-2. **Three-runtime abstraction is tractable.** ORT Web, LiteRT.js, and WebNN API have similar load/run patterns. A thin unified abstraction works.
-3. **Pre/post-processing is the actual bottleneck, not inference.** The inference runtimes are mature. The glue code is where developers struggle.
+2. **Three-engine abstraction is tractable.** ORT Web, LiteRT.js, and WebNN API have similar load/run patterns. A thin unified abstraction works.
+3. **Pre/post-processing is the actual bottleneck, not inference.** The inference engines are mature. The glue code is where developers struggle.
 4. **HuggingFace task taxonomy is the right organizing principle.** It's what the model ecosystem already uses.
 5. **model2webnn's codegen architecture can be extended or consumed.** Its IR, operator registry, and WGWT weight format are proven.
 6. **"Do nothing" (copy-paste from examples) is the real competitor.**
@@ -51,7 +51,7 @@ An independent Claude subagent reviewed the problem cold. Key insights:
 - **Coolest unexplored version:** A model-aware playground that reads HuggingFace model URLs and generates complete, runnable code snippets. The insight about using `preprocessor_config.json` is valid for Transformers-origin models but was challenged by the builder — many models (MediaPipe, custom ONNX) have no such configs. The design must be task-driven first, config-enhanced second.
 - **What reveals the builder's excitement:** The word "atomically" — the desire to decompose tangled class hierarchies into a flat catalog of pure functions.
 - **50% there:** model2webnn already has CLI, Web UI, IR, operator registry, multi-format codegen. The missing 50%: preprocessing IR + function catalog, task profiles, ORT/LiteRT emitters.
-- **Weekend build suggestion:** CLI that takes a HF model ID + runtime choice and emits a single working HTML file. Three task profiles (image-classification, object-detection, text-classification) to prove the architecture.
+- **Weekend build suggestion:** CLI that takes a HF model ID + engine choice and emits a single working HTML file. Three task profiles (image-classification, object-detection, text-classification) to prove the architecture.
 
 ## Approaches Considered
 
@@ -80,6 +80,11 @@ Effort: M-L | Risk: Low | Completeness: 9/10
 │   ├── image-normalize.ts   # Mean/std normalization per channel
 │   ├── image-to-nchw.ts     # HWC → NCHW layout transpose
 │   ├── image-crop.ts        # Center crop, letterbox padding
+│   ├── camera-capture.ts    # getUserMedia video → canvas → frame extraction loop
+│   ├── video-capture.ts     # <video> element → canvas → frame extraction at FPS
+│   ├── screen-capture.ts    # getDisplayMedia → canvas → frame extraction
+│   ├── mic-capture.ts       # getUserMedia audio → AudioWorklet → PCM Float32Array chunks
+│   ├── audio-stream.ts      # Realtime audio stream → windowed PCM buffers
 │   ├── tokenize.ts          # BPE/WordPiece tokenization
 │   ├── audio-features.ts    # Mel spectrogram, MFCC
 │   └── ...
@@ -91,6 +96,8 @@ Effort: M-L | Risk: Low | Completeness: 9/10
 │   ├── bbox-decode.ts       # Bounding box format conversions
 │   ├── mask-decode.ts       # Segmentation mask processing
 │   ├── token-decode.ts      # Greedy/beam search decoding
+│   ├── canvas-overlay.ts    # Draw bboxes/masks/labels on canvas (realtime visualization)
+│   ├── result-smoother.ts   # Temporal smoothing/averaging across frames
 │   └── ...
 ├── src/tasks/               # Task profiles (preprocessing chains + defaults)
 │   ├── image-classification.ts
@@ -110,29 +117,35 @@ Effort: M-L | Risk: Low | Completeness: 9/10
     └── postprocess-emitter.ts # Emit postprocessing function code
 
 webai CLI + Web UI (this repo: webai.js)
-├── src/cli.ts               # CLI entry: webai generate --model ... --runtime ... --task ...
+├── src/cli.ts               # CLI entry: webai generate --model ... --engine ... --task ...
 ├── src/web/                  # Web UI (Vite-based)
 ├── src/codegen/
 │   ├── inference-ort.ts      # ORT Web inference boilerplate emitter
 │   ├── inference-litert.ts   # LiteRT.js inference boilerplate emitter
 │   ├── inference-webnn.ts    # WebNN inference emitter (delegates to model2webnn)
 │   ├── html-template.ts      # Standalone HTML page generator
-│   ├── react-template.ts     # React component generator (stretch)
-│   ├── nextjs-template.ts    # Next.js page generator (stretch)
-│   └── svelte-template.ts    # Svelte component generator (stretch)
-├── src/assembler.ts          # assemble(task, runtime, mode, config) => GeneratedCode
+│   └── input-ui-emitter.ts   # Generates input UI code (file upload, camera, mic) per task
+├── src/templates/            # Framework project scaffolds with live preview
+│   ├── base/                 # Shared: inference runner, input handlers, result display
+│   ├── nextjs/               # Next.js app: page + layout + package.json
+│   ├── sveltekit/            # SvelteKit route: +page.svelte + layout + package.json
+│   ├── react-vite/           # React + Vite: App component + package.json
+│   ├── vanilla-vite/         # Vanilla JS + Vite: index.html + main.js + package.json
+│   └── html/                 # Single self-contained HTML file (no build step)
+├── src/assembler.ts          # assemble(task, engine, mode, config) => GeneratedCode
 │                             # mode: 'raw' | 'compact', lang: 'js' | 'ts'
+│                             # input: 'file' | 'camera' | 'mic' | 'video' | 'screen'
 └── package.json              # npm installable: npx webai generate ...
 
 model2webnn (existing repo, stays focused)
 ├── Adds @webai/core as an npm dependency for preprocessing functions
 ├── Stays focused on ONNX/TFLite → WebNN graph conversion
-└── webai.js imports model2webnn's convert() as a library for --runtime webnn
+└── webai.js imports model2webnn's convert() as a library for --engine webnn
 ```
 
 ### Preprocessing Resolution Order
 
-When a user runs `webai generate --task image-classification --model ./my-model.onnx --runtime ort`:
+When a user runs `webai generate --task image-classification --model ./my-model.onnx --engine ort`:
 
 1. **Read model input shape** — For local ONNX/TFLite files, parse the model's input tensor metadata (shape, dtype) directly from the file. ONNX and TFLite both encode this. Use it to infer image dimensions and channel layout.
 2. **Check for HF config** — If model is a HuggingFace ID, fetch `preprocessor_config.json`. If found, parse exact parameters (image_size, image_mean, image_std, do_resize, do_normalize, etc.)
@@ -144,11 +157,11 @@ The resolution cascade is implemented in `src/config/preprocess-resolver.ts`, wh
 
 ### Generated Output Examples
 
-**Raw mode** (`webai generate --task image-classification --runtime ort --mode raw`):
+**Raw mode** (`webai generate --task image-classification --engine ort --mode raw`):
 ```javascript
 // Pre-processing: image-classification
 // Generated by webai.js v0.1.0 — https://github.com/ibelem/webai.js
-// Regenerate: npx webai generate --task image-classification --runtime ort
+// Regenerate: npx webai generate --task image-classification --engine ort
 
 /**
  * Resize image to target dimensions using bilinear interpolation.
@@ -183,7 +196,12 @@ function topK(scores, k = 5) { /* ... */ }
 // Inference: ONNX Runtime Web
 async function runInference(imageElement) {
   const session = await ort.InferenceSession.create('model.onnx', {
-    executionProviders: ['webnn', 'webgpu', 'wasm']
+    executionProviders: [
+      { name: 'webnn', deviceType: 'npu' },
+      { name: 'webnn', deviceType: 'gpu' },
+      'webgpu',
+      'wasm'
+    ]
   });
   const canvas = document.createElement('canvas');
   // ... draw image to canvas, get pixels
@@ -201,35 +219,134 @@ async function runInference(imageElement) {
 
 **TypeScript mode** (`--lang ts`): Same structure as JS output, with type annotations on all function parameters and return types, typed tensor constructors, and a `tsconfig.json` snippet showing required compiler options (target: ES2020, lib: DOM). Default output is JavaScript; TS is opt-in.
 
+**Realtime camera mode** (`webai generate --task object-detection --engine ort --input camera --framework nextjs`):
+```javascript
+// Generated Next.js page component (simplified)
+'use client';
+import { useRef, useEffect, useState } from 'react';
+import * as ort from 'onnxruntime-web';
+
+export default function ObjectDetector() {
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null); // overlay for bounding boxes
+
+  useEffect(() => {
+    let animId;
+    let session;
+
+    async function init() {
+      // Start camera
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      videoRef.current.srcObject = stream;
+      await videoRef.current.play();
+
+      // Load model
+      session = await ort.InferenceSession.create('/yolov8n.onnx', {
+        executionProviders: ['webnn', 'webgpu', 'wasm']
+      });
+
+      // Inference loop
+      const offscreen = new OffscreenCanvas(640, 640);
+      const ctx = offscreen.getContext('2d');
+
+      async function detect() {
+        ctx.drawImage(videoRef.current, 0, 0, 640, 640);
+        const imageData = ctx.getImageData(0, 0, 640, 640);
+        const tensor = preprocessImage(imageData, 640, 640); // resize + normalize + NCHW
+        const results = await session.run({ images: tensor });
+        const boxes = postprocessDetections(results); // NMS + bbox decode
+        drawOverlay(canvasRef.current, boxes); // bboxes + labels on canvas
+        animId = requestAnimationFrame(detect);
+      }
+      detect();
+    }
+    init();
+    return () => cancelAnimationFrame(animId);
+  }, []);
+
+  return (
+    <div style={{ position: 'relative' }}>
+      <video ref={videoRef} style={{ width: '100%' }} />
+      <canvas ref={canvasRef} style={{ position: 'absolute', top: 0, left: 0, width: '100%' }} />
+    </div>
+  );
+}
+
+// preprocessImage, postprocessDetections, drawOverlay functions generated below...
+```
+
 ### CLI Interface
 
+**Flag reference (all flags have short aliases):**
+
+```
+Flag               Short   Values                         Default
+────────────────────────────────────────────────────────────────────
+--engine           -e      ort, litert, webnn             ort
+--backend          -b      wasm, webgpu, webnn-cpu,       (auto)
+                           webnn-gpu, webnn-npu
+--task             -t      image-classification, etc.     (auto-detect)
+--model            -m      path or HuggingFace ID         (required)
+--framework        -f      html, vanilla-vite, nextjs,    html
+                           sveltekit, react-vite
+--input            -i      file, camera, video, mic,      (task default)
+                           screen
+--mode                     raw, compact                   raw
+--lang             -l      js, ts                         js
+--output           -o      output directory path          ./output/
+--offline                  (flag, no value)               off
+--theme                    dark, light                    dark
+--verbose          -v      (flag, no value)               off
+--force                    (flag, no value)               off
+```
+
 ```bash
-# Basic usage
-webai generate --task image-classification --model Xenova/vit-base-patch16-224 --runtime ort -o ./output/
+# Basic usage — generates standalone HTML file
+webai generate -t image-classification -m Xenova/vit-base-patch16-224 -e ort -o ./output/
 
 # Local model file, no HF config
-webai generate --task object-detection --model ./hand_detector.tflite --runtime litert -o ./output/
+webai generate -t object-detection -m ./hand_detector.tflite -e litert -o ./output/
 
 # WebNN with model2webnn integration
-webai generate --task image-classification --model ./mobilenet.onnx --runtime webnn -o ./output/
+webai generate -t image-classification -m ./mobilenet.onnx -e webnn -o ./output/
+
+# Force specific backend
+webai generate -t image-classification -m ./mobilenet.onnx -e ort -b webgpu -o ./output/
+webai generate -t image-classification -m ./mobilenet.onnx -e ort -b webnn-npu -o ./output/
+
+# Framework template — generates a full runnable project
+webai generate -t image-classification -m ./mobilenet.onnx -e ort \
+  -f nextjs -o ./my-classifier/
+
+# Realtime camera input with SvelteKit
+webai generate -t object-detection -m ./yolov8n.onnx -e ort \
+  -f sveltekit -i camera -o ./my-detector/
+
+# Realtime mic input for streaming ASR
+webai generate -t automatic-speech-recognition -m ./whisper-tiny.onnx -e ort \
+  -f react -i mic -o ./my-transcriber/
 
 # Override preprocessing params
-webai generate --task image-classification --model ./custom.onnx --runtime ort \
+webai generate -t image-classification -m ./custom.onnx -e ort \
   --image-size 640 --normalize-mean 0,0,0 --normalize-std 1,1,1 -o ./output/
 
-# Framework-specific output (stretch goal)
-webai generate --task text-classification --model Xenova/distilbert-base --runtime ort \
-  --framework react -o ./components/
-
 # Compact mode for production
-webai generate --task image-classification --model ./model.onnx --runtime ort \
-  --mode compact -o ./output/
+webai generate -t image-classification -m ./model.onnx -e ort --mode compact -o ./output/
+
+# Zero-config: auto-detect task, engine, backend, input mode
+webai ./yolov8n.onnx -f nextjs
 
 # List supported tasks
 webai tasks
 
 # List supported models for a task (known profiles)
-webai models --task object-detection
+webai models -t object-detection
+
+# List supported frameworks
+webai frameworks
+
+# Benchmark all backends
+webai compare ./model.onnx
 ```
 
 ### Web UI
@@ -237,24 +354,29 @@ webai models --task object-detection
 A Vite-based web interface that mirrors the CLI:
 1. Select task from dropdown (organized by HuggingFace categories)
 2. Select or upload model (HF model ID, URL, or local file)
-3. Select target runtime (ORT Web / LiteRT.js / WebNN)
-4. Select output mode (Raw / Compact)
-5. Preview generated code with syntax highlighting
-6. Download as JS/TS/HTML or copy to clipboard
-7. Optional: test the generated code live in the browser
+3. Select inference engine (ORT Web / LiteRT.js / WebNN API)
+4. Select input mode (file / camera / mic / video / screen)
+5. Select framework (HTML / Vanilla+Vite / Next.js / SvelteKit / React+Vite)
+6. Select output mode (Raw / Compact) and language (JS / TS)
+7. Preview generated code with syntax highlighting (Monaco editor, tabbed per file)
+8. Live preview: run the generated code in a sandboxed iframe with real inputs (camera, mic, file upload)
+9. Download as ZIP (framework project) or copy individual files to clipboard
 
 ### Task Priority (Implementation Order)
 
-**Phase 1 — Core CV (proves the architecture):**
-- Image Classification
-- Object Detection
-- Image Segmentation
-- Feature Extraction / Embeddings (vision)
+**Phase 1 — Core CV + Framework Templates (proves the architecture):**
+- Image Classification (file input + camera input)
+- Object Detection (file input + camera input)
+- Image Segmentation (file input + camera input)
+- Feature Extraction / Embeddings (vision, file input)
+- Framework templates: html, vanilla-vite, nextjs, sveltekit, react-vite
+- Realtime: camera-capture preprocessing, canvas-overlay postprocessing, inference loop with frame skipping
 
-**Phase 2 — Audio:**
-- Automatic Speech Recognition
-- Audio Classification
-- Text-to-Speech
+**Phase 2 — Audio + Realtime Audio:**
+- Automatic Speech Recognition (file input + mic input for streaming ASR)
+- Audio Classification (file input + mic input for realtime classification)
+- Text-to-Speech (text input → audio playback)
+- Realtime: mic-capture preprocessing, audio-stream windowing, result-smoother postprocessing
 
 **Phase 2.5 — NLP (requires tokenizer decision, gated on Tokenizer Strategy section):**
 - Text Classification
@@ -264,15 +386,9 @@ A Vite-based web interface that mirrors the CLI:
 
 **Phase 3 — Multimodal + Advanced:**
 - Image-Text-to-Text (VLMs)
-- Text-to-Speech
 - Depth Estimation
 - Image-to-Text
-
-**Phase 4 — Framework Templates (stretch):**
-- React.js component generation
-- Next.js page/API route generation
-- SvelteKit page generation
-- Svelte component generation
+- Realtime: video-capture, screen-capture for advanced input scenarios
 
 ### Naming Decision
 
@@ -300,11 +416,11 @@ The answer is built into the architecture:
 - Invalid model path/ID: fail fast with clear message ("Model not found: ...")
 - Network failures during HF config fetch: warn and fall back to task defaults
 - Unsupported task type: list supported tasks
-- Incompatible runtime + model format (e.g., WebNN with a model that has unsupported ops): warn with specifics
+- Incompatible engine + model format (e.g., WebNN with a model that has unsupported ops): warn with specifics
 
 **Generated code runtime errors** (the generated code's responsibility):
 - Generated code does NOT include try/catch — that's the user's application concern. The generated code is a building block, not a framework.
-- Exception: `--runtime webnn` generates a capability check (`if (!navigator.ml)`) with a console warning suggesting fallback to ORT Web. This is the one case where the tool generates error handling because WebNN availability is uncertain.
+- Exception: `--engine webnn` generates a capability check (`if (!navigator.ml)`) with a console warning suggesting fallback to ORT Web, and device type negotiation (NPU → GPU → CPU) with per-device try/catch. This is the one case where the tool generates error handling because WebNN availability and device support are uncertain.
 
 ## Tokenizer Strategy (Phase 2 gate)
 
@@ -328,7 +444,7 @@ Audio tasks are intentionally placed in Phase 2.5 to allow this complexity to be
 
 ## WebNN-Specific Optimizations
 
-When `--runtime webnn` is selected, the generated code should include performance optimizations from Microsoft's webnn-developer-preview (reference: `/references/webnn-developer-preview`). These patterns are critical for real-world WebNN performance:
+When `--engine webnn` is selected, the generated code should include performance optimizations from Microsoft's webnn-developer-preview (reference: `/references/webnn-developer-preview`). These patterns are critical for real-world WebNN performance:
 
 1. **Pre-allocated MLTensor reuse.** Create MLTensor objects once during initialization and reuse them across inference calls. Avoid creating/destroying tensors per inference. For LLMs, pre-allocate the entire KV cache upfront:
    ```javascript
@@ -353,17 +469,108 @@ When `--runtime webnn` is selected, the generated code should include performanc
 
 6. **Explicit tensor lifecycle management.** Call `mlTensor.destroy()` when done to free GPU/device memory. Call `session.release()` and `mlContext.destroy()` at cleanup.
 
-7. **MLContext reuse.** Create the MLContext once at initialization, reuse across all tensor creation and inference operations.
+7. **MLContext reuse.** Create the MLContext once at initialization with the selected device type (`navigator.ml.createContext({ deviceType: 'npu' | 'gpu' | 'cpu' })`), reuse across all tensor creation and inference operations.
 
-The code generator should emit these patterns when `--runtime webnn` is selected. For simple single-inference cases (image classification), include patterns 1, 5, 6, 7. For streaming/iterative inference (LLMs, video), include all patterns.
+8. **Device type negotiation.** WebNN supports three device types: NPU (dedicated AI accelerator), GPU (graphics processor), and CPU. Generated code negotiates NPU → GPU → CPU with try/catch per device, because device availability varies by hardware and OS. The selected device type is logged and shown in the status bar.
+
+The code generator should emit these patterns when `--engine webnn` is selected. For simple single-inference cases (image classification), include patterns 1, 5, 6, 7. For streaming/iterative inference (LLMs, video), include all patterns.
 
 **Reference:** `webnn-developer-preview` is also added as a reference project in the repo.
+
+## Realtime Input Support
+
+The preprocessing catalog covers not just static files (image files, audio files, text) but also **realtime streams** from device sensors. This is critical because most real-world web AI use cases are realtime: camera-based object detection, live mic transcription, video analysis.
+
+### Realtime Preprocessing Functions
+
+**Camera / Video (`camera-capture.ts`, `video-capture.ts`, `screen-capture.ts`):**
+- `getUserMedia({ video: true })` → render to offscreen canvas → extract frame as `ImageData` at configurable FPS
+- Each frame feeds into the same image preprocessing pipeline (resize → normalize → NCHW)
+- Generated code includes a `requestAnimationFrame` or `setInterval` inference loop with frame skipping (run inference every N frames to match model throughput)
+- Screen capture uses `getDisplayMedia()` for screen/window/tab sharing scenarios
+
+**Microphone / Audio Stream (`mic-capture.ts`, `audio-stream.ts`):**
+- `getUserMedia({ audio: true })` → `AudioWorklet` (preferred) or `ScriptProcessorNode` (fallback) → PCM `Float32Array` chunks
+- Realtime audio feeds into a sliding window buffer for continuous inference (e.g., streaming ASR)
+- Generated code handles: sample rate conversion (mic rate → model rate), windowing (Hann/Hamming), and chunk assembly
+- For ASR: accumulate chunks → Mel spectrogram → feed model → decode tokens → stream text output
+- For audio classification: fixed-length windows → Mel/MFCC → classify → display with temporal smoothing
+
+### Realtime Postprocessing
+
+**Canvas Overlay (`canvas-overlay.ts`):**
+- Draws bounding boxes, segmentation masks, keypoint skeletons, and labels directly on a canvas overlaid on the camera/video feed
+- Color-coded by class, with confidence scores
+- Generated code includes the overlay setup (transparent canvas positioned over video element)
+
+**Result Smoothing (`result-smoother.ts`):**
+- Temporal averaging/smoothing across consecutive frames to prevent label flickering
+- Configurable smoothing window (e.g., average last 5 frames for classification confidence)
+
+### Input Mode Selection
+
+The `--input` flag controls what input UI the generated code includes:
+
+| `--input` value | Generated UI | Use case |
+|---|---|---|
+| `file` (default for image/audio tasks) | File picker + drag-and-drop | Static image/audio classification |
+| `camera` | Live camera feed + canvas overlay | Realtime object detection, pose estimation |
+| `video` | Video player + canvas overlay | Video analysis, action recognition |
+| `mic` | Mic permission + live waveform | Streaming ASR, audio classification |
+| `screen` | Screen share picker + canvas overlay | Screen content analysis |
+
+The assembler selects the default `--input` mode based on the task type but the user can override. For example, `image-classification` defaults to `file` but `--input camera` generates a live camera classifier.
+
+## Framework Templates & Live Preview
+
+Framework templates are a **core feature**, not a stretch goal. The generated output is a complete, runnable project that the developer can `npm install && npm run dev` to see inference working immediately in the browser. This is the "model2webnn preview experience" but with real inputs, real preprocessing, and real framework scaffolds.
+
+### Supported Frameworks
+
+| Framework | Generated Structure | Dev Server |
+|---|---|---|
+| `--framework nextjs` | Next.js app with `app/page.tsx`, `app/layout.tsx`, inference module, `package.json` | `npm run dev` → localhost:3000 |
+| `--framework sveltekit` | SvelteKit app with `src/routes/+page.svelte`, inference module, `package.json` | `npm run dev` → localhost:5173 |
+| `--framework react` | React + Vite with `App.tsx`, inference hook, `package.json` | `npm run dev` → localhost:5173 |
+| `--framework vanilla` | Vanilla JS + Vite with `index.html`, `main.js`, `package.json` | `npm run dev` → localhost:5173 |
+| `--framework html` (default) | Single self-contained HTML file, no build step | Open in browser directly |
+
+### What Gets Generated
+
+Each framework template includes:
+
+1. **Inference module** — The core generated code (preprocessing + inference + postprocessing), same as the standalone output but wrapped in a framework-appropriate module/hook/store
+2. **Input UI** — File upload, camera feed, mic input, or video player, depending on `--input` mode and task type
+3. **Result display** — Labels with confidence bars, bounding box canvas overlay, segmentation mask overlay, transcription text stream, etc., matched to the task type
+4. **Package configuration** — `package.json` with the minimal dependencies (inference engine + framework), `tsconfig.json` if TypeScript, Vite config if applicable
+5. **HTTPS for WebNN** — Templates that use WebNN include Vite `basicSsl` plugin config (WebNN requires secure context), matching model2webnn's approach
+
+### Preview Flow
+
+```bash
+# Generate a Next.js project for realtime camera object detection
+webai generate --task object-detection --model ./yolov8n.onnx --engine ort \
+  --framework nextjs --input camera -o ./my-detector/
+
+cd my-detector
+npm install
+npm run dev
+# Opens browser → grants camera permission → see live bounding boxes on camera feed
+```
+
+The developer gets a working app they can modify. Not a demo — a starting point. The generated code is readable and documented (in raw mode), so they can see exactly how preprocessing, inference, and postprocessing connect.
+
+### Relationship to Web UI
+
+The Web UI (`webai` web interface) is separate from framework templates. The Web UI is for exploring and configuring code generation (like model2webnn's web interface). Framework templates are the *output* — what gets generated. The Web UI can preview the generated code with syntax highlighting and optionally run it in a sandboxed iframe (like model2webnn does), but the real preview is `npm run dev` in the generated project.
 
 ## Resolved Decisions
 
 1. **Tokenizer strategy:** Option A — generate code that loads `tokenizer.json` at runtime from HuggingFace, with a lightweight BPE decoder (~200 lines). See Tokenizer Strategy section above.
-2. **model2webnn integration:** webai.js imports model2webnn's `convert()` as a library (npm dependency) for `--runtime webnn`. See Architecture section.
+2. **model2webnn integration:** webai.js imports model2webnn's `convert()` as a library (npm dependency) for `--engine webnn`. See Architecture section.
 3. **Audio preprocessing:** Vendored radix-2 FFT implementation for Mel/MFCC. See Audio Preprocessing Risk section above.
+4. **Realtime input is a first-class feature, not an add-on.** Preprocessing covers camera streams, mic/audio streams, video, and screen capture. Each task profile defines a default input mode (file vs camera vs mic) and supports override via `--input`. See Realtime Input Support section.
+5. **Framework templates are core, not stretch.** Generated output can be a complete runnable project (Next.js, SvelteKit, React+Vite, Vanilla+Vite, or standalone HTML). `npm install && npm run dev` shows live inference with real inputs. See Framework Templates & Live Preview section.
 
 ## Open Questions
 
@@ -372,11 +579,15 @@ The code generator should emit these patterns when `--runtime webnn` is selected
 
 ## Success Criteria
 
-- `npx webai generate --task image-classification --model ./mobilenet.onnx --runtime ort` produces a working HTML file that classifies images in a browser
-- Generated code is readable, documented (raw mode), and has zero dependencies beyond the inference runtime
-- Three runtimes work: ORT Web, LiteRT.js, WebNN API
-- Core CV + NLP tasks covered (Phase 1: 4 tasks)
-- Web UI mirrors CLI functionality
+- `npx webai generate --task image-classification --model ./mobilenet.onnx --engine ort` produces a working HTML file that classifies images in a browser
+- `npx webai generate --task object-detection --model ./yolov8n.onnx --engine ort --framework nextjs --input camera -o ./app/` produces a Next.js project that, after `npm install && npm run dev`, shows live camera feed with bounding boxes
+- `npx webai generate --task automatic-speech-recognition --model ./whisper.onnx --engine ort --framework react --input mic -o ./app/` produces a React app with live mic transcription
+- Generated code is readable, documented (raw mode), and has zero dependencies beyond the inference engine + framework
+- Three engines work: ORT Web, LiteRT.js, WebNN API
+- Five framework outputs work: html, vanilla-vite, nextjs, sveltekit, react-vite
+- Realtime inputs work: camera, mic, video, screen
+- Core CV tasks covered with both file and camera input (Phase 1: 4 tasks)
+- Web UI mirrors CLI functionality with live preview
 - Published to npm
 
 ## Monorepo Setup
@@ -405,15 +616,17 @@ The code generator should emit these patterns when `--runtime webnn` is selected
 ## Next Steps
 
 1. Set up the monorepo structure (webai.js root with `packages/core` and `packages/cli`)
-2. Implement the preprocessing function catalog (image-resize, image-normalize, image-to-nchw, softmax, topk, argmax, nms)
-3. Implement 1 task profile end-to-end: image-classification with ORT Web
-4. Build the CLI with the `generate` command
-5. Expand to object-detection, image-segmentation (Phase 1 CV)
-6. Add LiteRT.js and WebNN inference emitters
-6.5. Implement audio preprocessing (Mel/MFCC with vendored FFT) for Phase 2 audio tasks
-6.75. Implement tokenizer strategy, expand to Phase 2.5 NLP tasks (text-classification, etc.)
-7. Build the Web UI
-8. Publish to npm
+2. Implement the preprocessing function catalog: image (resize, normalize, to-nchw, crop) + postprocess (softmax, topk, argmax, nms)
+3. Implement camera-capture and canvas-overlay for realtime input/output
+4. Build the framework template scaffolds (html, vanilla-vite, nextjs, sveltekit, react-vite) with input UI generation
+5. Implement 1 task profile end-to-end: image-classification with ORT Web, file + camera input, all framework templates
+6. Build the CLI with the `generate` command (including `--framework`, `--input` flags)
+7. Expand to object-detection, image-segmentation with camera support (Phase 1 CV complete)
+8. Add LiteRT.js and WebNN inference emitters
+9. Implement mic-capture, audio-stream, and audio preprocessing (Mel/MFCC with vendored FFT) for Phase 2 audio tasks
+10. Implement tokenizer strategy, expand to Phase 2.5 NLP tasks
+11. Build the Web UI with live preview (sandboxed iframe)
+12. Publish to npm
 
 ## What I noticed about how you think
 
