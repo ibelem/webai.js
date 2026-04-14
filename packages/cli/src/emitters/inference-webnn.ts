@@ -77,8 +77,11 @@ async function createSession(modelPath${t ? ': string' : ''})${sessionType} {
   }
 
   // Fetch and build the model graph
-  const response = await fetch(modelPath);
-  const modelBuffer = await response.arrayBuffer();
+${config.offline
+    ? `  const cacheKey = modelPath.split('/').pop() || 'model.bin';
+  const modelBuffer = await cachedFetch(modelPath, cacheKey);`
+    : `  const response = await fetch(modelPath);
+  const modelBuffer = await response.arrayBuffer();`}
 
   const builder = new MLGraphBuilder(context);
 

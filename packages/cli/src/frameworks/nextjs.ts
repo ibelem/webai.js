@@ -923,6 +923,7 @@ export function emitNextjs(config: ResolvedConfig, blocks: CodeBlock[]): Generat
   const preprocessBlock = findBlock(blocks, 'preprocess');
   const inferenceBlock = findBlock(blocks, 'inference');
   const postprocessBlock = findBlock(blocks, 'postprocess');
+  const opfsBlock = findBlock(blocks, 'opfs-cache');
 
   const filePaths: string[] = [
     'package.json',
@@ -950,6 +951,11 @@ export function emitNextjs(config: ResolvedConfig, blocks: CodeBlock[]): Generat
     'README.md',
   );
 
+  // Prepend OPFS cache utilities to inference module when offline mode is enabled
+  const inferenceContent = opfsBlock?.code
+    ? `${opfsBlock.code}\n\n${toLibModule(inferenceBlock)}`
+    : toLibModule(inferenceBlock);
+
   const files: GeneratedFile[] = [
     { path: 'package.json', content: emitPackageJson(config, blocks) },
     { path: 'next.config.mjs', content: emitNextConfig() },
@@ -971,7 +977,7 @@ export function emitNextjs(config: ResolvedConfig, blocks: CodeBlock[]): Generat
 
   files.push(
     { path: `lib/preprocess.${le}`, content: toLibModule(preprocessBlock) },
-    { path: `lib/inference.${le}`, content: toLibModule(inferenceBlock) },
+    { path: `lib/inference.${le}`, content: inferenceContent },
     { path: `lib/postprocess.${le}`, content: toLibModule(postprocessBlock) },
     { path: 'README.md', content: emitReadme(config, filePaths) },
   );

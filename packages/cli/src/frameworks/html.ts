@@ -37,13 +37,24 @@ function isClassificationTask(task: string): boolean {
 }
 
 /** Concatenate Layer 1 block code into a script preamble */
-function emitBlockCode(_config: ResolvedConfig, blocks: CodeBlock[]): string {
+function emitBlockCode(config: ResolvedConfig, blocks: CodeBlock[]): string {
   const inputBlock = findBlock(blocks, 'input');
   const preprocessBlock = findBlock(blocks, 'preprocess');
   const inferenceBlock = findBlock(blocks, 'inference');
   const postprocessBlock = findBlock(blocks, 'postprocess');
+  const opfsBlock = findBlock(blocks, 'opfs-cache');
 
-  const sections: string[] = [`import * as ort from '${ORT_CDN}';`];
+  const sections: string[] = [];
+
+  // Engine-specific import (only ORT needs a CDN import for HTML)
+  if (config.engine === 'ort') {
+    sections.push(`import * as ort from '${ORT_CDN}';`);
+  }
+
+  // OPFS caching utilities (when offline mode enabled)
+  if (opfsBlock?.code) {
+    sections.push(`// --- OPFS Cache ---\n${opfsBlock.code}`);
+  }
 
   if (inputBlock?.code) {
     sections.push(`// --- Input Capture ---\n${inputBlock.code}`);
@@ -74,27 +85,10 @@ function emitColorPalette(): string {
 ];`;
 }
 
-// ---- File + Classification script (existing, unchanged for snapshot compat) ----
+// ---- File + Classification script ----
 
 function emitFileClassificationScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
-  const preprocessBlock = findBlock(blocks, 'preprocess');
-  const inferenceBlock = findBlock(blocks, 'inference');
-  const postprocessBlock = findBlock(blocks, 'postprocess');
-
-  const preprocessCode = preprocessBlock?.code ?? '';
-  const inferenceCode = inferenceBlock ? stripImports(inferenceBlock.code) : '';
-  const postprocessCode = postprocessBlock?.code ?? '';
-
-  return `import * as ort from '${ORT_CDN}';
-
-// --- Preprocessing ---
-${preprocessCode}
-
-// --- Inference ---
-${inferenceCode}
-
-// --- Postprocessing ---
-${postprocessCode}
+  return `${emitBlockCode(config, blocks)}
 
 // --- Application ---
 const MODEL_PATH = '${getModelPath(config, '.')}';

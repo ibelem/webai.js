@@ -23,17 +23,25 @@ const LITERT_PKG = '@anthropic-ai/litert-web';
 function emitCreateSession(config: ResolvedConfig, ts: boolean): string {
   const t = ts;
 
+  // When offline, load model via OPFS cache first
+  const modelSource = config.offline
+    ? `  const cacheKey = modelPath.split('/').pop() || 'model.tflite';
+  const modelData = await cachedFetch(modelPath, cacheKey);`
+    : '';
+
+  const modelArg = config.offline ? 'modelData' : 'modelPath';
+
   const delegateCode = config.backend === 'webgpu'
     ? `  const delegate = await litert.createGpuDelegate();
-  const session = await litert.TFLiteModel.load(modelPath, { delegates: [delegate] });`
-    : `  const session = await litert.TFLiteModel.load(modelPath);`;
+  const session = await litert.TFLiteModel.load(${modelArg}, { delegates: [delegate] });`
+    : `  const session = await litert.TFLiteModel.load(${modelArg});`;
 
   return `/**
  * Create a LiteRT inference session.
  * Loads a .tflite model for browser-based inference.
  */
 async function createSession(modelPath${t ? ': string' : ''})${t ? ': Promise<litert.TFLiteModel>' : ''} {
-${delegateCode}
+${modelSource}${modelSource ? '\n' : ''}${delegateCode}
 
   console.log('LiteRT session created');
   return session;

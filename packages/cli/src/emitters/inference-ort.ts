@@ -51,6 +51,17 @@ function emitCreateSession(config: ResolvedConfig, ts: boolean): string {
   const t = ts;
   const providers = emitProviders(config, ts);
 
+  // When offline, load model via OPFS cache (cachedFetch is in scope from opfs-cache block)
+  const modelLoad = config.offline
+    ? `  const cacheKey = modelPath.split('/').pop() || 'model.onnx';
+  const modelBuffer = await cachedFetch(modelPath, cacheKey);
+  const session = await ort.InferenceSession.create(modelBuffer, {
+    executionProviders: providers,
+  });`
+    : `  const session = await ort.InferenceSession.create(modelPath, {
+    executionProviders: providers,
+  });`;
+
   return `/**
  * Create an ORT Web inference session with backend selection.
  * The execution provider list determines hardware acceleration priority.
@@ -58,9 +69,7 @@ function emitCreateSession(config: ResolvedConfig, ts: boolean): string {
 async function createSession(modelPath${t ? ': string' : ''})${t ? ': Promise<ort.InferenceSession>' : ''} {
 ${providers}
 
-  const session = await ort.InferenceSession.create(modelPath, {
-    executionProviders: providers,
-  });
+${modelLoad}
 
   // Log which backend was selected
   console.log('Inference session created');

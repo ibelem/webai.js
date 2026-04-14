@@ -846,6 +846,7 @@ export function emitSvelteKit(config: ResolvedConfig, blocks: CodeBlock[]): Gene
   const preprocessBlock = findBlock(blocks, 'preprocess');
   const inferenceBlock = findBlock(blocks, 'inference');
   const postprocessBlock = findBlock(blocks, 'postprocess');
+  const opfsBlock = findBlock(blocks, 'opfs-cache');
 
   const filePaths: string[] = [
     'package.json',
@@ -868,6 +869,11 @@ export function emitSvelteKit(config: ResolvedConfig, blocks: CodeBlock[]): Gene
     'README.md',
   );
 
+  // Prepend OPFS cache utilities to inference module when offline mode is enabled
+  const inferenceContent = opfsBlock?.code
+    ? `${opfsBlock.code}\n\n${toLibModule(inferenceBlock)}`
+    : toLibModule(inferenceBlock);
+
   const files: GeneratedFile[] = [
     { path: 'package.json', content: emitPackageJson(config, blocks) },
     { path: 'svelte.config.js', content: emitSvelteConfig() },
@@ -884,7 +890,7 @@ export function emitSvelteKit(config: ResolvedConfig, blocks: CodeBlock[]): Gene
 
   files.push(
     { path: `src/lib/preprocess.${le}`, content: toLibModule(preprocessBlock) },
-    { path: `src/lib/inference.${le}`, content: toLibModule(inferenceBlock) },
+    { path: `src/lib/inference.${le}`, content: inferenceContent },
     { path: `src/lib/postprocess.${le}`, content: toLibModule(postprocessBlock) },
     { path: 'README.md', content: emitReadme(config, filePaths) },
   );

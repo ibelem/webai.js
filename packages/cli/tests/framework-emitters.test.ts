@@ -1085,3 +1085,139 @@ describe('task/input dispatch — SvelteKit', () => {
     expect(page).toContain('Start Screen Capture');
   });
 });
+
+// ---- Engine dispatch tests (LiteRT + WebNN) ----
+
+const liteRTMeta: ModelMetadata = {
+  format: 'tflite',
+  inputs: [{ name: 'input', dataType: 'float32', shape: [1, 224, 224, 3] }],
+  outputs: [{ name: 'output', dataType: 'float32', shape: [1, 1000] }],
+};
+
+const liteRTOverrides: Partial<ResolvedConfig> = {
+  engine: 'litert' as const,
+  modelMeta: liteRTMeta,
+  modelPath: './mobilenet.tflite',
+  modelName: 'mobilenet-tflite',
+};
+
+const webnnOverrides: Partial<ResolvedConfig> = {
+  engine: 'webnn' as const,
+  backend: 'webnn-npu' as const,
+};
+
+const offlineOverrides: Partial<ResolvedConfig> = {
+  offline: true,
+};
+
+describe('Engine dispatch — LiteRT', () => {
+  it('HTML: generates LiteRT inference code', () => {
+    const { files } = generateHtml(liteRTOverrides);
+    const html = getFile(files, 'index.html');
+    expect(html).toContain('TFLiteModel.load');
+    expect(html).toContain('LiteRT session created');
+    expect(html).not.toContain('ort.InferenceSession');
+  });
+
+  it('React-Vite: inference module contains LiteRT code', () => {
+    const { files } = generateReactVite(liteRTOverrides);
+    const inference = getFile(files, 'src/lib/inference.js');
+    expect(inference).toContain('TFLiteModel.load');
+    expect(inference).toContain('@anthropic-ai/litert-web');
+  });
+
+  it('package.json includes LiteRT dependency', () => {
+    const { files } = generateReactVite(liteRTOverrides);
+    const pkg = JSON.parse(getFile(files, 'package.json'));
+    expect(pkg.dependencies['@anthropic-ai/litert-web']).toBeDefined();
+  });
+});
+
+describe('Engine dispatch — WebNN', () => {
+  it('HTML: generates WebNN inference code', () => {
+    const { files } = generateHtml(webnnOverrides);
+    const html = getFile(files, 'index.html');
+    expect(html).toContain('navigator.ml');
+    expect(html).toContain('MLGraphBuilder');
+    expect(html).not.toContain('ort.InferenceSession');
+    // WebNN engine should not emit ORT CDN import
+    expect(html).not.toContain('onnxruntime-web');
+  });
+
+  it('React-Vite: inference module contains WebNN code', () => {
+    const { files } = generateReactVite(webnnOverrides);
+    const inference = getFile(files, 'src/lib/inference.js');
+    expect(inference).toContain('navigator.ml');
+    expect(inference).toContain('MLGraphBuilder');
+  });
+
+  it('package.json has no extra engine dependencies', () => {
+    const { files } = generateReactVite(webnnOverrides);
+    const pkg = JSON.parse(getFile(files, 'package.json'));
+    // WebNN is a browser API, no npm package
+    expect(pkg.dependencies['onnxruntime-web']).toBeUndefined();
+  });
+});
+
+describe('Offline mode — OPFS caching', () => {
+  it('HTML: includes cachedFetch when offline=true', () => {
+    const { files } = generateHtml(offlineOverrides);
+    const html = getFile(files, 'index.html');
+    expect(html).toContain('cachedFetch');
+    expect(html).toContain('OPFS Cache');
+    expect(html).toContain('navigator.storage.getDirectory');
+  });
+
+  it('HTML: does NOT include cachedFetch when offline=false', () => {
+    const { files } = generateHtml({});
+    const html = getFile(files, 'index.html');
+    expect(html).not.toContain('cachedFetch');
+  });
+
+  it('React-Vite: inference module includes OPFS code when offline', () => {
+    const { files } = generateReactVite(offlineOverrides);
+    const inference = getFile(files, 'src/lib/inference.js');
+    expect(inference).toContain('cachedFetch');
+    expect(inference).toContain('clearModelCache');
+    expect(inference).toContain('navigator.storage.getDirectory');
+  });
+
+  it('Vanilla-Vite: inference module includes OPFS code when offline', () => {
+    const { files } = generateVanillaVite(offlineOverrides);
+    const inference = getFile(files, 'src/lib/inference.js');
+    expect(inference).toContain('cachedFetch');
+  });
+
+  it('Next.js: inference module includes OPFS code when offline', () => {
+    const { files } = generateNextjs(offlineOverrides);
+    const inference = getFile(files, 'lib/inference.js');
+    expect(inference).toContain('cachedFetch');
+  });
+
+  it('SvelteKit: inference module includes OPFS code when offline', () => {
+    const { files } = generateSvelteKit(offlineOverrides);
+    const inference = getFile(files, 'src/lib/inference.js');
+    expect(inference).toContain('cachedFetch');
+  });
+
+  it('ORT createSession uses cachedFetch for model loading when offline', () => {
+    const { files } = generateHtml(offlineOverrides);
+    const html = getFile(files, 'index.html');
+    expect(html).toContain('modelBuffer = await cachedFetch(modelPath');
+    expect(html).toContain('ort.InferenceSession.create(modelBuffer');
+  });
+
+  it('LiteRT createSession uses cachedFetch when offline', () => {
+    const { files } = generateHtml({ ...liteRTOverrides, ...offlineOverrides });
+    const html = getFile(files, 'index.html');
+    expect(html).toContain('cachedFetch');
+    expect(html).toContain('TFLiteModel.load(modelData');
+  });
+
+  it('WebNN createSession uses cachedFetch when offline', () => {
+    const { files } = generateHtml({ ...webnnOverrides, ...offlineOverrides });
+    const html = getFile(files, 'index.html');
+    expect(html).toContain('cachedFetch');
+    expect(html).not.toContain('const response = await fetch(modelPath)');
+  });
+});
