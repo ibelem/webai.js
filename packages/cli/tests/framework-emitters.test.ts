@@ -22,6 +22,24 @@ const classificationMeta: ModelMetadata = {
   outputs: [{ name: 'output', dataType: 'float32', shape: [1, 1000] }],
 };
 
+const detectionMeta: ModelMetadata = {
+  format: 'onnx',
+  inputs: [{ name: 'images', dataType: 'float32', shape: [1, 3, 640, 640] }],
+  outputs: [{ name: 'output0', dataType: 'float32', shape: [1, 84, 8400] }],
+};
+
+const segmentationMeta: ModelMetadata = {
+  format: 'onnx',
+  inputs: [{ name: 'input', dataType: 'float32', shape: [1, 3, 512, 512] }],
+  outputs: [{ name: 'output', dataType: 'float32', shape: [1, 21, 512, 512] }],
+};
+
+const extractionMeta: ModelMetadata = {
+  format: 'onnx',
+  inputs: [{ name: 'input', dataType: 'float32', shape: [1, 3, 224, 224] }],
+  outputs: [{ name: 'output', dataType: 'float32', shape: [1, 768] }],
+};
+
 /** Safe file lookup — fails test if file not found */
 function getFile(files: GeneratedFile[], path: string): string {
   const file = files.find((f) => f.path === path);
@@ -810,5 +828,260 @@ describe('online model support', () => {
       const html = getFile(files, 'index.html');
       expect(html).toContain("const MODEL_PATH = 'https://huggingface.co/microsoft/resnet-50/resolve/main/model.onnx'");
     });
+  });
+});
+
+// ---- Task/Input dispatch tests for all frameworks ----
+
+const detectionOverrides = {
+  task: 'object-detection' as const,
+  input: 'file' as const,
+  modelName: 'yolov8n',
+  modelPath: './yolov8n.onnx',
+  modelMeta: detectionMeta,
+  preprocess: { imageSize: 640, mean: [0, 0, 0] as [number, number, number], std: [1, 1, 1] as [number, number, number], layout: 'nchw' as const },
+};
+
+const segmentationOverrides = {
+  task: 'image-segmentation' as const,
+  input: 'file' as const,
+  modelName: 'deeplabv3',
+  modelPath: './deeplabv3.onnx',
+  modelMeta: segmentationMeta,
+  preprocess: { imageSize: 512, mean: [0.485, 0.456, 0.406] as [number, number, number], std: [0.229, 0.224, 0.225] as [number, number, number], layout: 'nchw' as const },
+};
+
+const extractionOverrides = {
+  task: 'feature-extraction' as const,
+  input: 'file' as const,
+  modelName: 'clip',
+  modelPath: './clip.onnx',
+  modelMeta: extractionMeta,
+  preprocess: { imageSize: 224, mean: [0.485, 0.456, 0.406] as [number, number, number], std: [0.229, 0.224, 0.225] as [number, number, number], layout: 'nchw' as const },
+};
+
+const cameraOverrides = {
+  input: 'camera' as const,
+  task: 'image-classification' as const,
+};
+
+describe('task/input dispatch — HTML', () => {
+  it('detection: includes postprocessDetections and COLORS', () => {
+    const { files } = generateHtml(detectionOverrides);
+    const html = getFile(files, 'index.html');
+    expect(html).toContain('postprocessDetections');
+    expect(html).toContain('COLORS');
+    expect(html).toContain('NUM_ANCHORS');
+    expect(html).toContain('canvas');
+  });
+
+  it('segmentation: includes postprocessSegmentation and MASK_H', () => {
+    const { files } = generateHtml(segmentationOverrides);
+    const html = getFile(files, 'index.html');
+    expect(html).toContain('postprocessSegmentation');
+    expect(html).toContain('MASK_H');
+    expect(html).toContain('MASK_W');
+  });
+
+  it('feature-extraction: includes postprocessEmbeddings and L2 Norm', () => {
+    const { files } = generateHtml(extractionOverrides);
+    const html = getFile(files, 'index.html');
+    expect(html).toContain('postprocessEmbeddings');
+    expect(html).toContain('L2 Norm');
+    expect(html).toContain('Dimensions');
+  });
+
+  it('camera: includes permission prompt and video element', () => {
+    const { files } = generateHtml(cameraOverrides);
+    const html = getFile(files, 'index.html');
+    expect(html).toContain('permissionPrompt');
+    expect(html).toContain('<video');
+    expect(html).toContain('startCamera');
+    expect(html).toContain('createInferenceLoop');
+  });
+
+  it('detection + overlay body: includes canvas overlay', () => {
+    const { files } = generateHtml(detectionOverrides);
+    const html = getFile(files, 'index.html');
+    expect(html).toContain('id="overlay"');
+    expect(html).toContain('preview-wrapper');
+  });
+
+  it('detection: includes extended CSS', () => {
+    const { files } = generateHtml(detectionOverrides);
+    const html = getFile(files, 'index.html');
+    expect(html).toContain('.preview-wrapper');
+    expect(html).toContain('pointer-events: none');
+  });
+});
+
+describe('task/input dispatch — React-Vite', () => {
+  it('detection: App.jsx imports postprocessDetections', () => {
+    const { files } = generateReactVite(detectionOverrides);
+    const app = getFile(files, 'src/App.jsx');
+    expect(app).toContain('postprocessDetections');
+    expect(app).toContain('COLORS');
+    expect(app).toContain('NUM_ANCHORS');
+  });
+
+  it('segmentation: App.jsx imports postprocessSegmentation', () => {
+    const { files } = generateReactVite(segmentationOverrides);
+    const app = getFile(files, 'src/App.jsx');
+    expect(app).toContain('postprocessSegmentation');
+    expect(app).toContain('MASK_H');
+  });
+
+  it('feature-extraction: App.jsx imports postprocessEmbeddings', () => {
+    const { files } = generateReactVite(extractionOverrides);
+    const app = getFile(files, 'src/App.jsx');
+    expect(app).toContain('postprocessEmbeddings');
+    expect(app).toContain('Dimensions');
+    expect(app).toContain('L2 Norm');
+  });
+
+  it('camera: App.jsx imports startCamera and shows permission prompt', () => {
+    const { files } = generateReactVite(cameraOverrides);
+    const app = getFile(files, 'src/App.jsx');
+    expect(app).toContain('startCamera');
+    expect(app).toContain('createInferenceLoop');
+    expect(app).toContain('Enable Camera');
+  });
+
+  it('camera: includes input.js lib file', () => {
+    const { files } = generateReactVite(cameraOverrides);
+    const paths = files.map((f) => f.path);
+    expect(paths).toContain('src/lib/input.js');
+  });
+});
+
+describe('task/input dispatch — Vanilla-Vite', () => {
+  it('detection: main.js imports postprocessDetections', () => {
+    const { files } = generateVanillaVite(detectionOverrides);
+    const main = getFile(files, 'src/main.js');
+    expect(main).toContain('postprocessDetections');
+    expect(main).toContain('COLORS');
+  });
+
+  it('detection: index.html has canvas overlay', () => {
+    const { files } = generateVanillaVite(detectionOverrides);
+    const html = getFile(files, 'index.html');
+    expect(html).toContain('id="overlay"');
+    expect(html).toContain('preview-wrapper');
+  });
+
+  it('segmentation: main.js imports postprocessSegmentation', () => {
+    const { files } = generateVanillaVite(segmentationOverrides);
+    const main = getFile(files, 'src/main.js');
+    expect(main).toContain('postprocessSegmentation');
+    expect(main).toContain('MASK_H');
+  });
+
+  it('feature-extraction: main.js imports postprocessEmbeddings', () => {
+    const { files } = generateVanillaVite(extractionOverrides);
+    const main = getFile(files, 'src/main.js');
+    expect(main).toContain('postprocessEmbeddings');
+    expect(main).toContain('L2 Norm');
+  });
+
+  it('camera: index.html has permission prompt and video', () => {
+    const { files } = generateVanillaVite(cameraOverrides);
+    const html = getFile(files, 'index.html');
+    expect(html).toContain('permissionPrompt');
+    expect(html).toContain('<video');
+  });
+
+  it('camera: main.js imports startCamera', () => {
+    const { files } = generateVanillaVite(cameraOverrides);
+    const main = getFile(files, 'src/main.js');
+    expect(main).toContain('startCamera');
+    expect(main).toContain('createInferenceLoop');
+  });
+
+  it('detection: style.css includes extended CSS', () => {
+    const { files } = generateVanillaVite(detectionOverrides);
+    const css = getFile(files, 'src/style.css');
+    expect(css).toContain('.preview-wrapper');
+    expect(css).toContain('pointer-events: none');
+  });
+});
+
+describe('task/input dispatch — Next.js', () => {
+  it('detection: page.jsx imports postprocessDetections', () => {
+    const { files } = generateNextjs(detectionOverrides);
+    const page = getFile(files, 'app/page.jsx');
+    expect(page).toContain('postprocessDetections');
+    expect(page).toContain('COLORS');
+  });
+
+  it('segmentation: page.jsx imports postprocessSegmentation', () => {
+    const { files } = generateNextjs(segmentationOverrides);
+    const page = getFile(files, 'app/page.jsx');
+    expect(page).toContain('postprocessSegmentation');
+    expect(page).toContain('MASK_H');
+  });
+
+  it('feature-extraction: page.jsx imports postprocessEmbeddings', () => {
+    const { files } = generateNextjs(extractionOverrides);
+    const page = getFile(files, 'app/page.jsx');
+    expect(page).toContain('postprocessEmbeddings');
+    expect(page).toContain('Dimensions');
+  });
+
+  it('camera: page.jsx imports startCamera and has permission UI', () => {
+    const { files } = generateNextjs(cameraOverrides);
+    const page = getFile(files, 'app/page.jsx');
+    expect(page).toContain('startCamera');
+    expect(page).toContain('Enable Camera');
+  });
+
+  it('detection: globals.css includes extended CSS', () => {
+    const { files } = generateNextjs(detectionOverrides);
+    const css = getFile(files, 'app/globals.css');
+    expect(css).toContain('.preview-wrapper');
+  });
+});
+
+describe('task/input dispatch — SvelteKit', () => {
+  it('detection: page.svelte imports postprocessDetections', () => {
+    const { files } = generateSvelteKit(detectionOverrides);
+    const page = getFile(files, 'src/routes/+page.svelte');
+    expect(page).toContain('postprocessDetections');
+    expect(page).toContain('COLORS');
+    expect(page).toContain('$effect');
+  });
+
+  it('segmentation: page.svelte imports postprocessSegmentation', () => {
+    const { files } = generateSvelteKit(segmentationOverrides);
+    const page = getFile(files, 'src/routes/+page.svelte');
+    expect(page).toContain('postprocessSegmentation');
+    expect(page).toContain('MASK_H');
+  });
+
+  it('feature-extraction: page.svelte imports postprocessEmbeddings', () => {
+    const { files } = generateSvelteKit(extractionOverrides);
+    const page = getFile(files, 'src/routes/+page.svelte');
+    expect(page).toContain('postprocessEmbeddings');
+    expect(page).toContain('Dimensions');
+  });
+
+  it('camera: page.svelte imports startCamera', () => {
+    const { files } = generateSvelteKit(cameraOverrides);
+    const page = getFile(files, 'src/routes/+page.svelte');
+    expect(page).toContain('startCamera');
+    expect(page).toContain('createInferenceLoop');
+    expect(page).toContain('Enable Camera');
+  });
+
+  it('detection: app.css includes extended CSS', () => {
+    const { files } = generateSvelteKit(detectionOverrides);
+    const css = getFile(files, 'src/app.css');
+    expect(css).toContain('.preview-wrapper');
+  });
+
+  it('screen capture: page.svelte imports startScreenCapture', () => {
+    const { files } = generateSvelteKit({ ...cameraOverrides, input: 'screen' as const });
+    const page = getFile(files, 'src/routes/+page.svelte');
+    expect(page).toContain('startScreenCapture');
+    expect(page).toContain('Start Screen Capture');
   });
 });
