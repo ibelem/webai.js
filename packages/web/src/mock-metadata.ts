@@ -1,0 +1,70 @@
+/**
+ * Generate mock ModelMetadata for the Web UI.
+ *
+ * In the CLI, metadata comes from parsing an actual .onnx/.tflite file.
+ * In the Web UI, we create plausible shapes based on the selected task
+ * so the assembler can generate correct code.
+ */
+
+import type { ModelMetadata, TaskType } from '@webai/core';
+
+const TASK_SHAPES: Record<string, { inputs: ModelMetadata['inputs']; outputs: ModelMetadata['outputs'] }> = {
+  'image-classification': {
+    inputs: [{ name: 'input', dataType: 'float32', shape: [1, 3, 224, 224] }],
+    outputs: [{ name: 'output', dataType: 'float32', shape: [1, 1000] }],
+  },
+  'object-detection': {
+    inputs: [{ name: 'images', dataType: 'float32', shape: [1, 3, 640, 640] }],
+    outputs: [{ name: 'output0', dataType: 'float32', shape: [1, 84, 8400] }],
+  },
+  'image-segmentation': {
+    inputs: [{ name: 'input', dataType: 'float32', shape: [1, 3, 512, 512] }],
+    outputs: [{ name: 'output', dataType: 'float32', shape: [1, 21, 512, 512] }],
+  },
+  'feature-extraction': {
+    inputs: [{ name: 'input', dataType: 'float32', shape: [1, 3, 224, 224] }],
+    outputs: [{ name: 'output', dataType: 'float32', shape: [1, 768] }],
+  },
+  'speech-to-text': {
+    inputs: [{ name: 'input', dataType: 'float32', shape: [1, 80, 100] }],
+    outputs: [{ name: 'output', dataType: 'float32', shape: [1, 100, 28] }],
+  },
+  'audio-classification': {
+    inputs: [{ name: 'input', dataType: 'float32', shape: [1, 13, 100] }],
+    outputs: [{ name: 'output', dataType: 'float32', shape: [1, 527] }],
+  },
+  'text-to-speech': {
+    inputs: [{ name: 'input', dataType: 'float32', shape: [1, 100] }],
+    outputs: [{ name: 'output', dataType: 'float32', shape: [1, 22050] }],
+  },
+  'text-classification': {
+    inputs: [
+      { name: 'input_ids', dataType: 'int64', shape: [1, 128] },
+      { name: 'attention_mask', dataType: 'int64', shape: [1, 128] },
+    ],
+    outputs: [{ name: 'logits', dataType: 'float32', shape: [1, 2] }],
+  },
+  'text-generation': {
+    inputs: [
+      { name: 'input_ids', dataType: 'int64', shape: [1, 128] },
+      { name: 'attention_mask', dataType: 'int64', shape: [1, 128] },
+    ],
+    outputs: [{ name: 'logits', dataType: 'float32', shape: [1, 128, 50257] }],
+  },
+  'zero-shot-classification': {
+    inputs: [
+      { name: 'input_ids', dataType: 'int64', shape: [1, 128] },
+      { name: 'attention_mask', dataType: 'int64', shape: [1, 128] },
+    ],
+    outputs: [{ name: 'logits', dataType: 'float32', shape: [1, 3] }],
+  },
+};
+
+export function createMockMetadata(task: TaskType, format: 'onnx' | 'tflite' = 'onnx'): ModelMetadata {
+  const shapes = TASK_SHAPES[task] ?? TASK_SHAPES['image-classification'];
+  return {
+    format,
+    inputs: shapes.inputs,
+    outputs: shapes.outputs,
+  };
+}

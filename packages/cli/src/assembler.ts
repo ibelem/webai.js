@@ -12,6 +12,8 @@ import type { GeneratedFile } from './types.js';
 import { emitLayer1 } from './emitters/index.js';
 import { emitLayer2 } from './frameworks/index.js';
 
+export type { GeneratedFile } from './types.js';
+
 /**
  * Generate all files for the given config.
  *

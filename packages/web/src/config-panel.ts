@@ -1,0 +1,208 @@
+/**
+ * Config panel: dropdown-based configuration mirroring CLI flags.
+ *
+ * Renders <select> elements for: task, engine, backend, framework, input, lang, theme.
+ * Also has a text input for model name.
+ * Fires onChange callback whenever any value changes.
+ */
+
+import { TASK_PROFILES, type TaskType, type InputMode } from '@webai/core';
+import type { Engine, Backend, Framework, OutputLang, Theme } from '@webai/core';
+
+export interface ConfigValues {
+  task: TaskType;
+  engine: Engine;
+  backend: Backend;
+  framework: Framework;
+  input: InputMode;
+  lang: OutputLang;
+  theme: Theme;
+  modelName: string;
+  offline: boolean;
+}
+
+interface SelectOption {
+  value: string;
+  label: string;
+}
+
+const TASKS: SelectOption[] = Object.entries(TASK_PROFILES).map(([key, profile]) => ({
+  value: key,
+  label: profile.label,
+}));
+
+const ENGINES: SelectOption[] = [
+  { value: 'ort', label: 'ORT Web' },
+  { value: 'litert', label: 'LiteRT.js' },
+  { value: 'webnn', label: 'WebNN API' },
+];
+
+const BACKENDS: SelectOption[] = [
+  { value: 'auto', label: 'Auto (WebNN NPU > GPU > WebGPU > WASM)' },
+  { value: 'wasm', label: 'WASM' },
+  { value: 'webgpu', label: 'WebGPU' },
+  { value: 'webnn-cpu', label: 'WebNN CPU' },
+  { value: 'webnn-gpu', label: 'WebNN GPU' },
+  { value: 'webnn-npu', label: 'WebNN NPU' },
+];
+
+const FRAMEWORKS: SelectOption[] = [
+  { value: 'html', label: 'HTML (single file)' },
+  { value: 'vanilla-vite', label: 'Vanilla + Vite' },
+  { value: 'react-vite', label: 'React + Vite' },
+  { value: 'nextjs', label: 'Next.js' },
+  { value: 'sveltekit', label: 'SvelteKit' },
+];
+
+const LANGS: SelectOption[] = [
+  { value: 'js', label: 'JavaScript' },
+  { value: 'ts', label: 'TypeScript' },
+];
+
+const THEMES: SelectOption[] = [
+  { value: 'dark', label: 'Dark' },
+  { value: 'light', label: 'Light' },
+];
+
+function createSelect(
+  id: string,
+  label: string,
+  options: SelectOption[],
+  defaultValue: string,
+): HTMLElement {
+  const wrapper = document.createElement('div');
+
+  const lbl = document.createElement('label');
+  lbl.htmlFor = id;
+  lbl.textContent = label;
+  wrapper.appendChild(lbl);
+
+  const select = document.createElement('select');
+  select.id = id;
+  select.name = id;
+  for (const opt of options) {
+    const option = document.createElement('option');
+    option.value = opt.value;
+    option.textContent = opt.label;
+    if (opt.value === defaultValue) option.selected = true;
+    select.appendChild(option);
+  }
+  wrapper.appendChild(select);
+
+  return wrapper;
+}
+
+function createTextInput(id: string, label: string, defaultValue: string): HTMLElement {
+  const wrapper = document.createElement('div');
+
+  const lbl = document.createElement('label');
+  lbl.htmlFor = id;
+  lbl.textContent = label;
+  wrapper.appendChild(lbl);
+
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.id = id;
+  input.name = id;
+  input.value = defaultValue;
+  input.spellcheck = false;
+  wrapper.appendChild(input);
+
+  return wrapper;
+}
+
+function createCheckbox(id: string, label: string, defaultChecked: boolean): HTMLElement {
+  const wrapper = document.createElement('div');
+  wrapper.style.display = 'flex';
+  wrapper.style.alignItems = 'center';
+  wrapper.style.gap = '6px';
+  wrapper.style.marginTop = '12px';
+
+  const input = document.createElement('input');
+  input.type = 'checkbox';
+  input.id = id;
+  input.name = id;
+  input.checked = defaultChecked;
+  wrapper.appendChild(input);
+
+  const lbl = document.createElement('label');
+  lbl.htmlFor = id;
+  lbl.textContent = label;
+  lbl.style.marginTop = '0';
+  wrapper.appendChild(lbl);
+
+  return wrapper;
+}
+
+export function getInputOptions(task: TaskType): SelectOption[] {
+  const profile = TASK_PROFILES[task];
+  if (!profile) return [{ value: 'file', label: 'File' }];
+  return profile.supportedInputs.map((input) => ({
+    value: input,
+    label: input.charAt(0).toUpperCase() + input.slice(1),
+  }));
+}
+
+export function setupConfigPanel(
+  container: HTMLElement,
+  onChange: (values: ConfigValues) => void,
+): void {
+  const defaultTask: TaskType = 'image-classification';
+
+  container.appendChild(createTextInput('modelName', 'Model Name', 'mobilenet'));
+  container.appendChild(createSelect('task', 'Task', TASKS, defaultTask));
+  container.appendChild(createSelect('engine', 'Engine', ENGINES, 'ort'));
+  container.appendChild(createSelect('backend', 'Backend', BACKENDS, 'auto'));
+  container.appendChild(createSelect('framework', 'Framework', FRAMEWORKS, 'html'));
+  container.appendChild(createSelect('input', 'Input Mode', getInputOptions(defaultTask), 'file'));
+  container.appendChild(createSelect('lang', 'Language', LANGS, 'js'));
+  container.appendChild(createSelect('theme', 'Generated UI Theme', THEMES, 'dark'));
+  container.appendChild(createCheckbox('offline', 'Offline (OPFS cache)', false));
+
+  // Update input options when task changes
+  const taskSelect = container.querySelector('#task') as HTMLSelectElement;
+  const inputSelect = container.querySelector('#input') as HTMLSelectElement;
+
+  function updateInputOptions(): void {
+    const task = taskSelect.value as TaskType;
+    const options = getInputOptions(task);
+    inputSelect.innerHTML = '';
+    for (const opt of options) {
+      const option = document.createElement('option');
+      option.value = opt.value;
+      option.textContent = opt.label;
+      inputSelect.appendChild(option);
+    }
+  }
+
+  function getValues(): ConfigValues {
+    return {
+      task: (container.querySelector('#task') as HTMLSelectElement).value as TaskType,
+      engine: (container.querySelector('#engine') as HTMLSelectElement).value as Engine,
+      backend: (container.querySelector('#backend') as HTMLSelectElement).value as Backend,
+      framework: (container.querySelector('#framework') as HTMLSelectElement).value as Framework,
+      input: (container.querySelector('#input') as HTMLSelectElement).value as InputMode,
+      lang: (container.querySelector('#lang') as HTMLSelectElement).value as OutputLang,
+      theme: (container.querySelector('#theme') as HTMLSelectElement).value as Theme,
+      modelName: (container.querySelector('#modelName') as HTMLInputElement).value || 'model',
+      offline: (container.querySelector('#offline') as HTMLInputElement).checked,
+    };
+  }
+
+  // Listen for changes on all inputs
+  container.addEventListener('change', () => {
+    if (document.activeElement === taskSelect) {
+      updateInputOptions();
+    }
+    onChange(getValues());
+  });
+
+  container.addEventListener('input', (e) => {
+    if ((e.target as HTMLElement).id === 'modelName') {
+      onChange(getValues());
+    }
+  });
+
+  // Fire initial
+  onChange(getValues());
+}
