@@ -4,6 +4,7 @@ export default defineConfig([
   {
     entry: ['src/cli.ts'],
     format: ['esm'],
+    tsconfig: 'tsconfig.build.json',
     dts: false,
     clean: true,
     sourcemap: true,
@@ -14,6 +15,7 @@ export default defineConfig([
   {
     entry: ['src/index.ts'],
     format: ['esm'],
+    tsconfig: 'tsconfig.build.json',
     dts: true,
     clean: false,
     sourcemap: true,
