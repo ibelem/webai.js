@@ -19,6 +19,8 @@ CURRENT (9/10):
 
 10x VERSION:
   webai ./yolov8n.onnx
+  webai https://huggingface.co/user/repo/resolve/main/yolov8n.onnx
+  webai user/repo
   -> Auto-detects: object-detection task (from output shape [1,84,8400])
   -> Auto-selects: best engine + backend for current device
   -> Auto-picks: camera input (default for detection tasks)
@@ -273,7 +275,7 @@ Flag               Short   Values                         Default
 --backend          -b      wasm, webgpu, webnn-cpu,       (auto)
                            webnn-gpu, webnn-npu
 --task             -t      image-classification, etc.     (auto-detect)
---model            -m      path or HuggingFace ID         (required)
+--model            -m      path, URL, or HuggingFace ID   (required)
 --framework        -f      html, vanilla-vite, nextjs,    html
                            sveltekit, react-vite
 --input            -i      file, camera, video, mic,      (task default)
@@ -304,9 +306,24 @@ Backend (which hardware execution path, `-b`, optional override):
 Shorthand for `-e webnn`: since the engine is already WebNN, `-b npu`,
 `-b gpu`, `-b cpu` are accepted (no `webnn-` prefix needed).
 
+**Model input formats:**
+- `-m ./model.onnx` — local file path
+- `-m https://huggingface.co/user/repo/resolve/main/model.onnx` — direct HuggingFace URL
+- `-m user/repo` — HuggingFace model ID (resolves to best available ONNX/TFLite file)
+- Positional: `webai ./model.onnx` or `webai https://hf.co/.../model.onnx` or `webai user/repo`
+
+When the model source is a URL or HF model ID:
+- CLI fetches the model to a temp location for metadata parsing and task auto-detection
+- Generated code references the URL directly (not a local path)
+- When combined with `--offline`, generated code uses OPFS caching: fetch once from URL, load from cache after
+- HuggingFace URL normalization: `/blob/` rewritten to `/resolve/` for direct download (same pattern as model2webnn)
+- HuggingFace mirror fallback: auto-fallback to `hf-mirror.com` if primary URL times out (5s HEAD pre-check)
+
 **Examples with short flags:**
 ```bash
-webai ./yolov8n.onnx -f nextjs                    # auto-detect everything
+webai ./yolov8n.onnx -f nextjs                    # local file, auto-detect everything
+webai https://huggingface.co/user/repo/resolve/main/yolov8n.onnx -f nextjs  # HF URL
+webai user/repo -f nextjs                          # HF model ID, auto-resolve file
 webai generate -t object-detection -m ./yolov8n.onnx -e ort -f nextjs -i camera
 webai generate -m ./model.onnx -e ort -b webgpu   # force WebGPU backend
 webai generate -m ./model.onnx -e webnn -b npu    # pure WebNN API, force NPU
@@ -419,6 +436,7 @@ Vitest (matches the Vite-based build, supports TypeScript natively, fast).
 - Offline-first via OPFS model caching (Expansion #5, replaces service worker approach)
 - LiteRT.js inference emitter (CV tasks only)
 - WebNN inference emitter (delegates to model2webnn)
+- Online model support: HuggingFace URL + model ID resolution (Decision #40)
 - Golden output tests with reference model
 
 **Phase 2 -- Audio + Realtime Audio:**
@@ -483,6 +501,7 @@ Vitest (matches the Vite-based build, supports TypeScript natively, fast).
 
 **Phase 2 addition -- Web UI:**
 - Simple dropdown-based Web UI mirroring CLI flags (not visual node builder)
+- Model input: local file upload OR HuggingFace URL/model ID (same as CLI, see Decision #40)
 - Code preview with Monaco editor, tabbed per file
 - "Try it" button running generated code in sandboxed iframe
 
@@ -504,6 +523,10 @@ Vitest (matches the Vite-based build, supports TypeScript natively, fast).
 | WebNN device type unavailable | Fallback within WebNN: NPU -> GPU -> CPU. If all WebNN devices fail, fall through to WebGPU -> WASM. Status bar shows actual device used. |
 | Model has unsupported WebNN ops | CLI warning at generation time (if detectable from op list). Generated code includes try/catch around WebNN session creation with ORT Web WASM fallback. |
 | HF config fetch fails (network) | CLI warning: "Could not fetch HF config, using task defaults." Continue generation. |
+| HF URL model fetch fails (network) | Fail fast: "Could not fetch model from {url} — check URL and network connection." Suggest using a local file instead. |
+| HF URL returns non-model content (HTML) | Fail fast: "URL returned HTML, not a model file. For HuggingFace, use the /resolve/ URL (not /blob/)." Auto-rewrite attempted first. |
+| HF model ID has no ONNX/TFLite files | Fail fast: "No .onnx files found in {model-id}. This model may not have ONNX weights. Try downloading and converting manually." |
+| HF mirror fallback triggered | CLI info: "Primary HuggingFace URL slow, trying mirror..." Transparent to user, falls back automatically. |
 | Invalid flag combination | CLI error: "mic input is not supported for image-classification. Try --input camera" (from compatibility matrix) |
 
 ## Decisions from CEO Review (Sections 1-11 + Outside Voice)
@@ -524,6 +547,8 @@ ResolvedConfig (output of preprocess-resolver)
 │ lang: 'js' | 'ts'                                    │
 │ preprocess: { imageSize, mean, std, layout, ... }    │
 │ modelMeta: { inputs: TensorInfo[], outputs: TensorInfo[] } │
+│ modelSource: 'local' | 'url'                         │
+│ modelUrl?: string             // HF URL (when source=url) │
 │ offline: boolean                                      │
 │ theme: 'dark' | 'light'                              │
 └──────────────────┬───────────────────────────────────┘
@@ -620,6 +645,7 @@ directly. The assembler orchestrates: `config → L1(config) → L2(config, bloc
 37. **No circular dependency (from eng review outside voice):** The plan previously stated "model2webnn depends on @webai/core for preprocessing function catalog (future)." This creates a circular npm dependency (A depends on B depends on A). Revised: model2webnn NEVER depends on @webai/core. If model2webnn needs preprocessing functions in the future, it either (a) vendors/reimplements what it needs, or (b) takes preprocessing functions as injected callbacks. Dependency direction is strictly one-way: @webai/core → model2webnn, packages/cli → model2webnn + @webai/core.
 38. **Snapshot selection criteria (from eng review outside voice):** Not all 2700 (5 frameworks x 3 engines x 9 tasks x 5 inputs x 2 modes x 2 langs) combinations get snapshots. Selection strategy: one "golden" combo per engine (3), one per framework (5), one per input mode (5), one per mode/lang variant (4). That is ~17 representative snapshots. New snapshots are added when: (a) a new engine/framework/input is added, or (b) a bug is found in a specific combination. T24-T28 cover the Phase 1a subset. Selection criteria documented in `tests/README.md`.
 39. **Dev infrastructure in Phase 1a (from eng review outside voice):** Phase 1a includes: (a) GitHub Actions CI config (lint + typecheck + test on push/PR), (b) ESLint + Prettier config (shared across packages, also formats emitted code templates), (c) npm workspace protocol (`"@webai/core": "workspace:*"` in packages/cli/package.json), (d) `packages/cli/package.json` bin entry pointing to compiled CLI, (e) Node.js >=20 in engines field + `.nvmrc`, (f) TypeScript strict mode in both packages.
+40. **Online model support (CLI + Web UI):** Both CLI and Web UI accept three model input formats: (a) local file path (`./model.onnx`), (b) direct HuggingFace URL (`https://huggingface.co/user/repo/resolve/main/model.onnx`), (c) HuggingFace model ID (`user/repo`, auto-resolves to best available ONNX or TFLite file). The resolver classifies the input as `local-path | url | hf-model-id` and normalizes to an `ArrayBuffer` for metadata parsing. For URLs and model IDs, the CLI fetches the model to a temp location; generated code references the URL directly. HuggingFace URL normalization rewrites `/blob/` to `/resolve/` for direct download (same pattern as model2webnn's `transformHuggingFaceUrl()`). Mirror fallback: auto-fallback to `hf-mirror.com` if primary HuggingFace URL times out (5s HEAD pre-check, same pattern as model2webnn). When combined with `--offline`, generated code uses OPFS caching: fetches from URL on first load, serves from OPFS cache on subsequent loads. Web UI: URL paste field with same normalization + streaming progress bar. HF model ID resolution: fetch `https://huggingface.co/api/models/{id}` to list files, pick the first `.onnx` file (or `.tflite` if `--engine litert`). Resolves Open Question #1.
 
 ### Package Structure (from eng review)
 
@@ -805,6 +831,9 @@ Hierarchy:
 │          │  ┌─────────────────────────────────────────────┐  │
 │ Task: [▼]│  │ tabs: inference.js | preprocess.js | ...    │  │
 │ Model:   │  │                                             │  │
+│ [Browse] │  │                                             │  │
+│ or paste │  │                                             │  │
+│ HF URL   │  │                                             │  │
 │ Engine:  │  │  (Monaco editor, syntax highlighted)        │  │
 │ Framework│  │                                             │  │
 │ Input:   │  │                                             │  │
@@ -1095,11 +1124,39 @@ Generated 5 files in ./my-detector/
 ▸ Next: cd my-detector && npm install && npm run dev
 ```
 
-- Each resolver step shows a ✓ checkmark with what was resolved and how
+**Online model (HuggingFace URL):**
+```
+webai https://huggingface.co/nicjac/yolov8n-onnx/resolve/main/yolov8n.onnx -f nextjs
+
+✓ Fetched model: yolov8n.onnx (6.3 MB, from huggingface.co)
+✓ Detected task: object-detection
+  (from output shape [1,84,8400])
+✓ Engine: ORT Web (auto-select: WebNN NPU → WebNN GPU → WebGPU → WASM)
+✓ Input: camera (default for detection)
+✓ Framework: Next.js (app router)
+✓ Generated code uses model URL (OPFS cache on first load)
+
+Generated 5 files in ./my-detector/
+  ...
+
+▸ Next: cd my-detector && npm install && npm run dev
+```
+
+**HuggingFace model ID (auto-resolve):**
+```
+webai nicjac/yolov8n-onnx -f nextjs
+
+✓ Resolved model ID: nicjac/yolov8n-onnx → yolov8n.onnx (6.3 MB, ONNX)
+✓ Detected task: object-detection
+  ...
+```
+
+- Each resolver step shows a checkmark with what was resolved and how
 - File list shows every generated file
 - "Next:" gives the exact commands to run (copy-pasteable)
 - `--verbose` adds full resolver trace (each fallback step, config sources, template selection)
-- Errors use ✗ with specific message and suggestion
+- Errors use a cross mark with specific message and suggestion
+- Online models show fetch progress and source host
 
 ### User Journey: CLI → Working App
 
@@ -1185,7 +1242,7 @@ user SEES, not backend behavior.
 
 ## Open Questions (from design doc)
 
-1. **Model weight hosting:** Default assumption for Phase 1: user provides local model file path. For HuggingFace model IDs, generated code uses HF CDN URLs directly (`https://huggingface.co/{model}/resolve/main/{file}`). User can override with `--model-url` flag. Decision deadline: before Phase 1a CLI implementation.
+1. **Model weight hosting:** RESOLVED (Decision #40). Both CLI and Web UI support local files, HuggingFace URLs, and HuggingFace model IDs. CLI fetches model to temp for metadata parsing; generated code references URL directly. OPFS caching handles offline after first load.
 2. **WebNN fallback:** Default: console warning + ORT Web WASM auto-fallback in generated code. The backend auto-selection EP chain handles this naturally. No separate decision needed.
 
 ## NOT in Scope (from eng review)
@@ -1197,7 +1254,7 @@ Work considered during /plan-eng-review and explicitly deferred:
 - **WebNN code splitting for large models**: model2webnn's convert() can produce 50K+ line buildGraph() functions. Splitting into multiple files is a model2webnn concern, not webai.js.
 - **Bundler configuration in generated projects**: Generated projects use framework defaults (Vite, Next.js built-in). No custom webpack/rollup config.
 - **E2E browser tests for all frameworks**: Only html and react-vite get Playwright E2E in Phase 1a. Other frameworks tested via build-only (npm run build succeeds).
-- **HuggingFace model download in CLI**: Phase 1 assumes local model files. HF download is deferred (Open Question #1).
+- **HuggingFace model download in CLI**: RESOLVED — moved to Phase 1b scope (Decision #40).
 - **Monorepo release automation**: No changesets, no auto-publish. Manual npm publish per package until Phase 2.
 
 ## What Already Exists (from eng review)
