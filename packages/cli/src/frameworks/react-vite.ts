@@ -14,6 +14,7 @@ import {
   addExports,
   findBlock,
   collectImports,
+  collectAuxiliaryFiles,
   emitReadme,
   getTaskLabel,
   getEngineLabel,
@@ -106,6 +107,18 @@ createRoot(document.getElementById('root')${config.lang === 'ts' ? '!' : ''}).re
 }
 
 function emitApp(config: ResolvedConfig): string {
+  // Audio tasks
+  if (config.task === 'text-to-speech') return emitTextToSpeechApp(config);
+  if (config.task === 'audio-classification') {
+    if (config.input === 'mic') return emitMicAudioClassificationApp(config);
+    return emitFileAudioClassificationApp(config);
+  }
+  if (config.task === 'speech-to-text') {
+    if (config.input === 'mic') return emitMicSpeechToTextApp(config);
+    return emitFileSpeechToTextApp(config);
+  }
+
+  // Visual realtime
   if (config.input === 'camera' || config.input === 'screen') {
     return emitRealtimeApp(config);
   }
@@ -638,6 +651,428 @@ export default function App() {
 `;
 }
 
+// ---- Audio: File + Classification ----
+
+function emitFileAudioClassificationApp(config: ResolvedConfig): string {
+  const t = config.lang === 'ts';
+  const le = libExt(config);
+  const taskLabel = getTaskLabel(config.task);
+  const engineLabel = getEngineLabel(config.engine);
+
+  const stateType = t ? '<{ indices: number[]; values: number[] } | null>' : '';
+
+  return `import { useState, useEffect, useRef, useCallback } from 'react';
+import { createSession, runInference, getBackendLabel } from './lib/inference.${le}';
+import { melSpectrogram, mfcc } from './lib/preprocess.${le}';
+import { postprocessResults } from './lib/postprocess.${le}';
+
+const MODEL_PATH = '${getModelPath(config, '')}';
+
+export default function App() {
+  const [results, setResults] = useState${stateType}(null);
+  const [status, setStatus] = useState('Loading model...');
+  const sessionRef = useRef${t ? '<Awaited<ReturnType<typeof createSession>> | null>' : ''}(null);
+
+  useEffect(() => {
+    createSession(MODEL_PATH).then((s) => {
+      sessionRef.current = s;
+      setStatus('${config.modelName} \\u00b7 Ready');
+    }).catch((e) => { setStatus('Failed to load model'); console.error('Model load error:', e); });
+  }, []);
+
+  const handleFileChange = useCallback(async (e${t ? ': React.ChangeEvent<HTMLInputElement>' : ''}) => {
+    const file = e.target.files?.[0];
+    if (!file || !sessionRef.current) return;
+
+    setStatus('${config.modelName} \\u00b7 Decoding audio...');
+
+    const arrayBuffer = await file.arrayBuffer();
+    const audioCtx = new OfflineAudioContext(1, 1, 16000);
+    const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+
+    const offlineCtx = new OfflineAudioContext(1, Math.ceil(audioBuffer.duration * 16000), 16000);
+    const source = offlineCtx.createBufferSource();
+    source.buffer = audioBuffer;
+    source.connect(offlineCtx.destination);
+    source.start();
+    const resampled = await offlineCtx.startRendering();
+    const samples = resampled.getChannelData(0);
+
+    setStatus('${config.modelName} \\u00b7 Processing...');
+    const start = performance.now();
+
+    const mel = melSpectrogram(samples, 16000, 512, 160, 40);
+    const features = mfcc(mel.data, mel.numFrames, mel.numMelBands, 13);
+    const output = await runInference(sessionRef.current, features);
+    const r = postprocessResults(output);
+
+    const elapsed = (performance.now() - start).toFixed(1);
+    setStatus(\`${config.modelName} \\u00b7 \${elapsed}ms \\u00b7 \${getBackendLabel(sessionRef.current)}\`);
+    setResults(r);
+  }, []);
+
+  return (
+    <>
+      <a href="#results" className="skip-link">Skip to results</a>
+      <main>
+        <h1>${config.modelName} — ${taskLabel}</h1>
+        <div>
+          <label htmlFor="fileInput">Choose an audio file</label>
+          <input id="fileInput" type="file" accept="audio/*" onChange={handleFileChange} aria-label="Select audio file for ${taskLabel.toLowerCase()}" />
+        </div>
+        <div id="results" className="results" role="status" aria-live="polite" aria-atomic="true">
+          {results && results.indices.map((idx${t ? ': number' : ''}, i${t ? ': number' : ''}) => {
+            const pct = (results.values[i] * 100).toFixed(1);
+            if (results.values[i] < 0.01) return null;
+            const maxVal = results.values[0] || 1;
+            return (
+              <div key={idx} className={\`result-row\${i === 0 ? ' top-result' : ''}\`} tabIndex={0}
+                   aria-label={\`Class \${idx}: \${pct} percent\`}>
+                <span className="result-label">Class {idx}</span>
+                <div className="result-bar-container">
+                  <div className="result-bar" style={{ width: \`\${(results.values[i] / maxVal) * 100}%\` }} />
+                </div>
+                <span className="result-pct">{pct}%</span>
+              </div>
+            );
+          })}
+        </div>
+      </main>
+      <aside className="status-bar"><span>{status}</span></aside>
+      <div className="footer">Generated by webai.js · ${config.modelName} · ${engineLabel}</div>
+    </>
+  );
+}
+`;
+}
+
+// ---- Audio: File + Speech-to-Text ----
+
+function emitFileSpeechToTextApp(config: ResolvedConfig): string {
+  const t = config.lang === 'ts';
+  const le = libExt(config);
+  const taskLabel = getTaskLabel(config.task);
+  const engineLabel = getEngineLabel(config.engine);
+
+  return `import { useState, useEffect, useRef, useCallback } from 'react';
+import { createSession, runInference, getBackendLabel } from './lib/inference.${le}';
+import { melSpectrogram } from './lib/preprocess.${le}';
+import { postprocessTranscript } from './lib/postprocess.${le}';
+
+const MODEL_PATH = '${getModelPath(config, '')}';
+const VOCAB = [' ', ...'abcdefghijklmnopqrstuvwxyz'.split(''), "'"];
+
+export default function App() {
+  const [transcript, setTranscript] = useState('');
+  const [status, setStatus] = useState('Loading model...');
+  const sessionRef = useRef${t ? '<Awaited<ReturnType<typeof createSession>> | null>' : ''}(null);
+
+  useEffect(() => {
+    createSession(MODEL_PATH).then((s) => {
+      sessionRef.current = s;
+      setStatus('${config.modelName} \\u00b7 Ready');
+    }).catch((e) => { setStatus('Failed to load model'); console.error('Model load error:', e); });
+  }, []);
+
+  const handleFileChange = useCallback(async (e${t ? ': React.ChangeEvent<HTMLInputElement>' : ''}) => {
+    const file = e.target.files?.[0];
+    if (!file || !sessionRef.current) return;
+
+    setStatus('${config.modelName} \\u00b7 Decoding audio...');
+
+    const arrayBuffer = await file.arrayBuffer();
+    const audioCtx = new OfflineAudioContext(1, 1, 16000);
+    const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+
+    const offlineCtx = new OfflineAudioContext(1, Math.ceil(audioBuffer.duration * 16000), 16000);
+    const source = offlineCtx.createBufferSource();
+    source.buffer = audioBuffer;
+    source.connect(offlineCtx.destination);
+    source.start();
+    const resampled = await offlineCtx.startRendering();
+    const samples = resampled.getChannelData(0);
+
+    setStatus('${config.modelName} \\u00b7 Processing...');
+    const start = performance.now();
+
+    const mel = melSpectrogram(samples, 16000, 512, 160, 80);
+    const output = await runInference(sessionRef.current, mel.data);
+    const vocabSize = VOCAB.length + 1;
+    const numTimesteps = Math.floor(output.length / vocabSize);
+    const text = postprocessTranscript(output, numTimesteps, vocabSize, VOCAB);
+
+    const elapsed = (performance.now() - start).toFixed(1);
+    setStatus(\`${config.modelName} \\u00b7 \${elapsed}ms \\u00b7 \${getBackendLabel(sessionRef.current)}\`);
+    setTranscript(text || '(no speech detected)');
+  }, []);
+
+  return (
+    <>
+      <a href="#transcript" className="skip-link">Skip to results</a>
+      <main>
+        <h1>${config.modelName} — ${taskLabel}</h1>
+        <div>
+          <label htmlFor="fileInput">Choose an audio file</label>
+          <input id="fileInput" type="file" accept="audio/*" onChange={handleFileChange} aria-label="Select audio file for ${taskLabel.toLowerCase()}" />
+        </div>
+        <pre id="transcript" className="transcript" role="status" aria-live="polite" aria-atomic="true">{transcript}</pre>
+      </main>
+      <aside className="status-bar"><span>{status}</span></aside>
+      <div className="footer">Generated by webai.js · ${config.modelName} · ${engineLabel}</div>
+    </>
+  );
+}
+`;
+}
+
+// ---- Audio: Mic + Speech-to-Text ----
+
+function emitMicSpeechToTextApp(config: ResolvedConfig): string {
+  const t = config.lang === 'ts';
+  const le = libExt(config);
+  const taskLabel = getTaskLabel(config.task);
+  const engineLabel = getEngineLabel(config.engine);
+
+  return `import { useState, useEffect, useRef, useCallback } from 'react';
+import { createSession, runInference, getBackendLabel } from './lib/inference.${le}';
+import { melSpectrogram } from './lib/preprocess.${le}';
+import { postprocessTranscript } from './lib/postprocess.${le}';
+import { startAudioCapture, stopStream, createAudioInferenceLoop } from './lib/input.${le}';
+
+const MODEL_PATH = '${getModelPath(config, '')}';
+const VOCAB = [' ', ...'abcdefghijklmnopqrstuvwxyz'.split(''), "'"];
+
+export default function App() {
+  const [transcript, setTranscript] = useState('(listening...)');
+  const [status, setStatus] = useState('Loading model...');
+  const [recording, setRecording] = useState(false);
+  const sessionRef = useRef${t ? '<Awaited<ReturnType<typeof createSession>> | null>' : ''}(null);
+  const captureRef = useRef${t ? '<any>' : ''}(null);
+  const loopRef = useRef${t ? '<any>' : ''}(null);
+
+  useEffect(() => {
+    createSession(MODEL_PATH).then((s) => {
+      sessionRef.current = s;
+      setStatus('${config.modelName} \\u00b7 Ready');
+    }).catch((e) => { setStatus('Failed to load model'); console.error('Model load error:', e); });
+    return () => {
+      if (loopRef.current) loopRef.current.stop();
+      if (captureRef.current) { stopStream(captureRef.current.stream); captureRef.current.audioContext.close(); }
+    };
+  }, []);
+
+  async function processAudio(samples${t ? ': Float32Array' : ''}) {
+    const mel = melSpectrogram(samples, 16000, 512, 160, 80);
+    const output = await runInference(sessionRef.current${t ? '!' : ''}, mel.data);
+    const vocabSize = VOCAB.length + 1;
+    const numTimesteps = Math.floor(output.length / vocabSize);
+    return postprocessTranscript(output, numTimesteps, vocabSize, VOCAB);
+  }
+
+  const handleStart = useCallback(async () => {
+    if (!sessionRef.current) { setStatus('Model not loaded yet.'); return; }
+    try {
+      captureRef.current = await startAudioCapture(16000);
+      setRecording(true);
+      setStatus('${config.modelName} \\u00b7 Listening...');
+      loopRef.current = createAudioInferenceLoop({
+        getSamples: captureRef.current.getSamples,
+        onResult(text${t ? ': string' : ''}) { setTranscript(text || '(listening...)'); },
+        intervalMs: 2000,
+      });
+      loopRef.current.start();
+    } catch (e) { setStatus('Microphone access denied'); console.error('Mic error:', e); }
+  }, []);
+
+  const handleStop = useCallback(() => {
+    if (loopRef.current) { loopRef.current.stop(); loopRef.current = null; }
+    if (captureRef.current) { stopStream(captureRef.current.stream); captureRef.current.audioContext.close(); captureRef.current = null; }
+    setRecording(false);
+    setStatus('${config.modelName} \\u00b7 Stopped');
+  }, []);
+
+  return (
+    <>
+      <a href="#transcript" className="skip-link">Skip to results</a>
+      <main>
+        <h1>${config.modelName} — ${taskLabel}</h1>
+        <div className="controls" role="group" aria-label="Recording controls">
+          <button onClick={handleStart} disabled={recording} aria-label="Start recording">Start Recording</button>
+          <button onClick={handleStop} disabled={!recording} aria-label="Stop recording">Stop Recording</button>
+        </div>
+        <pre id="transcript" className="transcript" role="status" aria-live="polite" aria-atomic="true">{transcript}</pre>
+      </main>
+      <aside className="status-bar"><span>{status}</span></aside>
+      <div className="footer">Generated by webai.js · ${config.modelName} · ${engineLabel}</div>
+    </>
+  );
+}
+`;
+}
+
+// ---- Audio: Mic + Classification ----
+
+function emitMicAudioClassificationApp(config: ResolvedConfig): string {
+  const t = config.lang === 'ts';
+  const le = libExt(config);
+  const taskLabel = getTaskLabel(config.task);
+  const engineLabel = getEngineLabel(config.engine);
+
+  const stateType = t ? '<{ indices: number[]; values: number[] } | null>' : '';
+
+  return `import { useState, useEffect, useRef, useCallback } from 'react';
+import { createSession, runInference, getBackendLabel } from './lib/inference.${le}';
+import { melSpectrogram, mfcc } from './lib/preprocess.${le}';
+import { postprocessResults } from './lib/postprocess.${le}';
+import { startAudioCapture, stopStream, createAudioInferenceLoop } from './lib/input.${le}';
+
+const MODEL_PATH = '${getModelPath(config, '')}';
+
+export default function App() {
+  const [results, setResults] = useState${stateType}(null);
+  const [status, setStatus] = useState('Loading model...');
+  const [recording, setRecording] = useState(false);
+  const sessionRef = useRef${t ? '<Awaited<ReturnType<typeof createSession>> | null>' : ''}(null);
+  const captureRef = useRef${t ? '<any>' : ''}(null);
+  const loopRef = useRef${t ? '<any>' : ''}(null);
+
+  useEffect(() => {
+    createSession(MODEL_PATH).then((s) => {
+      sessionRef.current = s;
+      setStatus('${config.modelName} \\u00b7 Ready');
+    }).catch((e) => { setStatus('Failed to load model'); console.error('Model load error:', e); });
+    return () => {
+      if (loopRef.current) loopRef.current.stop();
+      if (captureRef.current) { stopStream(captureRef.current.stream); captureRef.current.audioContext.close(); }
+    };
+  }, []);
+
+  async function processAudio(samples${t ? ': Float32Array' : ''}) {
+    const mel = melSpectrogram(samples, 16000, 512, 160, 40);
+    const features = mfcc(mel.data, mel.numFrames, mel.numMelBands, 13);
+    const output = await runInference(sessionRef.current${t ? '!' : ''}, features);
+    return postprocessResults(output);
+  }
+
+  const handleStart = useCallback(async () => {
+    if (!sessionRef.current) { setStatus('Model not loaded yet.'); return; }
+    try {
+      captureRef.current = await startAudioCapture(16000);
+      setRecording(true);
+      setStatus('${config.modelName} \\u00b7 Listening...');
+      loopRef.current = createAudioInferenceLoop({
+        getSamples: captureRef.current.getSamples,
+        onResult(r${t ? ': { indices: number[]; values: number[] }' : ''}) { setResults(r); },
+        intervalMs: 2000,
+      });
+      loopRef.current.start();
+    } catch (e) { setStatus('Microphone access denied'); console.error('Mic error:', e); }
+  }, []);
+
+  const handleStop = useCallback(() => {
+    if (loopRef.current) { loopRef.current.stop(); loopRef.current = null; }
+    if (captureRef.current) { stopStream(captureRef.current.stream); captureRef.current.audioContext.close(); captureRef.current = null; }
+    setRecording(false);
+    setStatus('${config.modelName} \\u00b7 Stopped');
+  }, []);
+
+  return (
+    <>
+      <a href="#results" className="skip-link">Skip to results</a>
+      <main>
+        <h1>${config.modelName} — ${taskLabel}</h1>
+        <div className="controls" role="group" aria-label="Recording controls">
+          <button onClick={handleStart} disabled={recording} aria-label="Start recording">Start Recording</button>
+          <button onClick={handleStop} disabled={!recording} aria-label="Stop recording">Stop Recording</button>
+        </div>
+        <div id="results" className="results" role="status" aria-live="polite" aria-atomic="true">
+          {results && results.indices.map((idx${t ? ': number' : ''}, i${t ? ': number' : ''}) => {
+            const pct = (results.values[i] * 100).toFixed(1);
+            if (results.values[i] < 0.01) return null;
+            const maxVal = results.values[0] || 1;
+            return (
+              <div key={idx} className={\`result-row\${i === 0 ? ' top-result' : ''}\`} tabIndex={0}
+                   aria-label={\`Class \${idx}: \${pct} percent\`}>
+                <span className="result-label">Class {idx}</span>
+                <div className="result-bar-container">
+                  <div className="result-bar" style={{ width: \`\${(results.values[i] / maxVal) * 100}%\` }} />
+                </div>
+                <span className="result-pct">{pct}%</span>
+              </div>
+            );
+          })}
+        </div>
+      </main>
+      <aside className="status-bar"><span>{status}</span></aside>
+      <div className="footer">Generated by webai.js · ${config.modelName} · ${engineLabel}</div>
+    </>
+  );
+}
+`;
+}
+
+// ---- Audio: Text-to-Speech ----
+
+function emitTextToSpeechApp(config: ResolvedConfig): string {
+  const t = config.lang === 'ts';
+  const le = libExt(config);
+  const taskLabel = getTaskLabel(config.task);
+  const engineLabel = getEngineLabel(config.engine);
+
+  return `import { useState, useEffect, useRef, useCallback } from 'react';
+import { createSession, runInference, getBackendLabel } from './lib/inference.${le}';
+import { postprocessAudio, playAudio } from './lib/postprocess.${le}';
+
+const MODEL_PATH = '${getModelPath(config, '')}';
+
+export default function App() {
+  const [status, setStatus] = useState('Loading model...');
+  const [text, setText] = useState('Hello, this is a test of text to speech.');
+  const sessionRef = useRef${t ? '<Awaited<ReturnType<typeof createSession>> | null>' : ''}(null);
+
+  useEffect(() => {
+    createSession(MODEL_PATH).then((s) => {
+      sessionRef.current = s;
+      setStatus('${config.modelName} \\u00b7 Ready');
+    }).catch((e) => { setStatus('Failed to load model'); console.error('Model load error:', e); });
+  }, []);
+
+  const handleSynthesize = useCallback(async () => {
+    const trimmed = text.trim();
+    if (!trimmed || !sessionRef.current) return;
+
+    setStatus('${config.modelName} \\u00b7 Synthesizing...');
+    const start = performance.now();
+
+    const tokens = new Float32Array(trimmed.length);
+    for (let i = 0; i < trimmed.length; i++) { tokens[i] = trimmed.charCodeAt(i); }
+
+    const output = await runInference(sessionRef.current, tokens);
+    const samples = postprocessAudio(output);
+    await playAudio(samples);
+
+    const elapsed = (performance.now() - start).toFixed(1);
+    setStatus(\`${config.modelName} \\u00b7 \${elapsed}ms \\u00b7 \${getBackendLabel(sessionRef.current)}\`);
+  }, [text]);
+
+  return (
+    <>
+      <main>
+        <h1>${config.modelName} — ${taskLabel}</h1>
+        <div className="tts-input">
+          <label htmlFor="textInput">Enter text to synthesize</label>
+          <textarea id="textInput" rows={4} value={text} onChange={(e) => setText(e.target.value)} aria-label="Text to synthesize" />
+          <button className="primary-btn" onClick={handleSynthesize} aria-label="Synthesize speech">Synthesize</button>
+        </div>
+      </main>
+      <aside className="status-bar"><span>{status}</span></aside>
+      <div className="footer">Generated by webai.js · ${config.modelName} · ${engineLabel}</div>
+    </>
+  );
+}
+`;
+}
+
 function emitRealtimeApp(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
@@ -858,6 +1293,9 @@ export function emitReactVite(config: ResolvedConfig, blocks: CodeBlock[]): Gene
     { path: `src/lib/postprocess.${le}`, content: toLibModule(postprocessBlock) },
     { path: 'README.md', content: emitReadme(config, filePaths) },
   );
+
+  // Include auxiliary files from Layer 1 blocks (e.g. AudioWorklet processor)
+  files.push(...collectAuxiliaryFiles(blocks));
 
   return files;
 }

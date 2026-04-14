@@ -68,6 +68,12 @@ function emitBlockCode(config: ResolvedConfig, blocks: CodeBlock[]): string {
   return sections.join('\n\n');
 }
 
+// ---- Audio task helpers ----
+
+function isAudioTask(task: string): boolean {
+  return task === 'audio-classification' || task === 'speech-to-text' || task === 'text-to-speech';
+}
+
 // ---- Color palette for detection/segmentation ----
 
 function emitColorPalette(): string {
@@ -792,10 +798,425 @@ pauseBtn.addEventListener('click', () => {
 init();`;
 }
 
+// ---- File + Audio Classification script ----
+
+function emitFileAudioClassificationScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
+  return `${emitBlockCode(config, blocks)}
+
+// --- Application ---
+const MODEL_PATH = '${getModelPath(config, '.')}';
+let session = null;
+
+function updateStatus(text) {
+  document.getElementById('status').textContent = text;
+}
+
+async function init() {
+  updateStatus('Loading model...');
+  try {
+    session = await createSession(MODEL_PATH);
+    updateStatus('${config.modelName} \\u00b7 Ready');
+  } catch (e) {
+    updateStatus('Failed to load model');
+    console.error('Model load error:', e);
+  }
+}
+
+const fileInput = document.getElementById('fileInput');
+const resultsDiv = document.getElementById('results');
+
+fileInput.addEventListener('change', async () => {
+  const file = fileInput.files[0];
+  if (!file) return;
+
+  if (!session) {
+    resultsDiv.textContent = 'Model not loaded yet. Please wait.';
+    return;
+  }
+
+  updateStatus('${config.modelName} \\u00b7 Decoding audio...');
+
+  const arrayBuffer = await file.arrayBuffer();
+  const audioCtx = new OfflineAudioContext(1, 1, 16000);
+  const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+
+  // Resample to 16kHz mono
+  const offlineCtx = new OfflineAudioContext(1, Math.ceil(audioBuffer.duration * 16000), 16000);
+  const source = offlineCtx.createBufferSource();
+  source.buffer = audioBuffer;
+  source.connect(offlineCtx.destination);
+  source.start();
+  const resampled = await offlineCtx.startRendering();
+  const samples = resampled.getChannelData(0);
+
+  updateStatus('${config.modelName} \\u00b7 Processing...');
+  const start = performance.now();
+
+  const mel = melSpectrogram(samples, 16000, 512, 160, 40);
+  const features = mfcc(mel.data, mel.numFrames, mel.numMelBands, 13);
+  const output = await runInference(session, features);
+  const results = postprocessResults(output);
+
+  const elapsed = (performance.now() - start).toFixed(1);
+  updateStatus('${config.modelName} \\u00b7 ' + elapsed + 'ms \\u00b7 ' + getBackendLabel(session));
+
+  renderResults(results);
+});
+
+function renderResults(results) {
+  resultsDiv.innerHTML = '';
+  const maxValue = results.values[0] || 1;
+
+  for (let i = 0; i < results.indices.length; i++) {
+    const pct = (results.values[i] * 100).toFixed(1);
+    if (results.values[i] < 0.01) continue;
+
+    const row = document.createElement('div');
+    row.className = 'result-row' + (i === 0 ? ' top-result' : '');
+    row.setAttribute('tabindex', '0');
+    row.setAttribute('aria-label', 'Class ' + results.indices[i] + ': ' + pct + ' percent');
+
+    row.innerHTML =
+      '<span class="result-label">Class ' + results.indices[i] + '</span>' +
+      '<div class="result-bar-container"><div class="result-bar" style="width:' +
+      ((results.values[i] / maxValue) * 100) + '%"></div></div>' +
+      '<span class="result-pct">' + pct + '%</span>';
+
+    resultsDiv.appendChild(row);
+  }
+}
+
+init();`;
+}
+
+// ---- File + Speech-to-Text script ----
+
+function emitFileSpeechToTextScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
+  return `${emitBlockCode(config, blocks)}
+
+// --- Application ---
+const MODEL_PATH = '${getModelPath(config, '.')}';
+const VOCAB = [' ', ...'abcdefghijklmnopqrstuvwxyz'.split(''), "'"];
+let session = null;
+
+function updateStatus(text) {
+  document.getElementById('status').textContent = text;
+}
+
+async function init() {
+  updateStatus('Loading model...');
+  try {
+    session = await createSession(MODEL_PATH);
+    updateStatus('${config.modelName} \\u00b7 Ready');
+  } catch (e) {
+    updateStatus('Failed to load model');
+    console.error('Model load error:', e);
+  }
+}
+
+const fileInput = document.getElementById('fileInput');
+const transcript = document.getElementById('transcript');
+
+fileInput.addEventListener('change', async () => {
+  const file = fileInput.files[0];
+  if (!file) return;
+
+  if (!session) {
+    transcript.textContent = 'Model not loaded yet. Please wait.';
+    return;
+  }
+
+  updateStatus('${config.modelName} \\u00b7 Decoding audio...');
+
+  const arrayBuffer = await file.arrayBuffer();
+  const audioCtx = new OfflineAudioContext(1, 1, 16000);
+  const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+
+  // Resample to 16kHz mono
+  const offlineCtx = new OfflineAudioContext(1, Math.ceil(audioBuffer.duration * 16000), 16000);
+  const source = offlineCtx.createBufferSource();
+  source.buffer = audioBuffer;
+  source.connect(offlineCtx.destination);
+  source.start();
+  const resampled = await offlineCtx.startRendering();
+  const samples = resampled.getChannelData(0);
+
+  updateStatus('${config.modelName} \\u00b7 Processing...');
+  const start = performance.now();
+
+  const mel = melSpectrogram(samples, 16000, 512, 160, 80);
+  const output = await runInference(session, mel.data);
+  const vocabSize = VOCAB.length + 1;
+  const numTimesteps = Math.floor(output.length / vocabSize);
+  const text = postprocessTranscript(output, numTimesteps, vocabSize, VOCAB);
+
+  const elapsed = (performance.now() - start).toFixed(1);
+  updateStatus('${config.modelName} \\u00b7 ' + elapsed + 'ms \\u00b7 ' + getBackendLabel(session));
+
+  transcript.textContent = text || '(no speech detected)';
+});
+
+init();`;
+}
+
+// ---- Realtime (mic) + Speech-to-Text script ----
+
+function emitRealtimeSpeechToTextScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
+  return `${emitBlockCode(config, blocks)}
+
+// --- Application ---
+const MODEL_PATH = '${getModelPath(config, '.')}';
+const VOCAB = [' ', ...'abcdefghijklmnopqrstuvwxyz'.split(''), "'"];
+let session = null;
+let capture = null;
+let loop = null;
+
+function updateStatus(text) {
+  document.getElementById('status').textContent = text;
+}
+
+async function init() {
+  updateStatus('Loading model...');
+  try {
+    session = await createSession(MODEL_PATH);
+    updateStatus('${config.modelName} \\u00b7 Ready');
+  } catch (e) {
+    updateStatus('Failed to load model');
+    console.error('Model load error:', e);
+  }
+}
+
+async function processAudio(samples) {
+  const mel = melSpectrogram(samples, 16000, 512, 160, 80);
+  const output = await runInference(session, mel.data);
+  const vocabSize = VOCAB.length + 1;
+  const numTimesteps = Math.floor(output.length / vocabSize);
+  return postprocessTranscript(output, numTimesteps, vocabSize, VOCAB);
+}
+
+const startBtn = document.getElementById('startBtn');
+const stopBtn = document.getElementById('stopBtn');
+const transcript = document.getElementById('transcript');
+
+startBtn.addEventListener('click', async () => {
+  if (!session) {
+    updateStatus('Model not loaded yet.');
+    return;
+  }
+
+  try {
+    capture = await startAudioCapture(16000);
+    startBtn.disabled = true;
+    stopBtn.disabled = false;
+    updateStatus('${config.modelName} \\u00b7 Listening...');
+
+    loop = createAudioInferenceLoop({
+      getSamples: capture.getSamples,
+      onResult(text) {
+        transcript.textContent = text || '(listening...)';
+      },
+      intervalMs: 2000,
+    });
+    loop.start();
+  } catch (e) {
+    updateStatus('Microphone access denied');
+    console.error('Mic error:', e);
+  }
+});
+
+stopBtn.addEventListener('click', () => {
+  if (loop) { loop.stop(); loop = null; }
+  if (capture) {
+    stopStream(capture.stream);
+    capture.audioContext.close();
+    capture = null;
+  }
+  startBtn.disabled = false;
+  stopBtn.disabled = true;
+  updateStatus('${config.modelName} \\u00b7 Stopped');
+});
+
+init();`;
+}
+
+// ---- Realtime (mic) + Audio Classification script ----
+
+function emitRealtimeAudioClassificationScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
+  return `${emitBlockCode(config, blocks)}
+
+// --- Application ---
+const MODEL_PATH = '${getModelPath(config, '.')}';
+let session = null;
+let capture = null;
+let loop = null;
+
+function updateStatus(text) {
+  document.getElementById('status').textContent = text;
+}
+
+async function init() {
+  updateStatus('Loading model...');
+  try {
+    session = await createSession(MODEL_PATH);
+    updateStatus('${config.modelName} \\u00b7 Ready');
+  } catch (e) {
+    updateStatus('Failed to load model');
+    console.error('Model load error:', e);
+  }
+}
+
+async function processAudio(samples) {
+  const mel = melSpectrogram(samples, 16000, 512, 160, 40);
+  const features = mfcc(mel.data, mel.numFrames, mel.numMelBands, 13);
+  const output = await runInference(session, features);
+  return postprocessResults(output);
+}
+
+const startBtn = document.getElementById('startBtn');
+const stopBtn = document.getElementById('stopBtn');
+const resultsDiv = document.getElementById('results');
+
+startBtn.addEventListener('click', async () => {
+  if (!session) {
+    updateStatus('Model not loaded yet.');
+    return;
+  }
+
+  try {
+    capture = await startAudioCapture(16000);
+    startBtn.disabled = true;
+    stopBtn.disabled = false;
+    updateStatus('${config.modelName} \\u00b7 Listening...');
+
+    loop = createAudioInferenceLoop({
+      getSamples: capture.getSamples,
+      onResult(results) {
+        renderResults(results);
+      },
+      intervalMs: 2000,
+    });
+    loop.start();
+  } catch (e) {
+    updateStatus('Microphone access denied');
+    console.error('Mic error:', e);
+  }
+});
+
+stopBtn.addEventListener('click', () => {
+  if (loop) { loop.stop(); loop = null; }
+  if (capture) {
+    stopStream(capture.stream);
+    capture.audioContext.close();
+    capture = null;
+  }
+  startBtn.disabled = false;
+  stopBtn.disabled = true;
+  updateStatus('${config.modelName} \\u00b7 Stopped');
+});
+
+function renderResults(results) {
+  resultsDiv.innerHTML = '';
+  const maxValue = results.values[0] || 1;
+
+  for (let i = 0; i < results.indices.length; i++) {
+    const pct = (results.values[i] * 100).toFixed(1);
+    if (results.values[i] < 0.01) continue;
+
+    const row = document.createElement('div');
+    row.className = 'result-row' + (i === 0 ? ' top-result' : '');
+    row.setAttribute('tabindex', '0');
+    row.setAttribute('aria-label', 'Class ' + results.indices[i] + ': ' + pct + ' percent');
+
+    row.innerHTML =
+      '<span class="result-label">Class ' + results.indices[i] + '</span>' +
+      '<div class="result-bar-container"><div class="result-bar" style="width:' +
+      ((results.values[i] / maxValue) * 100) + '%"></div></div>' +
+      '<span class="result-pct">' + pct + '%</span>';
+
+    resultsDiv.appendChild(row);
+  }
+}
+
+init();`;
+}
+
+// ---- Text-to-Speech script ----
+
+function emitTextToSpeechScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
+  return `${emitBlockCode(config, blocks)}
+
+// --- Application ---
+const MODEL_PATH = '${getModelPath(config, '.')}';
+let session = null;
+
+function updateStatus(text) {
+  document.getElementById('status').textContent = text;
+}
+
+async function init() {
+  updateStatus('Loading model...');
+  try {
+    session = await createSession(MODEL_PATH);
+    updateStatus('${config.modelName} \\u00b7 Ready');
+  } catch (e) {
+    updateStatus('Failed to load model');
+    console.error('Model load error:', e);
+  }
+}
+
+const textInput = document.getElementById('textInput');
+const synthesizeBtn = document.getElementById('synthesizeBtn');
+
+synthesizeBtn.addEventListener('click', async () => {
+  const text = textInput.value.trim();
+  if (!text) return;
+
+  if (!session) {
+    updateStatus('Model not loaded yet. Please wait.');
+    return;
+  }
+
+  updateStatus('${config.modelName} \\u00b7 Synthesizing...');
+  const start = performance.now();
+
+  // Simple char-to-charCode tokenization
+  const tokens = new Float32Array(text.length);
+  for (let i = 0; i < text.length; i++) {
+    tokens[i] = text.charCodeAt(i);
+  }
+
+  const output = await runInference(session, tokens);
+  const samples = postprocessAudio(output);
+  await playAudio(samples);
+
+  const elapsed = (performance.now() - start).toFixed(1);
+  updateStatus('${config.modelName} \\u00b7 ' + elapsed + 'ms \\u00b7 ' + getBackendLabel(session));
+});
+
+init();`;
+}
+
 // ---- Script dispatcher ----
 
 function emitAppScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
-  // Realtime input modes
+  // Audio tasks
+  if (config.task === 'audio-classification') {
+    if (config.input === 'mic') {
+      return emitRealtimeAudioClassificationScript(config, blocks);
+    }
+    return emitFileAudioClassificationScript(config, blocks);
+  }
+  if (config.task === 'speech-to-text') {
+    if (config.input === 'mic') {
+      return emitRealtimeSpeechToTextScript(config, blocks);
+    }
+    return emitFileSpeechToTextScript(config, blocks);
+  }
+  if (config.task === 'text-to-speech') {
+    return emitTextToSpeechScript(config, blocks);
+  }
+
+  // Realtime input modes (visual)
   if (config.input === 'camera' || config.input === 'screen') {
     return emitRealtimeScript(config, blocks);
   }
@@ -895,7 +1316,67 @@ function emitRealtimeBody(config: ResolvedConfig): string {
     </div>`;
 }
 
+/** Audio file input body (classification or STT) */
+function emitAudioFileBody(config: ResolvedConfig): string {
+  const taskLabel = getTaskLabel(config.task);
+  const isSTT = config.task === 'speech-to-text';
+  const resultsContent = isSTT
+    ? `      <pre id="transcript" class="transcript" role="status" aria-live="polite" aria-atomic="true"></pre>`
+    : `      <div id="results" class="results" role="status" aria-live="polite" aria-atomic="true">\n      </div>`;
+
+  return `    <h2>${taskLabel}</h2>
+
+    <a href="#${isSTT ? 'transcript' : 'results'}" class="skip-link">Skip to results</a>
+
+    <div>
+      <label for="fileInput">Choose an audio file &#9835;</label>
+      <input type="file" id="fileInput" accept="audio/*" aria-label="Select audio file for ${taskLabel.toLowerCase()}">
+    </div>
+
+${resultsContent}`;
+}
+
+/** Mic-based audio body (classification or STT) */
+function emitAudioMicBody(config: ResolvedConfig): string {
+  const taskLabel = getTaskLabel(config.task);
+  const isSTT = config.task === 'speech-to-text';
+  const resultsContent = isSTT
+    ? `    <pre id="transcript" class="transcript" role="status" aria-live="polite" aria-atomic="true">(listening...)</pre>`
+    : `    <div id="results" class="results" role="status" aria-live="polite" aria-atomic="true">\n    </div>`;
+
+  return `    <h2>${taskLabel}</h2>
+
+    <div class="controls" role="group" aria-label="Recording controls">
+      <button id="startBtn" class="controls-btn" aria-label="Start recording">Start Recording</button>
+      <button id="stopBtn" class="controls-btn" disabled aria-label="Stop recording">Stop Recording</button>
+    </div>
+
+${resultsContent}`;
+}
+
+/** Text-to-Speech body */
+function emitTtsBody(): string {
+  return `    <h2>Text to Speech</h2>
+
+    <div class="tts-input">
+      <label for="textInput">Enter text to synthesize</label>
+      <textarea id="textInput" rows="4" aria-label="Text to synthesize">Hello, this is a test of text to speech.</textarea>
+      <button id="synthesizeBtn" class="primary-btn" aria-label="Synthesize speech">Synthesize</button>
+    </div>`;
+}
+
 function emitBodyContent(config: ResolvedConfig): string {
+  // Audio tasks
+  if (config.task === 'text-to-speech') {
+    return emitTtsBody();
+  }
+  if (config.task === 'speech-to-text' || config.task === 'audio-classification') {
+    if (config.input === 'mic') {
+      return emitAudioMicBody(config);
+    }
+    return emitAudioFileBody(config);
+  }
+
   if (config.input === 'camera' || config.input === 'screen') {
     return emitRealtimeBody(config);
   }
@@ -991,10 +1472,68 @@ function emitExtendedCSS(): string {
 }`;
 }
 
+/** Audio-specific CSS */
+function emitAudioCSS(): string {
+  return `
+/* Transcript display */
+.transcript {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: 8px;
+  padding: 1rem;
+  min-height: 100px;
+  white-space: pre-wrap;
+  font-family: inherit;
+}
+
+/* Audio controls */
+.controls {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.controls button {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1rem;
+  background: var(--webai-accent);
+  color: white;
+}
+
+.controls button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* TTS input */
+.tts-input {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.tts-input textarea {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: 6px;
+  color: var(--webai-text);
+  padding: 0.75rem;
+  font-size: 1rem;
+  resize: vertical;
+}`;
+}
+
 function needsExtendedCSS(config: ResolvedConfig): boolean {
   return config.input === 'camera' || config.input === 'screen' ||
     config.task === 'object-detection' || config.task === 'image-segmentation' ||
     config.task === 'feature-extraction';
+}
+
+function needsAudioCSS(config: ResolvedConfig): boolean {
+  return isAudioTask(config.task);
 }
 
 /**
@@ -1008,6 +1547,7 @@ export function emitHtml(config: ResolvedConfig, blocks: CodeBlock[]): Generated
   const designCSS = emitDesignSystemCSS(config);
   const appCSS = emitAppCSS();
   const extraCSS = needsExtendedCSS(config) ? emitExtendedCSS() : '';
+  const audioCSS = needsAudioCSS(config) ? emitAudioCSS() : '';
   const appScript = emitAppScript(config, blocks);
   const bodyContent = emitBodyContent(config);
 
@@ -1019,7 +1559,7 @@ export function emitHtml(config: ResolvedConfig, blocks: CodeBlock[]): Generated
   <title>${config.modelName} — ${taskLabel}</title>
   <style>
 ${designCSS}
-${appCSS}${extraCSS}
+${appCSS}${extraCSS}${audioCSS}
   </style>
 </head>
 <body>
@@ -1047,6 +1587,15 @@ ${appScript}
     { path: 'index.html', content: html },
     { path: 'README.md', content: emitReadme(config, ['index.html', 'README.md']) },
   ];
+
+  // Include auxiliary files from Layer 1 blocks (e.g. AudioWorklet processor)
+  for (const block of blocks) {
+    if (block.auxiliaryFiles) {
+      for (const aux of block.auxiliaryFiles) {
+        files.push(aux);
+      }
+    }
+  }
 
   return files;
 }

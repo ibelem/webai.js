@@ -16,6 +16,7 @@ import {
 import type { CliFlags, ModelSourceType } from '@webai/core';
 import { assemble } from './assembler.js';
 import { writeFiles, formatSummary } from './writer.js';
+import { generateCompareHtml, generateCompareJson } from './compare.js';
 
 const program = new Command();
 
@@ -262,11 +263,101 @@ program
 program
   .command('compare')
   .description('Benchmark model across available backends')
-  .argument('<model>', 'Path to model file')
+  .argument('<model>', 'Path, URL, or HuggingFace model ID (.onnx)')
   .option('--json', 'Output machine-readable JSON instead of HTML')
-  .action((_model, _options) => {
-    console.error('✗ compare command is not yet implemented (Phase 2)');
-    process.exitCode = 1;
+  .option('-o, --output <dir>', 'Output directory', './compare-output/')
+  .option('-v, --verbose', 'Print debug info')
+  .option('--force', 'Overwrite existing output directory')
+  .action(async (model: string, options: { json?: boolean; output?: string; verbose?: boolean; force?: boolean }) => {
+    const verbose = options.verbose ?? false;
+    const sourceType = classifyModelInput(model);
+
+    let buffer: Uint8Array;
+    let modelUrl: string | undefined;
+
+    if (sourceType === 'local-path') {
+      try {
+        buffer = new Uint8Array(readFileSync(model));
+      } catch {
+        console.error(`✗ Model not found: ${model}`);
+        process.exitCode = 1;
+        return;
+      }
+    } else if (sourceType === 'hf-model-id') {
+      try {
+        const resolved = await resolveHfModelId(model, false, verbose);
+        console.log(`✓ Resolved model ID: ${model} → ${resolved.filename}`);
+        modelUrl = resolved.url;
+
+        const fetched = await fetchModelFromUrl(resolved.url, verbose);
+        buffer = fetched.buffer;
+        modelUrl = fetched.finalUrl;
+        console.log(`✓ Fetched model (${(buffer.byteLength / 1024 / 1024).toFixed(1)} MB)`);
+      } catch (e) {
+        console.error(`✗ ${e instanceof Error ? e.message : String(e)}`);
+        process.exitCode = 1;
+        return;
+      }
+    } else {
+      try {
+        const fetched = await fetchModelFromUrl(model, verbose);
+        buffer = fetched.buffer;
+        modelUrl = fetched.finalUrl;
+        const host = new URL(modelUrl).hostname;
+        console.log(`✓ Fetched model (${(buffer.byteLength / 1024 / 1024).toFixed(1)} MB, from ${host})`);
+      } catch (e) {
+        console.error(`✗ ${e instanceof Error ? e.message : String(e)}`);
+        process.exitCode = 1;
+        return;
+      }
+    }
+
+    // Parse model metadata
+    let metadata;
+    try {
+      metadata = parseModelMetadata(buffer);
+    } catch (e) {
+      console.error(`✗ Could not parse model: ${model}`);
+      if (e instanceof Error) console.error(`  ${e.message}`);
+      process.exitCode = 1;
+      return;
+    }
+
+    // Use the URL for remote models so the HTML page can fetch it
+    const displayPath = modelUrl ?? model;
+
+    if (options.json) {
+      const json = generateCompareJson(displayPath, metadata);
+      const outputDir = options.output ?? './compare-output/';
+      try {
+        writeFiles(
+          [{ path: 'compare.json', content: json }],
+          outputDir,
+          { force: options.force },
+        );
+        console.log(`✓ Generated compare.json in ${outputDir}`);
+      } catch (e) {
+        if (e instanceof Error) console.error(`✗ ${e.message}`);
+        process.exitCode = 1;
+        return;
+      }
+    } else {
+      const html = generateCompareHtml(displayPath, metadata);
+      const outputDir = options.output ?? './compare-output/';
+      try {
+        writeFiles(
+          [{ path: 'index.html', content: html }],
+          outputDir,
+          { force: options.force },
+        );
+        console.log(`✓ Generated benchmark page in ${outputDir}`);
+        console.log(`▸ Next: cd ${outputDir} && npx serve .`);
+      } catch (e) {
+        if (e instanceof Error) console.error(`✗ ${e.message}`);
+        process.exitCode = 1;
+        return;
+      }
+    }
   });
 
 // Zero-config shorthand: webai ./model.onnx or webai https://hf.co/.../model.onnx or webai user/repo

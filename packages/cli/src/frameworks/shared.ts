@@ -5,7 +5,7 @@
  */
 
 import type { ResolvedConfig } from '@webai/core';
-import type { CodeBlock } from '../types.js';
+import type { CodeBlock, GeneratedFile } from '../types.js';
 
 // ---- CSS Design System ----
 
@@ -293,10 +293,61 @@ h1 {
   left: var(--webai-space-2);
 }
 
+/* Audio: transcript display */
+.transcript {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: 8px;
+  padding: 1rem;
+  min-height: 100px;
+  white-space: pre-wrap;
+}
+
+/* Audio: controls */
+.controls { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+.controls button {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  background: var(--webai-accent);
+  color: white;
+}
+.controls button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Audio: TTS input */
+.tts-input { display: flex; flex-direction: column; gap: 0.5rem; }
+.tts-input textarea {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: 6px;
+  color: var(--webai-text);
+  padding: 0.75rem;
+  resize: vertical;
+}
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .result-bar { transition: none; }
 }`;
+}
+
+// ---- Audio Task Helpers ----
+
+/** Check if a task is an audio task */
+export function isAudioTask(task: string): boolean {
+  return ['speech-to-text', 'audio-classification', 'text-to-speech'].includes(task);
+}
+
+/** Collect auxiliary files from all code blocks (e.g. AudioWorklet processor) */
+export function collectAuxiliaryFiles(blocks: CodeBlock[]): GeneratedFile[] {
+  const files: GeneratedFile[] = [];
+  for (const block of blocks) {
+    if (block.auxiliaryFiles) {
+      files.push(...block.auxiliaryFiles);
+    }
+  }
+  return files;
 }
 
 // ---- Code Processing ----

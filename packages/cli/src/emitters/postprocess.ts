@@ -305,6 +305,120 @@ function postprocessEmbeddings(output${t ? ': Float32Array' : ''})${t ? ': Float
 }`;
 }
 
+// ---- Speech-to-Text: greedy CTC decoder ----
+
+function emitGreedyDecode(ts: boolean): string {
+  const t = ts;
+  return `/**
+ * Greedy CTC decoder: decode speech recognition logits.
+ * Performs argmax at each timestep, then collapses repeated tokens and blanks.
+ *
+ * @param logits - Raw model logits (Float32Array)
+ * @param numTimesteps - Number of time steps
+ * @param vocabSize - Vocabulary size
+ * @param blankIndex - CTC blank token index (default: 0)
+ * @returns Array of token indices
+ */
+function greedyDecode(
+  logits${t ? ': Float32Array' : ''},
+  numTimesteps${t ? ': number' : ''},
+  vocabSize${t ? ': number' : ''},
+  blankIndex${t ? ': number' : ''} = 0
+)${t ? ': number[]' : ''} {
+  const tokens${t ? ': number[]' : ''} = [];
+  let prev = -1;
+
+  for (let t = 0; t < numTimesteps; t++) {
+    let bestIdx = 0;
+    let bestVal = logits[t * vocabSize];
+    for (let v = 1; v < vocabSize; v++) {
+      const val = logits[t * vocabSize + v];
+      if (val > bestVal) {
+        bestVal = val;
+        bestIdx = v;
+      }
+    }
+
+    // CTC collapsing: skip blank and repeated tokens
+    if (bestIdx !== blankIndex && bestIdx !== prev) {
+      tokens.push(bestIdx);
+    }
+    prev = bestIdx;
+  }
+
+  return tokens;
+}`;
+}
+
+function emitPostprocessTranscript(ts: boolean): string {
+  const t = ts;
+  return `/**
+ * Postprocess speech-to-text model output: decode logits → transcript.
+ *
+ * @param logits - Raw model logits (Float32Array)
+ * @param numTimesteps - Number of time steps
+ * @param vocabSize - Vocabulary size
+ * @param vocab - Vocabulary array mapping indices to characters
+ * @returns Transcribed text string
+ */
+function postprocessTranscript(
+  logits${t ? ': Float32Array' : ''},
+  numTimesteps${t ? ': number' : ''},
+  vocabSize${t ? ': number' : ''},
+  vocab${t ? ': string[]' : ''}
+)${t ? ': string' : ''} {
+  const indices = greedyDecode(logits, numTimesteps, vocabSize);
+  return indices.map((i) => vocab[i]).join('');
+}`;
+}
+
+// ---- Text-to-Speech: audio output ----
+
+function emitPlayAudio(ts: boolean): string {
+  const t = ts;
+  return `/**
+ * Play audio samples in the browser.
+ * Creates an AudioContext and plays the samples as a buffer.
+ *
+ * @param samples - Audio samples (Float32Array, values in [-1, 1])
+ * @param sampleRate - Sample rate in Hz (default: 22050)
+ * @returns Promise that resolves when playback ends
+ */
+function playAudio(
+  samples${t ? ': Float32Array' : ''},
+  sampleRate${t ? ': number' : ''} = 22050
+)${t ? ': Promise<void>' : ''} {
+  return new Promise((resolve) => {
+    const ctx = new AudioContext({ sampleRate });
+    const buffer = ctx.createBuffer(1, samples.length, sampleRate);
+    buffer.copyToChannel(samples, 0);
+
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(ctx.destination);
+    source.onended = () => resolve();
+    source.start();
+  });
+}`;
+}
+
+function emitPostprocessAudio(ts: boolean): string {
+  const t = ts;
+  return `/**
+ * Postprocess text-to-speech model output: clamp samples for safe playback.
+ *
+ * @param output - Raw model output (Float32Array)
+ * @returns Clamped audio samples ready for playback
+ */
+function postprocessAudio(output${t ? ': Float32Array' : ''})${t ? ': Float32Array' : ''} {
+  const samples = new Float32Array(output.length);
+  for (let i = 0; i < output.length; i++) {
+    samples[i] = Math.max(-1, Math.min(1, output[i]));
+  }
+  return samples;
+}`;
+}
+
 // ---- Block emitter dispatch ----
 
 /**
@@ -315,6 +429,8 @@ function postprocessEmbeddings(output${t ? ': Float32Array' : ''})${t ? ': Float
  *   object-detection      → BoundingBox type + iou + nms + decodeDetections + postprocessDetections
  *   image-segmentation    → argmaxMask + postprocessSegmentation
  *   feature-extraction    → postprocessEmbeddings
+ *   speech-to-text        → greedyDecode + postprocessTranscript
+ *   text-to-speech        → playAudio + postprocessAudio
  */
 export function emitPostprocessBlock(config: ResolvedConfig): CodeBlock {
   const ts = config.lang === 'ts';
@@ -354,8 +470,20 @@ export function emitPostprocessBlock(config: ResolvedConfig): CodeBlock {
       exports.push('postprocessEmbeddings');
       break;
 
+    case 'speech-to-text':
+      parts.push(emitGreedyDecode(ts));
+      parts.push(emitPostprocessTranscript(ts));
+      exports.push('greedyDecode', 'postprocessTranscript');
+      break;
+
+    case 'text-to-speech':
+      parts.push(emitPlayAudio(ts));
+      parts.push(emitPostprocessAudio(ts));
+      exports.push('postprocessAudio', 'playAudio');
+      break;
+
     default:
-      // Tasks without postprocessing (speech-to-text, text-generation, text-to-speech)
+      // Tasks without postprocessing (text-generation)
       break;
   }
 

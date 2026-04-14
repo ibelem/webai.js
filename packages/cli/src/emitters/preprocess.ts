@@ -7,6 +7,7 @@
 
 import type { ResolvedConfig } from '@webai/core';
 import type { CodeBlock } from '../types.js';
+import { emitAudioPreprocessBlock } from './audio-preprocess.js';
 
 /** Emit the resizeImage function as standalone JS/TS code */
 function emitResizeImage(ts: boolean): string {
@@ -153,6 +154,11 @@ ${layoutStep}
  * Emit the preprocess CodeBlock for a given config.
  */
 export function emitPreprocessBlock(config: ResolvedConfig): CodeBlock {
+  const audioTasks: string[] = ['speech-to-text', 'audio-classification', 'text-to-speech'];
+  if (audioTasks.includes(config.task)) {
+    return emitAudioPreprocessBlock(config);
+  }
+
   const ts = config.lang === 'ts';
 
   const parts = [

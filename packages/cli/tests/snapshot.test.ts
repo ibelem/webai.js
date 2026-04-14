@@ -272,3 +272,182 @@ describe('snapshot — classification + LiteRT + react-vite', () => {
     expect(output).toMatchSnapshot();
   });
 });
+
+// ---- Audio task snapshots ----
+
+const audioClassMeta: ModelMetadata = {
+  format: 'onnx',
+  inputs: [{ name: 'input', dataType: 'float32', shape: [1, 13, 100] }],
+  outputs: [{ name: 'output', dataType: 'float32', shape: [1, 527] }],
+};
+
+const sttMeta: ModelMetadata = {
+  format: 'onnx',
+  inputs: [{ name: 'input', dataType: 'float32', shape: [1, 80, 100] }],
+  outputs: [{ name: 'output', dataType: 'float32', shape: [1, 100, 28] }],
+};
+
+const ttsMeta: ModelMetadata = {
+  format: 'onnx',
+  inputs: [{ name: 'input', dataType: 'float32', shape: [1, 100] }],
+  outputs: [{ name: 'output', dataType: 'float32', shape: [1, 22050] }],
+};
+
+/** Audio tasks have no image preprocess; use the resolver fallback. */
+const audioPreprocess = {
+  imageSize: 224,
+  mean: [0, 0, 0] as readonly number[],
+  std: [1, 1, 1] as readonly number[],
+  layout: 'nchw' as const,
+};
+
+describe('audio task snapshots', () => {
+  // Audio Classification
+  it('audio-classification + html + file + ort', () => {
+    const config = makeConfig({
+      task: 'audio-classification',
+      input: 'file',
+      engine: 'ort',
+      framework: 'html',
+      lang: 'js',
+      modelMeta: audioClassMeta,
+      modelPath: './yamnet.onnx',
+      modelName: 'yamnet',
+      preprocess: audioPreprocess,
+    });
+    const files = serializeFiles(config);
+    expect(files).toMatchSnapshot();
+  });
+
+  it('audio-classification + html + mic + ort', () => {
+    const config = makeConfig({
+      task: 'audio-classification',
+      input: 'mic',
+      engine: 'ort',
+      framework: 'html',
+      lang: 'js',
+      modelMeta: audioClassMeta,
+      modelPath: './yamnet.onnx',
+      modelName: 'yamnet',
+      preprocess: audioPreprocess,
+    });
+    const files = serializeFiles(config);
+    expect(files).toMatchSnapshot();
+  });
+
+  it('audio-classification + react-vite + file + ort', () => {
+    const config = makeConfig({
+      task: 'audio-classification',
+      input: 'file',
+      engine: 'ort',
+      framework: 'react-vite',
+      lang: 'js',
+      modelMeta: audioClassMeta,
+      modelPath: './yamnet.onnx',
+      modelName: 'yamnet',
+      preprocess: audioPreprocess,
+    });
+    const files = serializeFiles(config);
+    expect(files).toMatchSnapshot();
+  });
+
+  // Speech-to-Text
+  it('speech-to-text + html + file + ort', () => {
+    const config = makeConfig({
+      task: 'speech-to-text',
+      input: 'file',
+      engine: 'ort',
+      framework: 'html',
+      lang: 'js',
+      modelMeta: sttMeta,
+      modelPath: './whisper-tiny.onnx',
+      modelName: 'whisper-tiny',
+      preprocess: audioPreprocess,
+    });
+    const files = serializeFiles(config);
+    expect(files).toMatchSnapshot();
+  });
+
+  it('speech-to-text + html + mic + ort', () => {
+    const config = makeConfig({
+      task: 'speech-to-text',
+      input: 'mic',
+      engine: 'ort',
+      framework: 'html',
+      lang: 'js',
+      modelMeta: sttMeta,
+      modelPath: './whisper-tiny.onnx',
+      modelName: 'whisper-tiny',
+      preprocess: audioPreprocess,
+    });
+    const files = serializeFiles(config);
+    expect(files).toMatchSnapshot();
+  });
+
+  it('speech-to-text + vanilla-vite + mic + ort + ts', () => {
+    const config = makeConfig({
+      task: 'speech-to-text',
+      input: 'mic',
+      engine: 'ort',
+      framework: 'vanilla-vite',
+      lang: 'ts',
+      modelMeta: sttMeta,
+      modelPath: './whisper-tiny.onnx',
+      modelName: 'whisper-tiny',
+      preprocess: audioPreprocess,
+    });
+    const files = serializeFiles(config);
+    expect(files).toMatchSnapshot();
+  });
+
+  // Text-to-Speech
+  it('text-to-speech + html + file + ort', () => {
+    const config = makeConfig({
+      task: 'text-to-speech',
+      input: 'file',
+      engine: 'ort',
+      framework: 'html',
+      lang: 'js',
+      modelMeta: ttsMeta,
+      modelPath: './tts-model.onnx',
+      modelName: 'tts-model',
+      preprocess: audioPreprocess,
+    });
+    const files = serializeFiles(config);
+    expect(files).toMatchSnapshot();
+  });
+
+  it('text-to-speech + nextjs + file + ort + ts', () => {
+    const config = makeConfig({
+      task: 'text-to-speech',
+      input: 'file',
+      engine: 'ort',
+      framework: 'nextjs',
+      lang: 'ts',
+      modelMeta: ttsMeta,
+      modelPath: './tts-model.onnx',
+      modelName: 'tts-model',
+      preprocess: audioPreprocess,
+    });
+    const files = serializeFiles(config);
+    expect(files).toMatchSnapshot();
+  });
+
+  // Audio + offline
+  it('audio-classification + html + file + ort + offline', () => {
+    const config = makeConfig({
+      task: 'audio-classification',
+      input: 'file',
+      engine: 'ort',
+      framework: 'html',
+      lang: 'js',
+      offline: true,
+      modelMeta: audioClassMeta,
+      modelPath: './yamnet.onnx',
+      modelName: 'yamnet',
+      preprocess: audioPreprocess,
+    });
+    const files = serializeFiles(config);
+    expect(files).toMatchSnapshot();
+  });
+});

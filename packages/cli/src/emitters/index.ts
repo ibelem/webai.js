@@ -65,4 +65,5 @@ export { emitOrtInferenceBlock } from './inference-ort.js';
 export { emitLiteRTInferenceBlock } from './inference-litert.js';
 export { emitWebNNInferenceBlock } from './inference-webnn.js';
 export { emitOpfsCacheBlock } from './opfs-cache.js';
+export { emitAudioPreprocessBlock } from './audio-preprocess.js';
 export type { CodeBlock, GeneratedFile } from '../types.js';

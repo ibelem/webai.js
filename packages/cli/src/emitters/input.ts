@@ -209,6 +209,146 @@ function captureAudio(
 }`;
 }
 
+// ---- AudioWorklet-based mic capture for audio ML tasks ----
+
+/** Emit AudioWorklet processor source (written to a separate .js file) */
+function emitAudioWorkletProcessor(): string {
+  return `class AudioCaptureProcessor extends AudioWorkletProcessor {
+  process(inputs, outputs, parameters) {
+    const input = inputs[0];
+    if (input && input[0] && input[0].length > 0) {
+      this.port.postMessage(new Float32Array(input[0]));
+    }
+    return true;
+  }
+}
+registerProcessor('audio-capture-processor', AudioCaptureProcessor);`;
+}
+
+/**
+ * Emit startAudioCapture: continuous PCM capture via AudioWorklet with ring buffer.
+ * Falls back to ScriptProcessorNode if AudioWorklet is unavailable.
+ */
+function emitStartAudioCapture(ts: boolean): string {
+  const t = ts;
+  const returnType = t
+    ? `: Promise<{
+  stream: MediaStream;
+  buffer: Float32Array;
+  getSamples: () => Float32Array;
+  audioContext: AudioContext;
+}>`
+    : '';
+  return `/**
+ * Start continuous audio capture via AudioWorklet with a ring buffer.
+ * Falls back to ScriptProcessorNode if AudioWorklet is not available.
+ *
+ * @param sampleRate - Audio sample rate (default: 16000)
+ * @param bufferSeconds - Ring buffer duration in seconds (default: 30)
+ * @returns Object with stream, buffer, getSamples(), and audioContext
+ */
+async function startAudioCapture(
+  sampleRate${t ? ': number' : ''} = 16000,
+  bufferSeconds${t ? ': number' : ''} = 30
+)${returnType} {
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  const audioContext = new AudioContext({ sampleRate });
+  const source = audioContext.createMediaStreamSource(stream);
+
+  const bufferSize = sampleRate * bufferSeconds;
+  const buffer = new Float32Array(bufferSize);
+  let writePos = 0;
+  let totalWritten = 0;
+
+  function writeSamples(samples${t ? ': Float32Array' : ''})${t ? ': void' : ''} {
+    for (let i = 0; i < samples.length; i++) {
+      buffer[writePos] = samples[i];
+      writePos = (writePos + 1) % bufferSize;
+    }
+    totalWritten += samples.length;
+  }
+
+  function getSamples()${t ? ': Float32Array' : ''} {
+    if (totalWritten < bufferSize) {
+      // Buffer not full yet — return only the valid portion
+      return buffer.slice(0, Math.min(totalWritten, bufferSize));
+    }
+    // Buffer full — unwrap from writePos
+    const result = new Float32Array(bufferSize);
+    const tail = bufferSize - writePos;
+    result.set(buffer.subarray(writePos, writePos + tail), 0);
+    result.set(buffer.subarray(0, writePos), tail);
+    return result;
+  }
+
+  try {
+    await audioContext.audioWorklet.addModule('audio-processor.js');
+    const workletNode = new AudioWorkletNode(audioContext, 'audio-capture-processor');
+    workletNode.port.onmessage = (e${t ? ': MessageEvent<Float32Array>' : ''}) => {
+      writeSamples(e.data);
+    };
+    source.connect(workletNode);
+    workletNode.connect(audioContext.destination);
+  } catch (_err) {
+    console.warn('AudioWorklet not available, falling back to ScriptProcessorNode');
+    const scriptNode = audioContext.createScriptProcessor(4096, 1, 1);
+    scriptNode.onaudioprocess = (e${t ? ': AudioProcessingEvent' : ''}) => {
+      writeSamples(e.inputBuffer.getChannelData(0));
+    };
+    source.connect(scriptNode);
+    scriptNode.connect(audioContext.destination);
+  }
+
+  return { stream, buffer, getSamples, audioContext };
+}`;
+}
+
+/**
+ * Emit createAudioInferenceLoop: interval-based audio inference loop.
+ * Calls processAudio(samples) which is expected to be in scope.
+ */
+function emitAudioInferenceLoop(ts: boolean): string {
+  const t = ts;
+  const optsType = t
+    ? `: {
+  getSamples: () => Float32Array;
+  onResult: (result: unknown) => void;
+  intervalMs?: number;
+}`
+    : '';
+  return `/**
+ * Create an interval-based audio inference loop.
+ * Calls processAudio(samples) on each tick and passes the result to onResult.
+ *
+ * @param opts - Options with getSamples, onResult callback, and optional intervalMs
+ * @returns Object with start() and stop() methods.
+ */
+function createAudioInferenceLoop(opts${optsType})${t ? ': { start: () => void; stop: () => void }' : ''} {
+  let timerId${t ? ': ReturnType<typeof setInterval> | null' : ''} = null;
+  const interval = opts.intervalMs ?? 1000;
+
+  async function tick() {
+    const samples = opts.getSamples();
+    if (samples.length === 0) return;
+    const result = await processAudio(samples);
+    opts.onResult(result);
+  }
+
+  return {
+    start() {
+      if (timerId !== null) return;
+      timerId = setInterval(tick, interval);
+    },
+    stop() {
+      if (timerId !== null) {
+        clearInterval(timerId);
+        timerId = null;
+      }
+    },
+  };
+}`;
+}
+
 // ---- Block emitter dispatch ----
 
 /**
@@ -251,12 +391,36 @@ export function emitInputBlock(config: ResolvedConfig): CodeBlock {
       exports.push('captureFrame', 'startScreenCapture', 'stopStream', 'createInferenceLoop');
       break;
 
-    case 'mic':
+    case 'mic': {
+      const isAudioTask = ['speech-to-text', 'audio-classification'].includes(config.task);
+
+      if (isAudioTask) {
+        parts.push(emitStartAudioCapture(ts));
+        parts.push(emitAudioInferenceLoop(ts));
+        parts.push(emitStopStream(ts));
+        exports.push('startAudioCapture', 'createAudioInferenceLoop', 'stopStream');
+
+        return {
+          id: 'input',
+          code: parts.join('\n\n'),
+          imports: [],
+          exports,
+          auxiliaryFiles: [
+            {
+              path: 'audio-processor.js',
+              content: emitAudioWorkletProcessor(),
+            },
+          ],
+        };
+      }
+
+      // Non-audio task with mic (legacy path)
       parts.push(emitStartMicrophone(ts));
       parts.push(emitCaptureAudio(ts));
       parts.push(emitStopStream(ts));
       exports.push('startMicrophone', 'captureAudio', 'stopStream');
       break;
+    }
 
     case 'file':
     default:
