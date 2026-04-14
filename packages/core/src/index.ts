@@ -38,3 +38,22 @@ export {
   type PreprocessDefaults,
   type TaskProfile,
 } from './tasks/index.js';
+
+// Config
+export {
+  resolveConfig,
+  ConfigValidationError,
+  validateTaskInput,
+  validateTaskEngine,
+  getSupportedInputs,
+  type ResolveResult,
+  type Engine,
+  type Backend,
+  type Framework,
+  type CodeMode,
+  type OutputLang,
+  type Theme,
+  type CliFlags,
+  type ResolvedConfig,
+  type ResolverStep,
+} from './config/index.js';
