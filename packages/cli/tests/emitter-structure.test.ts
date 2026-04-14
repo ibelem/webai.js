@@ -272,7 +272,10 @@ describe('emitInputBlock', () => {
 
   it('exports captureFrame, startCamera, stopStream, createInferenceLoop for camera', () => {
     const block = emitInputBlock(makeConfig({ input: 'camera' }));
-    expect(block.exports).toEqual(['captureFrame', 'startCamera', 'stopStream', 'createInferenceLoop']);
+    expect(block.exports).toEqual([
+      'captureFrame', 'captureFrameZeroCopy', 'startCamera', 'stopStream',
+      'createInferenceLoop', 'createFrameAccumulator', 'createClipInferenceLoop',
+    ]);
   });
 
   it('camera code contains getUserMedia', () => {
@@ -281,9 +284,13 @@ describe('emitInputBlock', () => {
     expect(block.code).toContain('facingMode');
   });
 
-  it('exports captureFrame, stopStream, createInferenceLoop for video', () => {
+  it('exports video-specific functions including batch processor for video', () => {
     const block = emitInputBlock(makeConfig({ input: 'video' }));
-    expect(block.exports).toEqual(['captureFrame', 'stopStream', 'createInferenceLoop']);
+    expect(block.exports).toEqual([
+      'captureFrame', 'captureFrameZeroCopy', 'stopStream',
+      'createInferenceLoop', 'processVideoFrames',
+      'createFrameAccumulator', 'createClipInferenceLoop',
+    ]);
   });
 
   it('video does not include startCamera or startScreenCapture', () => {
@@ -292,9 +299,12 @@ describe('emitInputBlock', () => {
     expect(block.code).not.toContain('startScreenCapture');
   });
 
-  it('exports captureFrame, startScreenCapture, stopStream, createInferenceLoop for screen', () => {
+  it('exports screen-specific functions for screen', () => {
     const block = emitInputBlock(makeConfig({ input: 'screen' }));
-    expect(block.exports).toEqual(['captureFrame', 'startScreenCapture', 'stopStream', 'createInferenceLoop']);
+    expect(block.exports).toEqual([
+      'captureFrame', 'captureFrameZeroCopy', 'startScreenCapture', 'stopStream',
+      'createInferenceLoop', 'createFrameAccumulator', 'createClipInferenceLoop',
+    ]);
   });
 
   it('screen code contains getDisplayMedia', () => {

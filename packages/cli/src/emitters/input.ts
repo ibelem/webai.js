@@ -167,6 +167,240 @@ function stopStream(stream${t ? ': MediaStream' : ''})${t ? ': void' : ''} {
 }`;
 }
 
+// ---- WebCodecs zero-copy frame capture ----
+
+/**
+ * Emit captureFrameZeroCopy: uses WebCodecs VideoFrame for precise timing
+ * and zero-copy frame access, with standard canvas fallback.
+ */
+function emitCaptureFrameZeroCopy(ts: boolean): string {
+  const t = ts;
+  return `/**
+ * Capture a frame using WebCodecs VideoFrame for zero-copy access.
+ * VideoFrame provides precise frame timing and can avoid extra pixel
+ * copies compared to drawing directly from the video element.
+ * Falls back to standard canvas capture when VideoFrame is unavailable.
+ */
+function captureFrameZeroCopy(
+  video${t ? ': HTMLVideoElement' : ''},
+  canvas${t ? ': HTMLCanvasElement' : ''}
+)${t ? ': ImageData' : ''} {
+  const w = video.videoWidth;
+  const h = video.videoHeight;
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d')${t ? '!' : ''};
+
+  if (typeof VideoFrame !== 'undefined') {
+    const frame = new VideoFrame(video);
+    ctx.drawImage(frame, 0, 0);
+    frame.close();
+  } else {
+    ctx.drawImage(video, 0, 0);
+  }
+
+  return ctx.getImageData(0, 0, w, h);
+}`;
+}
+
+// ---- Batch video frame processing ----
+
+/**
+ * Emit processVideoFrames: seek-based batch inference on all frames of a video file.
+ * Processes as fast as the browser can decode — not limited to playback speed.
+ */
+function emitBatchVideoProcessor(ts: boolean): string {
+  const t = ts;
+  const callbackType = t
+    ? ': (imageData: ImageData, frameIndex: number, timestamp: number) => Promise<unknown>'
+    : '';
+  const progressType = t ? ': (processed: number, total: number) => void' : '';
+  const optsType = t
+    ? `: {
+  video: HTMLVideoElement;
+  canvas: HTMLCanvasElement;
+  onFrame${callbackType};
+  onProgress?${progressType};
+  frameInterval?: number;
+}`
+    : '';
+  return `/**
+ * Process all frames of a video file for batch inference.
+ * Seeks through the video at specified intervals and runs inference per frame.
+ * Processes as fast as the browser can decode — not limited to playback speed.
+ *
+ * @param opts.video - Video element with source loaded
+ * @param opts.canvas - Canvas element for frame capture
+ * @param opts.onFrame - Async callback receiving (ImageData, frameIndex, timestamp)
+ * @param opts.onProgress - Optional progress callback (processed, estimatedTotal)
+ * @param opts.frameInterval - Seconds between captures (default: 1/30)
+ * @returns Array of all inference results
+ */
+async function processVideoFrames(opts${optsType})${t ? ': Promise<unknown[]>' : ''} {
+  const { video, canvas, onFrame, onProgress, frameInterval = 1 / 30 } = opts;
+  const results${t ? ': unknown[]' : ''} = [];
+
+  if (video.readyState < 1) {
+    await new Promise${t ? '<void>' : ''}((resolve) => {
+      video.addEventListener('loadedmetadata', () => resolve(), { once: true });
+    });
+  }
+
+  video.pause();
+  const duration = video.duration;
+  const estimatedTotal = Math.ceil(duration / frameInterval);
+  let processed = 0;
+
+  for (let time = 0; time < duration; time += frameInterval) {
+    video.currentTime = time;
+    await new Promise${t ? '<void>' : ''}((resolve) => {
+      video.addEventListener('seeked', () => resolve(), { once: true });
+    });
+
+    const imageData = captureFrame(video, canvas);
+    const result = await onFrame(imageData, processed, time);
+    results.push(result);
+    processed++;
+    if (onProgress) onProgress(processed, estimatedTotal);
+  }
+
+  return results;
+}`;
+}
+
+// ---- Temporal / clip-based frame accumulation ----
+
+/**
+ * Emit createFrameAccumulator: ring buffer collecting N frames for
+ * clip-based inference (action recognition, video classification, optical flow).
+ */
+function emitFrameAccumulator(ts: boolean): string {
+  const t = ts;
+  return `/**
+ * Create a frame accumulator for temporal / clip-based inference.
+ * Collects N frames before making them available as a clip
+ * (e.g., 16 frames for action recognition, video classification).
+ *
+ * @param clipLength - Number of frames per clip
+ * @param stride - Frames to advance between clips (default: clipLength, non-overlapping)
+ * @returns Accumulator with push(), getClip(), isReady(), and reset()
+ */
+function createFrameAccumulator(
+  clipLength${t ? ': number' : ''},
+  stride${t ? '?: number' : ''}
+)${t ? `: {
+  push: (frame: ImageData) => void;
+  getClip: () => ImageData[];
+  isReady: () => boolean;
+  reset: () => void;
+  readonly length: number;
+}` : ''} {
+  const _stride = stride ?? clipLength;
+  const frames${t ? ': ImageData[]' : ''} = [];
+  let framesSinceLastClip = 0;
+  let clipReady = false;
+
+  return {
+    push(frame${t ? ': ImageData' : ''}) {
+      frames.push(frame);
+      framesSinceLastClip++;
+      if (frames.length > clipLength) {
+        frames.shift();
+      }
+      if (frames.length >= clipLength && framesSinceLastClip >= _stride) {
+        clipReady = true;
+        framesSinceLastClip = 0;
+      }
+    },
+    getClip()${t ? ': ImageData[]' : ''} {
+      clipReady = false;
+      return frames.slice(-clipLength);
+    },
+    isReady()${t ? ': boolean' : ''} {
+      return clipReady;
+    },
+    reset()${t ? ': void' : ''} {
+      frames.length = 0;
+      framesSinceLastClip = 0;
+      clipReady = false;
+    },
+    get length() {
+      return frames.length;
+    },
+  };
+}`;
+}
+
+/**
+ * Emit createClipInferenceLoop: rAF loop that captures frames continuously,
+ * accumulates them, and runs inference when a full clip is ready.
+ */
+function emitClipInferenceLoop(ts: boolean): string {
+  const t = ts;
+  const callbackType = t
+    ? ': (clip: ImageData[]) => Promise<{ result: unknown; elapsed: number }>'
+    : '';
+  const statusType = t ? ': (elapsed: number, clipIndex: number) => void' : '';
+  const optsType = t
+    ? `: {
+  video: HTMLVideoElement;
+  canvas: HTMLCanvasElement;
+  accumulator: ReturnType<typeof createFrameAccumulator>;
+  onClip${callbackType};
+  onStatus${statusType};
+}`
+    : '';
+  return `/**
+ * Create a clip-based inference loop for temporal video tasks.
+ * Captures frames continuously into the accumulator and runs inference
+ * when a full clip is ready (e.g., 16 frames for action recognition).
+ * Uses requestAnimationFrame for smooth capture.
+ *
+ * @returns Object with start() and stop() methods
+ */
+function createClipInferenceLoop(opts${optsType})${t ? ': { start: () => void; stop: () => void }' : ''} {
+  let running = false;
+  let rafId = 0;
+  let clipIndex = 0;
+  let processing = false;
+
+  function loop() {
+    if (!running) return;
+
+    const imageData = captureFrame(opts.video, opts.canvas);
+    opts.accumulator.push(imageData);
+
+    if (opts.accumulator.isReady() && !processing) {
+      processing = true;
+      const clip = opts.accumulator.getClip();
+
+      opts.onClip(clip).then(({ result, elapsed }) => {
+        void result;
+        opts.onStatus(elapsed, clipIndex);
+        clipIndex++;
+        processing = false;
+      });
+    }
+
+    if (running) {
+      rafId = requestAnimationFrame(loop);
+    }
+  }
+
+  return {
+    start() {
+      running = true;
+      clipIndex = 0;
+      rafId = requestAnimationFrame(loop);
+    },
+    stop() {
+      running = false;
+      cancelAnimationFrame(rafId);
+    },
+  };
+}`;
+}
+
 // ---- Microphone capture ----
 
 function emitStartMicrophone(ts: boolean): string {
@@ -356,9 +590,9 @@ function createAudioInferenceLoop(opts${optsType})${t ? ': { start: () => void; 
  *
  * Dispatches by input mode:
  *   file    → empty block
- *   camera  → captureFrame + startCamera + stopStream + inferenceLoop
- *   video   → captureFrame + stopStream + inferenceLoop
- *   screen  → captureFrame + startScreenCapture + stopStream + inferenceLoop
+ *   camera  → captureFrame + zeroCopy + startCamera + stopStream + inferenceLoop + accumulator + clipLoop
+ *   video   → captureFrame + zeroCopy + stopStream + inferenceLoop + batchProcessor + accumulator + clipLoop
+ *   screen  → captureFrame + zeroCopy + startScreenCapture + stopStream + inferenceLoop + accumulator + clipLoop
  *   mic     → startMicrophone + captureAudio + stopStream
  */
 export function emitInputBlock(config: ResolvedConfig): CodeBlock {
@@ -370,25 +604,45 @@ export function emitInputBlock(config: ResolvedConfig): CodeBlock {
   switch (config.input) {
     case 'camera':
       parts.push(emitCaptureFrame(ts));
+      parts.push(emitCaptureFrameZeroCopy(ts));
       parts.push(emitStartCamera(ts));
       parts.push(emitStopStream(ts));
       parts.push(emitInferenceLoop(ts));
-      exports.push('captureFrame', 'startCamera', 'stopStream', 'createInferenceLoop');
+      parts.push(emitFrameAccumulator(ts));
+      parts.push(emitClipInferenceLoop(ts));
+      exports.push(
+        'captureFrame', 'captureFrameZeroCopy', 'startCamera', 'stopStream',
+        'createInferenceLoop', 'createFrameAccumulator', 'createClipInferenceLoop',
+      );
       break;
 
     case 'video':
       parts.push(emitCaptureFrame(ts));
+      parts.push(emitCaptureFrameZeroCopy(ts));
       parts.push(emitStopStream(ts));
       parts.push(emitInferenceLoop(ts));
-      exports.push('captureFrame', 'stopStream', 'createInferenceLoop');
+      parts.push(emitBatchVideoProcessor(ts));
+      parts.push(emitFrameAccumulator(ts));
+      parts.push(emitClipInferenceLoop(ts));
+      exports.push(
+        'captureFrame', 'captureFrameZeroCopy', 'stopStream',
+        'createInferenceLoop', 'processVideoFrames',
+        'createFrameAccumulator', 'createClipInferenceLoop',
+      );
       break;
 
     case 'screen':
       parts.push(emitCaptureFrame(ts));
+      parts.push(emitCaptureFrameZeroCopy(ts));
       parts.push(emitStartScreenCapture(ts));
       parts.push(emitStopStream(ts));
       parts.push(emitInferenceLoop(ts));
-      exports.push('captureFrame', 'startScreenCapture', 'stopStream', 'createInferenceLoop');
+      parts.push(emitFrameAccumulator(ts));
+      parts.push(emitClipInferenceLoop(ts));
+      exports.push(
+        'captureFrame', 'captureFrameZeroCopy', 'startScreenCapture', 'stopStream',
+        'createInferenceLoop', 'createFrameAccumulator', 'createClipInferenceLoop',
+      );
       break;
 
     case 'mic': {
