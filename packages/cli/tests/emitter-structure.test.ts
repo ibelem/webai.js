@@ -5,9 +5,13 @@
 import { describe, it, expect } from 'vitest';
 import type { ResolvedConfig, ModelMetadata } from '@webai/core';
 import { emitLayer1 } from '../src/emitters/index.js';
+import { emitInputBlock } from '../src/emitters/input.js';
 import { emitPreprocessBlock } from '../src/emitters/preprocess.js';
 import { emitPostprocessBlock } from '../src/emitters/postprocess.js';
 import { emitOrtInferenceBlock } from '../src/emitters/inference-ort.js';
+import { emitLiteRTInferenceBlock } from '../src/emitters/inference-litert.js';
+import { emitWebNNInferenceBlock } from '../src/emitters/inference-webnn.js';
+import { emitOpfsCacheBlock } from '../src/emitters/opfs-cache.js';
 
 const classificationMeta: ModelMetadata = {
   format: 'onnx',
@@ -114,6 +118,68 @@ describe('emitPostprocessBlock', () => {
     expect(block.code).toContain(': Float32Array');
     expect(block.code).toContain(': ArrayLike<number>');
   });
+
+  it('exports nms, decodeDetections, postprocessDetections for object-detection', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'object-detection' }));
+    expect(block.exports).toEqual(['nms', 'decodeDetections', 'postprocessDetections']);
+  });
+
+  it('emits BoundingBox interface for detection in TS mode', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'object-detection', lang: 'ts' }));
+    expect(block.code).toContain('interface BoundingBox');
+    expect(block.code).toContain('classIndex: number');
+  });
+
+  it('omits BoundingBox interface for detection in JS mode', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'object-detection', lang: 'js' }));
+    expect(block.code).not.toContain('interface BoundingBox');
+  });
+
+  it('detection code contains iou, nms, decodeDetections functions', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'object-detection' }));
+    expect(block.code).toContain('function iou(');
+    expect(block.code).toContain('function nms(');
+    expect(block.code).toContain('function decodeDetections(');
+    expect(block.code).toContain('function postprocessDetections(');
+  });
+
+  it('exports argmaxMask, postprocessSegmentation for image-segmentation', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'image-segmentation' }));
+    expect(block.exports).toEqual(['argmaxMask', 'postprocessSegmentation']);
+  });
+
+  it('segmentation code contains argmaxMask function', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'image-segmentation' }));
+    expect(block.code).toContain('function argmaxMask(');
+    expect(block.code).toContain('Uint8Array');
+  });
+
+  it('exports postprocessEmbeddings for feature-extraction', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'feature-extraction' }));
+    expect(block.exports).toEqual(['postprocessEmbeddings']);
+  });
+
+  it('feature-extraction code returns Float32Array passthrough', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'feature-extraction' }));
+    expect(block.code).toContain('Float32Array');
+    expect(block.code).toContain('function postprocessEmbeddings(');
+  });
+
+  it('returns empty code and exports for tasks without postprocessing', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'text-generation' }));
+    expect(block.code).toBe('');
+    expect(block.exports).toEqual([]);
+  });
+
+  it('uses same exports for audio-classification as image-classification', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'audio-classification' }));
+    expect(block.exports).toEqual(['softmax', 'topK', 'postprocessResults']);
+  });
+
+  it('uses same exports for text-classification as image-classification', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'text-classification' }));
+    expect(block.exports).toEqual(['softmax', 'topK', 'postprocessResults']);
+  });
 });
 
 describe('emitOrtInferenceBlock', () => {
@@ -174,5 +240,296 @@ describe('emitOrtInferenceBlock', () => {
     const block = emitOrtInferenceBlock(makeConfig({ lang: 'ts' }));
     expect(block.code).toContain(': ort.InferenceSession');
     expect(block.code).toContain(': Promise<Float32Array>');
+  });
+});
+
+describe('emitInputBlock', () => {
+  it('returns empty block for file input', () => {
+    const block = emitInputBlock(makeConfig({ input: 'file' }));
+    expect(block.id).toBe('input');
+    expect(block.code).toBe('');
+    expect(block.exports).toEqual([]);
+  });
+
+  it('exports captureFrame, startCamera, stopStream, createInferenceLoop for camera', () => {
+    const block = emitInputBlock(makeConfig({ input: 'camera' }));
+    expect(block.exports).toEqual(['captureFrame', 'startCamera', 'stopStream', 'createInferenceLoop']);
+  });
+
+  it('camera code contains getUserMedia', () => {
+    const block = emitInputBlock(makeConfig({ input: 'camera' }));
+    expect(block.code).toContain('getUserMedia');
+    expect(block.code).toContain('facingMode');
+  });
+
+  it('exports captureFrame, stopStream, createInferenceLoop for video', () => {
+    const block = emitInputBlock(makeConfig({ input: 'video' }));
+    expect(block.exports).toEqual(['captureFrame', 'stopStream', 'createInferenceLoop']);
+  });
+
+  it('video does not include startCamera or startScreenCapture', () => {
+    const block = emitInputBlock(makeConfig({ input: 'video' }));
+    expect(block.code).not.toContain('startCamera');
+    expect(block.code).not.toContain('startScreenCapture');
+  });
+
+  it('exports captureFrame, startScreenCapture, stopStream, createInferenceLoop for screen', () => {
+    const block = emitInputBlock(makeConfig({ input: 'screen' }));
+    expect(block.exports).toEqual(['captureFrame', 'startScreenCapture', 'stopStream', 'createInferenceLoop']);
+  });
+
+  it('screen code contains getDisplayMedia', () => {
+    const block = emitInputBlock(makeConfig({ input: 'screen' }));
+    expect(block.code).toContain('getDisplayMedia');
+  });
+
+  it('exports startMicrophone, captureAudio, stopStream for mic', () => {
+    const block = emitInputBlock(makeConfig({ input: 'mic' }));
+    expect(block.exports).toEqual(['startMicrophone', 'captureAudio', 'stopStream']);
+  });
+
+  it('mic code contains AudioContext and AnalyserNode', () => {
+    const block = emitInputBlock(makeConfig({ input: 'mic' }));
+    expect(block.code).toContain('AudioContext');
+    expect(block.code).toContain('AnalyserNode');
+  });
+
+  it('inference loop contains frame skipping logic', () => {
+    const block = emitInputBlock(makeConfig({ input: 'camera' }));
+    expect(block.code).toContain('frameSkip');
+    expect(block.code).toContain('requestAnimationFrame');
+    expect(block.code).toContain('cancelAnimationFrame');
+  });
+
+  it('emits TypeScript annotations for camera when lang=ts', () => {
+    const block = emitInputBlock(makeConfig({ input: 'camera', lang: 'ts' }));
+    expect(block.code).toContain(': HTMLVideoElement');
+    expect(block.code).toContain(': HTMLCanvasElement');
+    expect(block.code).toContain(': ImageData');
+    expect(block.code).toContain(': MediaStream');
+  });
+
+  it('omits TypeScript annotations for camera when lang=js', () => {
+    const block = emitInputBlock(makeConfig({ input: 'camera', lang: 'js' }));
+    expect(block.code).not.toContain(': HTMLVideoElement');
+    expect(block.code).not.toContain(': HTMLCanvasElement');
+  });
+
+  it('has no imports for any input mode', () => {
+    for (const input of ['file', 'camera', 'video', 'screen', 'mic'] as const) {
+      const block = emitInputBlock(makeConfig({ input }));
+      expect(block.imports).toEqual([]);
+    }
+  });
+});
+
+describe('emitLayer1 with input block', () => {
+  it('includes input block for camera input (4 blocks total)', () => {
+    const blocks = emitLayer1(makeConfig({ input: 'camera' }));
+    expect(blocks).toHaveLength(4);
+    expect(blocks.map((b) => b.id)).toEqual(['input', 'preprocess', 'inference', 'postprocess']);
+  });
+
+  it('omits input block for file input (3 blocks total)', () => {
+    const blocks = emitLayer1(makeConfig({ input: 'file' }));
+    expect(blocks).toHaveLength(3);
+    expect(blocks.map((b) => b.id)).toEqual(['preprocess', 'inference', 'postprocess']);
+  });
+
+  it('includes input block for screen input', () => {
+    const blocks = emitLayer1(makeConfig({ input: 'screen' }));
+    const inputBlock = blocks.find((b) => b.id === 'input');
+    expect(inputBlock).toBeDefined();
+    expect(inputBlock?.exports).toContain('startScreenCapture');
+  });
+});
+
+describe('emitLiteRTInferenceBlock', () => {
+  it('exports createSession, runInference, getBackendLabel', () => {
+    const block = emitLiteRTInferenceBlock(makeConfig({ engine: 'litert' }));
+    expect(block.exports).toEqual(['createSession', 'runInference', 'getBackendLabel']);
+  });
+
+  it('uses @anthropic-ai/litert-web import', () => {
+    const block = emitLiteRTInferenceBlock(makeConfig({ engine: 'litert' }));
+    expect(block.imports).toContain('@anthropic-ai/litert-web');
+    expect(block.code).toContain("import * as litert from '@anthropic-ai/litert-web'");
+  });
+
+  it('includes GPU delegate when backend=webgpu', () => {
+    const block = emitLiteRTInferenceBlock(makeConfig({ engine: 'litert', backend: 'webgpu' }));
+    expect(block.code).toContain('createGpuDelegate');
+    expect(block.code).toContain('delegates');
+  });
+
+  it('omits GPU delegate when backend is not webgpu', () => {
+    const block = emitLiteRTInferenceBlock(makeConfig({ engine: 'litert', backend: 'wasm' }));
+    expect(block.code).not.toContain('createGpuDelegate');
+  });
+
+  it('uses model input shape from metadata', () => {
+    const block = emitLiteRTInferenceBlock(makeConfig({ engine: 'litert' }));
+    expect(block.code).toContain('[1, 3, 224, 224]');
+  });
+
+  it('emits TypeScript annotations when lang=ts', () => {
+    const block = emitLiteRTInferenceBlock(makeConfig({ engine: 'litert', lang: 'ts' }));
+    expect(block.code).toContain(': litert.TFLiteModel');
+    expect(block.code).toContain(': Promise<Float32Array>');
+  });
+
+  it('has id=inference', () => {
+    const block = emitLiteRTInferenceBlock(makeConfig({ engine: 'litert' }));
+    expect(block.id).toBe('inference');
+  });
+});
+
+describe('emitWebNNInferenceBlock', () => {
+  it('exports createSession, runInference, getBackendLabel', () => {
+    const block = emitWebNNInferenceBlock(makeConfig({ engine: 'webnn' }));
+    expect(block.exports).toEqual(['createSession', 'runInference', 'getBackendLabel']);
+  });
+
+  it('has no npm imports (browser API)', () => {
+    const block = emitWebNNInferenceBlock(makeConfig({ engine: 'webnn' }));
+    expect(block.imports).toEqual([]);
+  });
+
+  it('checks for WebNN support', () => {
+    const block = emitWebNNInferenceBlock(makeConfig({ engine: 'webnn' }));
+    expect(block.code).toContain("'ml' in navigator");
+  });
+
+  it('includes device fallback chain', () => {
+    const block = emitWebNNInferenceBlock(makeConfig({ engine: 'webnn' }));
+    expect(block.code).toContain('devicePrefs');
+    expect(block.code).toContain('createContext');
+  });
+
+  it('uses npu device for webnn-npu backend', () => {
+    const block = emitWebNNInferenceBlock(makeConfig({ engine: 'webnn', backend: 'webnn-npu' }));
+    expect(block.code).toContain("'npu'");
+  });
+
+  it('uses gpu device for webnn-gpu backend', () => {
+    const block = emitWebNNInferenceBlock(makeConfig({ engine: 'webnn', backend: 'webnn-gpu' }));
+    expect(block.code).toContain("'gpu'");
+  });
+
+  it('uses cpu device for webnn-cpu backend', () => {
+    const block = emitWebNNInferenceBlock(makeConfig({ engine: 'webnn', backend: 'webnn-cpu' }));
+    expect(block.code).toContain("'cpu'");
+  });
+
+  it('includes MLTensor-based inference', () => {
+    const block = emitWebNNInferenceBlock(makeConfig({ engine: 'webnn' }));
+    expect(block.code).toContain('createTensor');
+    expect(block.code).toContain('dispatch');
+  });
+
+  it('emits TypeScript annotations when lang=ts', () => {
+    const block = emitWebNNInferenceBlock(makeConfig({ engine: 'webnn', lang: 'ts' }));
+    expect(block.code).toContain(': MLContext');
+    expect(block.code).toContain(': MLGraph');
+    expect(block.code).toContain(': Promise<Float32Array>');
+  });
+
+  it('getBackendLabel returns WebNN device label', () => {
+    const block = emitWebNNInferenceBlock(makeConfig({ engine: 'webnn' }));
+    expect(block.code).toContain('WebNN');
+    expect(block.code).toContain('toUpperCase');
+  });
+
+  it('has id=inference', () => {
+    const block = emitWebNNInferenceBlock(makeConfig({ engine: 'webnn' }));
+    expect(block.id).toBe('inference');
+  });
+});
+
+describe('emitOpfsCacheBlock', () => {
+  it('returns empty block when offline=false', () => {
+    const block = emitOpfsCacheBlock(makeConfig({ offline: false }));
+    expect(block.id).toBe('opfs-cache');
+    expect(block.code).toBe('');
+    expect(block.exports).toEqual([]);
+    expect(block.imports).toEqual([]);
+  });
+
+  it('exports cachedFetch and clearModelCache when offline=true', () => {
+    const block = emitOpfsCacheBlock(makeConfig({ offline: true }));
+    expect(block.exports).toEqual(['cachedFetch', 'clearModelCache']);
+  });
+
+  it('includes OPFS storage API calls when offline=true', () => {
+    const block = emitOpfsCacheBlock(makeConfig({ offline: true }));
+    expect(block.code).toContain('navigator.storage.getDirectory');
+    expect(block.code).toContain('getDirectoryHandle');
+    expect(block.code).toContain('webai-cache');
+  });
+
+  it('includes cache hit/miss logging', () => {
+    const block = emitOpfsCacheBlock(makeConfig({ offline: true }));
+    expect(block.code).toContain('Cache hit');
+    expect(block.code).toContain('Cache miss');
+  });
+
+  it('includes clearModelCache function', () => {
+    const block = emitOpfsCacheBlock(makeConfig({ offline: true }));
+    expect(block.code).toContain('function clearModelCache');
+    expect(block.code).toContain('removeEntry');
+  });
+
+  it('has no npm imports', () => {
+    const block = emitOpfsCacheBlock(makeConfig({ offline: true }));
+    expect(block.imports).toEqual([]);
+  });
+
+  it('emits TypeScript annotations when lang=ts', () => {
+    const block = emitOpfsCacheBlock(makeConfig({ offline: true, lang: 'ts' }));
+    expect(block.code).toContain(': string');
+    expect(block.code).toContain(': Promise<ArrayBuffer>');
+    expect(block.code).toContain(': Promise<void>');
+  });
+
+  it('omits TypeScript annotations when lang=js', () => {
+    const block = emitOpfsCacheBlock(makeConfig({ offline: true, lang: 'js' }));
+    expect(block.code).not.toContain(': Promise<ArrayBuffer>');
+    expect(block.code).not.toContain(': Promise<void>');
+  });
+});
+
+describe('emitLayer1 with engine variations', () => {
+  it('uses litert inference block when engine=litert', () => {
+    const blocks = emitLayer1(makeConfig({ engine: 'litert' }));
+    const inference = blocks.find((b) => b.id === 'inference');
+    expect(inference).toBeDefined();
+    expect(inference?.imports).toContain('@anthropic-ai/litert-web');
+  });
+
+  it('uses webnn inference block when engine=webnn', () => {
+    const blocks = emitLayer1(makeConfig({ engine: 'webnn' }));
+    const inference = blocks.find((b) => b.id === 'inference');
+    expect(inference).toBeDefined();
+    expect(inference?.imports).toEqual([]);
+    expect(inference?.code).toContain("'ml' in navigator");
+  });
+
+  it('includes opfs-cache block when offline=true', () => {
+    const blocks = emitLayer1(makeConfig({ offline: true }));
+    const opfs = blocks.find((b) => b.id === 'opfs-cache');
+    expect(opfs).toBeDefined();
+    expect(opfs?.exports).toContain('cachedFetch');
+  });
+
+  it('omits opfs-cache block when offline=false', () => {
+    const blocks = emitLayer1(makeConfig({ offline: false }));
+    const opfs = blocks.find((b) => b.id === 'opfs-cache');
+    expect(opfs).toBeUndefined();
+  });
+
+  it('produces 4 blocks for ort + offline (preprocess, inference, postprocess, opfs)', () => {
+    const blocks = emitLayer1(makeConfig({ offline: true }));
+    expect(blocks).toHaveLength(4);
+    expect(blocks.map((b) => b.id)).toEqual(['preprocess', 'inference', 'postprocess', 'opfs-cache']);
   });
 });

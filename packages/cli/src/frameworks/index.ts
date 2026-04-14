@@ -11,7 +11,10 @@
 import type { ResolvedConfig } from '@webai/core';
 import type { CodeBlock, GeneratedFile } from '../types.js';
 import { emitHtml } from './html.js';
+import { emitVanillaVite } from './vanilla-vite.js';
 import { emitReactVite } from './react-vite.js';
+import { emitNextjs } from './nextjs.js';
+import { emitSvelteKit } from './sveltekit.js';
 
 /**
  * Emit all Layer 2 files for the given config and code blocks.
@@ -24,13 +27,21 @@ export function emitLayer2(config: ResolvedConfig, blocks: CodeBlock[]): Generat
   switch (config.framework) {
     case 'html':
       return emitHtml(config, blocks);
+    case 'vanilla-vite':
+      return emitVanillaVite(config, blocks);
     case 'react-vite':
       return emitReactVite(config, blocks);
-    // Phase 1b: vanilla-vite, nextjs, sveltekit
+    case 'nextjs':
+      return emitNextjs(config, blocks);
+    case 'sveltekit':
+      return emitSvelteKit(config, blocks);
     default:
       throw new Error(`Unsupported framework: ${config.framework}`);
   }
 }
 
 export { emitHtml } from './html.js';
+export { emitVanillaVite } from './vanilla-vite.js';
 export { emitReactVite } from './react-vite.js';
+export { emitNextjs } from './nextjs.js';
+export { emitSvelteKit } from './sveltekit.js';

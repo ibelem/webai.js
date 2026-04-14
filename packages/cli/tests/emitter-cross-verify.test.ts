@@ -13,6 +13,8 @@ import {
   toNCHW,
   softmax,
   topK,
+  nms,
+  argmax,
   type ResolvedConfig,
   type ModelMetadata,
 } from '@webai/core';
@@ -232,6 +234,131 @@ describe('T23: full emitted preprocessing chain matches real functions', () => {
     expect(emitted.length).toBe(real.length);
     for (let j = 0; j < real.length; j++) {
       expect(Math.abs(emitted[j] - real[j])).toBeLessThan(1e-6);
+    }
+  });
+});
+
+// ---- Detection cross-verification ----
+
+const detectionConfig: ResolvedConfig = {
+  ...baseConfig,
+  task: 'object-detection',
+  preprocess: { imageSize: 640, mean: [0, 0, 0], std: [1, 1, 1], layout: 'nchw' },
+  modelMeta: {
+    format: 'onnx',
+    inputs: [{ name: 'images', dataType: 'float32', shape: [1, 3, 640, 640] }],
+    outputs: [{ name: 'output0', dataType: 'float32', shape: [1, 84, 8400] }],
+  },
+};
+
+describe('T38: emitted NMS matches real nms()', () => {
+  const block = emitPostprocessBlock({ ...detectionConfig, lang: 'js' });
+  const emittedNms = evalInSandbox(block.code, 'nms');
+
+  // Test boxes: two overlapping, one separate
+  const boxes = [
+    { x: 0, y: 0, width: 10, height: 10, classIndex: 0, score: 0.9 },
+    { x: 1, y: 1, width: 10, height: 10, classIndex: 0, score: 0.8 },
+    { x: 50, y: 50, width: 10, height: 10, classIndex: 1, score: 0.7 },
+  ];
+
+  // Core BoundingBox doesn't have classIndex, but nms only reads x, y, width, height, score
+  const coreBoxes = boxes.map(({ x, y, width, height, score }) => ({ x, y, width, height, score }));
+
+  it('NMS with 0.5 IoU threshold', () => {
+    const realResult = nms(coreBoxes, 0.5);
+    const emittedResult = emittedNms(boxes, 0.5) as number[];
+    expect(emittedResult).toEqual(realResult);
+  });
+
+  it('NMS with 0.01 IoU threshold (aggressive suppression)', () => {
+    const realResult = nms(coreBoxes, 0.01);
+    const emittedResult = emittedNms(boxes, 0.01) as number[];
+    expect(emittedResult).toEqual(realResult);
+  });
+
+  it('NMS with 1.0 IoU threshold (no suppression)', () => {
+    const realResult = nms(coreBoxes, 1.0);
+    const emittedResult = emittedNms(boxes, 1.0) as number[];
+    expect(emittedResult).toEqual(realResult);
+  });
+
+  it('NMS with empty boxes', () => {
+    const realResult = nms([], 0.5);
+    const emittedResult = emittedNms([], 0.5) as number[];
+    expect(emittedResult).toEqual(realResult);
+  });
+});
+
+// ---- Segmentation cross-verification ----
+
+const segmentationConfig: ResolvedConfig = {
+  ...baseConfig,
+  task: 'image-segmentation',
+  modelMeta: {
+    format: 'onnx',
+    inputs: [{ name: 'input', dataType: 'float32', shape: [1, 3, 512, 512] }],
+    outputs: [{ name: 'output', dataType: 'float32', shape: [1, 21, 512, 512] }],
+  },
+};
+
+describe('T39: emitted argmaxMask matches real argmax per-pixel', () => {
+  const block = emitPostprocessBlock({ ...segmentationConfig, lang: 'js' });
+  const emittedArgmaxMask = evalInSandbox(block.code, 'argmaxMask');
+
+  it('3-class 2x2 mask matches per-pixel argmax', () => {
+    const numClasses = 3;
+    const height = 2;
+    const width = 2;
+    const numPixels = height * width;
+
+    // CHW layout: [class0[p0,p1,p2,p3], class1[p0,p1,p2,p3], class2[p0,p1,p2,p3]]
+    const output = new Float32Array([
+      0.1, 0.8, 0.3, 0.2, // class 0
+      0.9, 0.1, 0.5, 0.1, // class 1
+      0.0, 0.1, 0.2, 0.7, // class 2
+    ]);
+
+    const emittedMask = emittedArgmaxMask(output, numClasses, height, width) as Uint8Array;
+
+    // Verify each pixel against core argmax
+    for (let p = 0; p < numPixels; p++) {
+      const column = new Float32Array(numClasses);
+      for (let c = 0; c < numClasses; c++) {
+        column[c] = output[c * numPixels + p];
+      }
+      const realClass = argmax(column);
+      expect(emittedMask[p]).toBe(realClass);
+    }
+  });
+
+  it('single class produces all zeros', () => {
+    const output = new Float32Array([0.5, 0.3, 0.8, 0.1]);
+    const mask = emittedArgmaxMask(output, 1, 2, 2) as Uint8Array;
+    expect(Array.from(mask)).toEqual([0, 0, 0, 0]);
+  });
+
+  it('21-class 4x4 mask matches per-pixel argmax', () => {
+    const numClasses = 21;
+    const height = 4;
+    const width = 4;
+    const numPixels = height * width;
+
+    // Generate deterministic test data
+    const output = new Float32Array(numClasses * numPixels);
+    for (let i = 0; i < output.length; i++) {
+      output[i] = Math.sin(i * 0.7 + 0.3);
+    }
+
+    const emittedMask = emittedArgmaxMask(output, numClasses, height, width) as Uint8Array;
+
+    for (let p = 0; p < numPixels; p++) {
+      const column = new Float32Array(numClasses);
+      for (let c = 0; c < numClasses; c++) {
+        column[c] = output[c * numPixels + p];
+      }
+      const realClass = argmax(column);
+      expect(emittedMask[p]).toBe(realClass);
     }
   });
 });

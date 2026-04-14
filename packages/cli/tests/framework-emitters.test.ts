@@ -12,6 +12,9 @@ import { emitLayer1 } from '../src/emitters/index.js';
 import { emitLayer2 } from '../src/frameworks/index.js';
 import { emitHtml } from '../src/frameworks/html.js';
 import { emitReactVite } from '../src/frameworks/react-vite.js';
+import { emitVanillaVite } from '../src/frameworks/vanilla-vite.js';
+import { emitNextjs } from '../src/frameworks/nextjs.js';
+import { emitSvelteKit } from '../src/frameworks/sveltekit.js';
 
 const classificationMeta: ModelMetadata = {
   format: 'onnx',
@@ -66,6 +69,24 @@ function generateReactVite(overrides: Partial<ResolvedConfig> = {}) {
   return { files: emitReactVite(config, blocks), config, blocks };
 }
 
+function generateVanillaVite(overrides: Partial<ResolvedConfig> = {}) {
+  const config = makeConfig({ framework: 'vanilla-vite', ...overrides });
+  const blocks = emitLayer1(config);
+  return { files: emitVanillaVite(config, blocks), config, blocks };
+}
+
+function generateNextjs(overrides: Partial<ResolvedConfig> = {}) {
+  const config = makeConfig({ framework: 'nextjs', ...overrides });
+  const blocks = emitLayer1(config);
+  return { files: emitNextjs(config, blocks), config, blocks };
+}
+
+function generateSvelteKit(overrides: Partial<ResolvedConfig> = {}) {
+  const config = makeConfig({ framework: 'sveltekit', ...overrides });
+  const blocks = emitLayer1(config);
+  return { files: emitSvelteKit(config, blocks), config, blocks };
+}
+
 // ---- emitLayer2 dispatcher ----
 
 describe('emitLayer2', () => {
@@ -83,8 +104,32 @@ describe('emitLayer2', () => {
     expect(files.some((f) => f.path === 'package.json')).toBe(true);
   });
 
+  it('dispatches to nextjs framework', () => {
+    const config = makeConfig({ framework: 'nextjs' });
+    const blocks = emitLayer1(config);
+    const files = emitLayer2(config, blocks);
+    expect(files.some((f) => f.path === 'package.json')).toBe(true);
+    expect(files.some((f) => f.path.startsWith('app/'))).toBe(true);
+  });
+
+  it('dispatches to vanilla-vite framework', () => {
+    const config = makeConfig({ framework: 'vanilla-vite' });
+    const blocks = emitLayer1(config);
+    const files = emitLayer2(config, blocks);
+    expect(files.some((f) => f.path === 'package.json')).toBe(true);
+    expect(files.some((f) => f.path === 'src/style.css')).toBe(true);
+  });
+
+  it('dispatches to sveltekit framework', () => {
+    const config = makeConfig({ framework: 'sveltekit' });
+    const blocks = emitLayer1(config);
+    const files = emitLayer2(config, blocks);
+    expect(files.some((f) => f.path === 'package.json')).toBe(true);
+    expect(files.some((f) => f.path === 'src/routes/+page.svelte')).toBe(true);
+  });
+
   it('throws for unsupported framework', () => {
-    const config = makeConfig({ framework: 'nextjs' as ResolvedConfig['framework'] });
+    const config = makeConfig({ framework: 'unknown' as ResolvedConfig['framework'] });
     const blocks = emitLayer1(config);
     expect(() => emitLayer2(config, blocks)).toThrow(/Unsupported framework/);
   });
@@ -431,6 +476,236 @@ describe('emitReactVite', () => {
       expect(readme).toContain('package.json');
       expect(readme).toContain('src/App.jsx');
       expect(readme).toContain('src/lib/inference.js');
+    });
+  });
+});
+
+// ---- Vanilla-Vite framework ----
+
+describe('emitVanillaVite', () => {
+  describe('file structure (JS)', () => {
+    it('produces correct file set', () => {
+      const { files } = generateVanillaVite({ lang: 'js' });
+      const paths = files.map((f) => f.path);
+      expect(paths).toContain('package.json');
+      expect(paths).toContain('vite.config.js');
+      expect(paths).toContain('index.html');
+      expect(paths).toContain('src/main.js');
+      expect(paths).toContain('src/style.css');
+      expect(paths).toContain('src/lib/preprocess.js');
+      expect(paths).toContain('src/lib/inference.js');
+      expect(paths).toContain('src/lib/postprocess.js');
+      expect(paths).toContain('README.md');
+    });
+  });
+
+  describe('file structure (TS)', () => {
+    it('uses .ts extensions', () => {
+      const { files } = generateVanillaVite({ lang: 'ts' });
+      const paths = files.map((f) => f.path);
+      expect(paths).toContain('src/main.ts');
+      expect(paths).toContain('src/lib/preprocess.ts');
+      expect(paths).toContain('src/lib/inference.ts');
+      expect(paths).toContain('src/lib/postprocess.ts');
+    });
+  });
+
+  describe('package.json', () => {
+    it('includes onnxruntime-web dependency', () => {
+      const { files } = generateVanillaVite();
+      const pkg = JSON.parse(getFile(files, 'package.json'));
+      expect(pkg.dependencies['onnxruntime-web']).toBeDefined();
+    });
+
+    it('does not include React dependencies', () => {
+      const { files } = generateVanillaVite();
+      const pkg = JSON.parse(getFile(files, 'package.json'));
+      expect(pkg.dependencies.react).toBeUndefined();
+    });
+
+    it('has dev, build, preview scripts', () => {
+      const { files } = generateVanillaVite();
+      const pkg = JSON.parse(getFile(files, 'package.json'));
+      expect(pkg.scripts.dev).toBe('vite');
+      expect(pkg.scripts.build).toBe('vite build');
+      expect(pkg.scripts.preview).toBe('vite preview');
+    });
+  });
+
+  describe('lib modules', () => {
+    it('preprocess module exports functions', () => {
+      const { files } = generateVanillaVite();
+      const code = getFile(files, 'src/lib/preprocess.js');
+      expect(code).toContain('export function resizeImage');
+      expect(code).toContain('export function preprocessImage');
+    });
+
+    it('inference module exports functions', () => {
+      const { files } = generateVanillaVite();
+      const code = getFile(files, 'src/lib/inference.js');
+      expect(code).toContain("import * as ort from 'onnxruntime-web'");
+      expect(code).toContain('export async function createSession');
+      expect(code).toContain('export async function runInference');
+    });
+
+    it('postprocess module exports functions', () => {
+      const { files } = generateVanillaVite();
+      const code = getFile(files, 'src/lib/postprocess.js');
+      expect(code).toContain('export function softmax');
+      expect(code).toContain('export function topK');
+    });
+  });
+
+  describe('main module', () => {
+    it('imports from lib modules', () => {
+      const { files } = generateVanillaVite();
+      const main = getFile(files, 'src/main.js');
+      expect(main).toContain("from './lib/inference.js'");
+      expect(main).toContain("from './lib/preprocess.js'");
+      expect(main).toContain("from './lib/postprocess.js'");
+    });
+
+    it('references model path', () => {
+      const { files } = generateVanillaVite();
+      const main = getFile(files, 'src/main.js');
+      expect(main).toContain('mobilenet');
+    });
+  });
+});
+
+// ---- Next.js framework ----
+
+describe('emitNextjs', () => {
+  describe('file structure (JS)', () => {
+    it('produces correct file set', () => {
+      const { files } = generateNextjs({ lang: 'js' });
+      const paths = files.map((f) => f.path);
+      expect(paths).toContain('package.json');
+      expect(paths).toContain('next.config.mjs');
+      expect(paths).toContain('app/layout.jsx');
+      expect(paths).toContain('app/page.jsx');
+      expect(paths).toContain('app/globals.css');
+      expect(paths).toContain('README.md');
+    });
+  });
+
+  describe('file structure (TS)', () => {
+    it('uses .tsx extensions and includes tsconfig', () => {
+      const { files } = generateNextjs({ lang: 'ts' });
+      const paths = files.map((f) => f.path);
+      expect(paths).toContain('app/layout.tsx');
+      expect(paths).toContain('app/page.tsx');
+      expect(paths).toContain('tsconfig.json');
+    });
+  });
+
+  describe('package.json', () => {
+    it('includes next, react, and react-dom', () => {
+      const { files } = generateNextjs();
+      const pkg = JSON.parse(getFile(files, 'package.json'));
+      expect(pkg.dependencies.next).toBeDefined();
+      expect(pkg.dependencies.react).toBeDefined();
+      expect(pkg.dependencies['react-dom']).toBeDefined();
+    });
+
+    it('has dev, build, start scripts', () => {
+      const { files } = generateNextjs();
+      const pkg = JSON.parse(getFile(files, 'package.json'));
+      expect(pkg.scripts.dev).toContain('next dev');
+      expect(pkg.scripts.build).toContain('next build');
+      expect(pkg.scripts.start).toContain('next start');
+    });
+  });
+
+  describe('app files', () => {
+    it('page includes use client directive', () => {
+      const { files } = generateNextjs();
+      const page = getFile(files, 'app/page.jsx');
+      expect(page).toContain("'use client'");
+    });
+
+    it('layout includes metadata export', () => {
+      const { files } = generateNextjs();
+      const layout = getFile(files, 'app/layout.jsx');
+      expect(layout).toContain('metadata');
+    });
+  });
+
+  describe('lib modules', () => {
+    it('has inference lib with ort import', () => {
+      const { files } = generateNextjs();
+      const code = getFile(files, 'lib/inference.js');
+      expect(code).toContain("import * as ort from 'onnxruntime-web'");
+      expect(code).toContain('export async function createSession');
+    });
+  });
+});
+
+// ---- SvelteKit framework ----
+
+describe('emitSvelteKit', () => {
+  describe('file structure', () => {
+    it('produces correct file set', () => {
+      const { files } = generateSvelteKit({ lang: 'js' });
+      const paths = files.map((f) => f.path);
+      expect(paths).toContain('package.json');
+      expect(paths).toContain('svelte.config.js');
+      expect(paths).toContain('vite.config.js');
+      expect(paths).toContain('src/app.html');
+      expect(paths).toContain('src/app.css');
+      expect(paths).toContain('src/routes/+layout.svelte');
+      expect(paths).toContain('src/routes/+page.svelte');
+      expect(paths).toContain('README.md');
+    });
+  });
+
+  describe('file structure (TS)', () => {
+    it('uses .ts extensions for lib modules', () => {
+      const { files } = generateSvelteKit({ lang: 'ts' });
+      const paths = files.map((f) => f.path);
+      expect(paths).toContain('src/lib/preprocess.ts');
+      expect(paths).toContain('src/lib/inference.ts');
+      expect(paths).toContain('src/lib/postprocess.ts');
+    });
+  });
+
+  describe('package.json', () => {
+    it('includes svelte and @sveltejs/kit', () => {
+      const { files } = generateSvelteKit();
+      const pkg = JSON.parse(getFile(files, 'package.json'));
+      expect(pkg.devDependencies.svelte || pkg.dependencies.svelte).toBeDefined();
+      expect(pkg.devDependencies['@sveltejs/kit'] || pkg.dependencies['@sveltejs/kit']).toBeDefined();
+    });
+
+    it('has dev and build scripts', () => {
+      const { files } = generateSvelteKit();
+      const pkg = JSON.parse(getFile(files, 'package.json'));
+      expect(pkg.scripts.dev).toContain('vite dev');
+      expect(pkg.scripts.build).toContain('vite build');
+    });
+  });
+
+  describe('page component', () => {
+    it('imports from $lib modules', () => {
+      const { files } = generateSvelteKit();
+      const page = getFile(files, 'src/routes/+page.svelte');
+      expect(page).toContain('$lib/');
+    });
+
+    it('includes script and markup sections', () => {
+      const { files } = generateSvelteKit();
+      const page = getFile(files, 'src/routes/+page.svelte');
+      expect(page).toContain('<script');
+      expect(page).toContain('</script>');
+    });
+  });
+
+  describe('lib modules', () => {
+    it('inference lib has ort import', () => {
+      const { files } = generateSvelteKit();
+      const code = getFile(files, 'src/lib/inference.js');
+      expect(code).toContain("import * as ort from 'onnxruntime-web'");
+      expect(code).toContain('export async function createSession');
     });
   });
 });

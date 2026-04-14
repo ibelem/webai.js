@@ -1,9 +1,13 @@
 /**
- * React-Vite framework emitter (Layer 2).
+ * Next.js framework emitter (Layer 2).
  *
- * Produces a full React + Vite project:
- *   package.json, vite.config.js, index.html, src/main, src/App, src/App.css,
- *   src/lib/preprocess, src/lib/inference, src/lib/postprocess, README.md
+ * Produces a Next.js App Router project:
+ *   package.json, next.config.mjs, tsconfig.json (TS only),
+ *   app/layout.{tsx|jsx}, app/page.{tsx|jsx}, app/globals.css,
+ *   lib/input.{ts|js} (if non-file), lib/preprocess.{ts|js},
+ *   lib/inference.{ts|js}, lib/postprocess.{ts|js}, README.md
+ *
+ * Uses App Router with 'use client' for browser ML inference.
  */
 
 import type { ResolvedConfig } from '@webai/core';
@@ -24,6 +28,7 @@ const libExt = (config: ResolvedConfig) => (config.lang === 'ts' ? 'ts' : 'js');
 
 function emitPackageJson(config: ResolvedConfig, blocks: CodeBlock[]): string {
   const deps: Record<string, string> = {
+    next: '^15.0.0',
     react: '^19.0.0',
     'react-dom': '^19.0.0',
   };
@@ -32,79 +37,107 @@ function emitPackageJson(config: ResolvedConfig, blocks: CodeBlock[]): string {
     else deps[imp] = 'latest';
   }
 
-  const devDeps: Record<string, string> = {
-    '@vitejs/plugin-react': '^4.3.0',
-    vite: '^6.0.0',
-  };
+  const devDeps: Record<string, string> = {};
   if (config.lang === 'ts') {
     devDeps['typescript'] = '^5.7.0';
     devDeps['@types/react'] = '^19.0.0';
     devDeps['@types/react-dom'] = '^19.0.0';
+    devDeps['@types/node'] = '^22.0.0';
   }
 
+  const pkg: Record<string, unknown> = {
+    name: config.modelName,
+    private: true,
+    version: '0.0.0',
+    scripts: {
+      dev: 'next dev',
+      build: 'next build',
+      start: 'next start',
+    },
+    dependencies: deps,
+  };
+
+  if (Object.keys(devDeps).length > 0) {
+    pkg.devDependencies = devDeps;
+  }
+
+  return JSON.stringify(pkg, null, 2);
+}
+
+function emitNextConfig(): string {
+  return `/** @type {import('next').NextConfig} */
+const nextConfig = {
+  // Configure webpack to handle ONNX WASM files
+  webpack(config) {
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      fs: false,
+      path: false,
+    };
+    return config;
+  },
+};
+
+export default nextConfig;
+`;
+}
+
+function emitTsConfig(): string {
   return JSON.stringify(
     {
-      name: config.modelName,
-      private: true,
-      version: '0.0.0',
-      type: 'module',
-      scripts: {
-        dev: 'vite',
-        build: 'vite build',
-        preview: 'vite preview',
+      compilerOptions: {
+        target: 'ES2017',
+        lib: ['dom', 'dom.iterable', 'esnext'],
+        allowJs: true,
+        skipLibCheck: true,
+        strict: true,
+        noEmit: true,
+        esModuleInterop: true,
+        module: 'esnext',
+        moduleResolution: 'bundler',
+        resolveJsonModule: true,
+        isolatedModules: true,
+        jsx: 'preserve',
+        incremental: true,
+        plugins: [{ name: 'next' }],
+        paths: { '@/*': ['./*'] },
       },
-      dependencies: deps,
-      devDependencies: devDeps,
+      include: ['next-env.d.ts', '**/*.ts', '**/*.tsx', '.next/types/**/*.ts'],
+      exclude: ['node_modules'],
     },
     null,
     2,
   );
 }
 
-function emitViteConfig(): string {
-  return `import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-
-export default defineConfig({
-  plugins: [react()],
-});
-`;
-}
-
-function emitIndexHtml(config: ResolvedConfig): string {
+function emitLayout(config: ResolvedConfig): string {
+  const t = config.lang === 'ts';
   const taskLabel = getTaskLabel(config.task);
-  return `<!DOCTYPE html>
-<html lang="en" data-theme="${config.theme}">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>${config.modelName} — ${taskLabel}</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.${ext(config)}"></script>
-  </body>
-</html>
+  const metadataExport = t
+    ? `\nimport type { Metadata } from 'next';\n\nexport const metadata: Metadata = {
+  title: '${config.modelName} — ${taskLabel}',
+  description: '${taskLabel} powered by ${getEngineLabel(config.engine)}',
+};\n`
+    : `\nexport const metadata = {
+  title: '${config.modelName} — ${taskLabel}',
+  description: '${taskLabel} powered by ${getEngineLabel(config.engine)}',
+};\n`;
+
+  const childrenType = t ? ': { children: React.ReactNode }' : '';
+
+  return `import './globals.css';
+${metadataExport}
+export default function RootLayout({ children }${childrenType}) {
+  return (
+    <html lang="en" data-theme="${config.theme}">
+      <body>{children}</body>
+    </html>
+  );
+}
 `;
 }
 
-function emitMain(config: ResolvedConfig): string {
-  const e = ext(config);
-  const appImport = e === 'tsx' ? './App.tsx' : './App.jsx';
-  return `import { StrictMode } from 'react';
-import { createRoot } from 'react-dom/client';
-import App from '${appImport}';
-import './App.css';
-
-createRoot(document.getElementById('root')${config.lang === 'ts' ? '!' : ''}).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-);
-`;
-}
-
-function emitApp(config: ResolvedConfig): string {
+function emitPage(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
@@ -115,14 +148,16 @@ function emitApp(config: ResolvedConfig): string {
   const eventType = t ? ': React.DragEvent' : '';
   const changeType = t ? ': React.ChangeEvent<HTMLInputElement>' : '';
 
-  return `import { useState, useEffect, useRef, useCallback } from 'react';
-import { createSession, runInference, getBackendLabel } from './lib/inference.${le}';
-import { preprocessImage } from './lib/preprocess.${le}';
-import { postprocessResults } from './lib/postprocess.${le}';
+  return `'use client';
+
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { createSession, runInference, getBackendLabel } from '../lib/inference.${le}';
+import { preprocessImage } from '../lib/preprocess.${le}';
+import { postprocessResults } from '../lib/postprocess.${le}';
 
 const MODEL_PATH = '/${config.modelName}.onnx';
 
-export default function App() {
+export default function Page() {
   const [results, setResults] = useState${stateType}(null);
   const [status, setStatus] = useState('Loading model...');
   const [imageUrl, setImageUrl] = useState${t ? '<string | null>' : ''}(null);
@@ -256,7 +291,7 @@ export default function App() {
 `;
 }
 
-function emitAppCssFile(config: ResolvedConfig): string {
+function emitGlobalsCss(config: ResolvedConfig): string {
   return `${emitDesignSystemCSS(config)}\n\n${emitAppCSS()}`;
 }
 
@@ -267,9 +302,9 @@ function toLibModule(block: CodeBlock | undefined): string {
 }
 
 /**
- * Emit React-Vite framework files.
+ * Emit Next.js framework files.
  */
-export function emitReactVite(config: ResolvedConfig, blocks: CodeBlock[]): GeneratedFile[] {
+export function emitNextjs(config: ResolvedConfig, blocks: CodeBlock[]): GeneratedFile[] {
   const le = libExt(config);
   const e = ext(config);
 
@@ -280,42 +315,53 @@ export function emitReactVite(config: ResolvedConfig, blocks: CodeBlock[]): Gene
 
   const filePaths: string[] = [
     'package.json',
-    'vite.config.js',
-    'index.html',
-    `src/main.${e}`,
-    `src/App.${e}`,
-    'src/App.css',
+    'next.config.mjs',
   ];
 
-  // Include input lib module only for non-file input modes
-  if (inputBlock?.code) {
-    filePaths.push(`src/lib/input.${le}`);
+  if (config.lang === 'ts') {
+    filePaths.push('tsconfig.json');
   }
 
   filePaths.push(
-    `src/lib/preprocess.${le}`,
-    `src/lib/inference.${le}`,
-    `src/lib/postprocess.${le}`,
+    `app/layout.${e}`,
+    `app/page.${e}`,
+    'app/globals.css',
+  );
+
+  if (inputBlock?.code) {
+    filePaths.push(`lib/input.${le}`);
+  }
+
+  filePaths.push(
+    `lib/preprocess.${le}`,
+    `lib/inference.${le}`,
+    `lib/postprocess.${le}`,
     'README.md',
   );
 
   const files: GeneratedFile[] = [
     { path: 'package.json', content: emitPackageJson(config, blocks) },
-    { path: 'vite.config.js', content: emitViteConfig() },
-    { path: 'index.html', content: emitIndexHtml(config) },
-    { path: `src/main.${e}`, content: emitMain(config) },
-    { path: `src/App.${e}`, content: emitApp(config) },
-    { path: 'src/App.css', content: emitAppCssFile(config) },
+    { path: 'next.config.mjs', content: emitNextConfig() },
   ];
 
-  if (inputBlock?.code) {
-    files.push({ path: `src/lib/input.${le}`, content: toLibModule(inputBlock) });
+  if (config.lang === 'ts') {
+    files.push({ path: 'tsconfig.json', content: emitTsConfig() });
   }
 
   files.push(
-    { path: `src/lib/preprocess.${le}`, content: toLibModule(preprocessBlock) },
-    { path: `src/lib/inference.${le}`, content: toLibModule(inferenceBlock) },
-    { path: `src/lib/postprocess.${le}`, content: toLibModule(postprocessBlock) },
+    { path: `app/layout.${e}`, content: emitLayout(config) },
+    { path: `app/page.${e}`, content: emitPage(config) },
+    { path: 'app/globals.css', content: emitGlobalsCss(config) },
+  );
+
+  if (inputBlock?.code) {
+    files.push({ path: `lib/input.${le}`, content: toLibModule(inputBlock) });
+  }
+
+  files.push(
+    { path: `lib/preprocess.${le}`, content: toLibModule(preprocessBlock) },
+    { path: `lib/inference.${le}`, content: toLibModule(inferenceBlock) },
+    { path: `lib/postprocess.${le}`, content: toLibModule(postprocessBlock) },
     { path: 'README.md', content: emitReadme(config, filePaths) },
   );
 
