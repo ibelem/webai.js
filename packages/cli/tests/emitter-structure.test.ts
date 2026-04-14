@@ -166,10 +166,28 @@ describe('emitPostprocessBlock', () => {
     expect(block.code).toContain('function postprocessEmbeddings(');
   });
 
-  it('returns empty code and exports for tasks without postprocessing', () => {
+  it('exports sampleNextToken, postprocessGeneration for text-generation', () => {
     const block = emitPostprocessBlock(makeConfig({ task: 'text-generation' }));
-    expect(block.code).toBe('');
-    expect(block.exports).toEqual([]);
+    expect(block.exports).toEqual(['sampleNextToken', 'postprocessGeneration']);
+  });
+
+  it('text-generation code contains sampleNextToken and postprocessGeneration functions', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'text-generation' }));
+    expect(block.code).toContain('function sampleNextToken(');
+    expect(block.code).toContain('function postprocessGeneration(');
+    expect(block.code).toContain('greedy decoding (argmax)');
+  });
+
+  it('exports postprocessZeroShot for zero-shot-classification', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'zero-shot-classification' }));
+    expect(block.exports).toEqual(['postprocessZeroShot']);
+  });
+
+  it('zero-shot code contains postprocessZeroShot function with softmax', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'zero-shot-classification' }));
+    expect(block.code).toContain('function postprocessZeroShot(');
+    expect(block.code).toContain('Softmax over scores');
+    expect(block.code).toContain('entailment scores');
   });
 
   it('uses same exports for audio-classification as image-classification', () => {

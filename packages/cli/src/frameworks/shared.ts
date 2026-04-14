@@ -19,6 +19,7 @@ const TASK_LABELS: Record<string, string> = {
   'text-to-speech': 'Text to Speech',
   'text-classification': 'Text Classification',
   'text-generation': 'Text Generation',
+  'zero-shot-classification': 'Zero-Shot Classification',
 };
 
 const ENGINE_LABELS: Record<string, string> = {
@@ -326,6 +327,67 @@ h1 {
   resize: vertical;
 }
 
+/* Text task: input area */
+.text-input {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webai-space-3);
+}
+
+.text-input textarea {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-sans);
+  font-size: var(--webai-font-size-base);
+  padding: var(--webai-space-3);
+  resize: vertical;
+  min-height: 100px;
+}
+
+.text-input textarea:focus {
+  outline: 2px solid var(--webai-accent);
+  outline-offset: -2px;
+}
+
+/* Text task: run button */
+.run-btn {
+  align-self: flex-start;
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-2) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  cursor: pointer;
+  font-size: var(--webai-font-size-base);
+}
+
+.run-btn:hover { opacity: 0.9; }
+.run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Text task: generation output */
+.generation-output {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  padding: var(--webai-space-3);
+  white-space: pre-wrap;
+  font-family: var(--webai-font-sans);
+  min-height: 80px;
+}
+
+/* Zero-shot: label input */
+.labels-input {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  padding: var(--webai-space-2);
+}
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .result-bar { transition: none; }
@@ -337,6 +399,11 @@ h1 {
 /** Check if a task is an audio task */
 export function isAudioTask(task: string): boolean {
   return ['speech-to-text', 'audio-classification', 'text-to-speech'].includes(task);
+}
+
+/** Check if a task is a text/NLP task */
+export function isTextTask(task: string): boolean {
+  return ['text-classification', 'text-generation', 'zero-shot-classification'].includes(task);
 }
 
 /** Collect auxiliary files from all code blocks (e.g. AudioWorklet processor) */

@@ -276,6 +276,67 @@ h1 {
   resize: vertical;
 }
 
+/* Text task: input area */
+.text-input {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webai-space-3);
+}
+
+.text-input textarea {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-sans);
+  font-size: var(--webai-font-size-base);
+  padding: var(--webai-space-3);
+  resize: vertical;
+  min-height: 100px;
+}
+
+.text-input textarea:focus {
+  outline: 2px solid var(--webai-accent);
+  outline-offset: -2px;
+}
+
+/* Text task: run button */
+.run-btn {
+  align-self: flex-start;
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-2) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  cursor: pointer;
+  font-size: var(--webai-font-size-base);
+}
+
+.run-btn:hover { opacity: 0.9; }
+.run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Text task: generation output */
+.generation-output {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  padding: var(--webai-space-3);
+  white-space: pre-wrap;
+  font-family: var(--webai-font-sans);
+  min-height: 80px;
+}
+
+/* Zero-shot: label input */
+.labels-input {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  padding: var(--webai-space-2);
+}
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .result-bar { transition: none; }
@@ -1175,6 +1236,67 @@ h1 {
   resize: vertical;
 }
 
+/* Text task: input area */
+.text-input {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webai-space-3);
+}
+
+.text-input textarea {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-sans);
+  font-size: var(--webai-font-size-base);
+  padding: var(--webai-space-3);
+  resize: vertical;
+  min-height: 100px;
+}
+
+.text-input textarea:focus {
+  outline: 2px solid var(--webai-accent);
+  outline-offset: -2px;
+}
+
+/* Text task: run button */
+.run-btn {
+  align-self: flex-start;
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-2) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  cursor: pointer;
+  font-size: var(--webai-font-size-base);
+}
+
+.run-btn:hover { opacity: 0.9; }
+.run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Text task: generation output */
+.generation-output {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  padding: var(--webai-space-3);
+  white-space: pre-wrap;
+  font-family: var(--webai-font-sans);
+  min-height: 80px;
+}
+
+/* Zero-shot: label input */
+.labels-input {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  padding: var(--webai-space-2);
+}
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .result-bar { transition: none; }
@@ -1730,6 +1852,67 @@ h1 {
   color: var(--webai-text);
   padding: 0.75rem;
   resize: vertical;
+}
+
+/* Text task: input area */
+.text-input {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webai-space-3);
+}
+
+.text-input textarea {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-sans);
+  font-size: var(--webai-font-size-base);
+  padding: var(--webai-space-3);
+  resize: vertical;
+  min-height: 100px;
+}
+
+.text-input textarea:focus {
+  outline: 2px solid var(--webai-accent);
+  outline-offset: -2px;
+}
+
+/* Text task: run button */
+.run-btn {
+  align-self: flex-start;
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-2) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  cursor: pointer;
+  font-size: var(--webai-font-size-base);
+}
+
+.run-btn:hover { opacity: 0.9; }
+.run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Text task: generation output */
+.generation-output {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  padding: var(--webai-space-3);
+  white-space: pre-wrap;
+  font-family: var(--webai-font-sans);
+  min-height: 80px;
+}
+
+/* Zero-shot: label input */
+.labels-input {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  padding: var(--webai-space-2);
 }
 
 /* Reduced motion */
@@ -2437,6 +2620,67 @@ h1 {
   resize: vertical;
 }
 
+/* Text task: input area */
+.text-input {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webai-space-3);
+}
+
+.text-input textarea {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-sans);
+  font-size: var(--webai-font-size-base);
+  padding: var(--webai-space-3);
+  resize: vertical;
+  min-height: 100px;
+}
+
+.text-input textarea:focus {
+  outline: 2px solid var(--webai-accent);
+  outline-offset: -2px;
+}
+
+/* Text task: run button */
+.run-btn {
+  align-self: flex-start;
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-2) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  cursor: pointer;
+  font-size: var(--webai-font-size-base);
+}
+
+.run-btn:hover { opacity: 0.9; }
+.run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Text task: generation output */
+.generation-output {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  padding: var(--webai-space-3);
+  white-space: pre-wrap;
+  font-family: var(--webai-font-sans);
+  min-height: 80px;
+}
+
+/* Zero-shot: label input */
+.labels-input {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  padding: var(--webai-space-2);
+}
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .result-bar { transition: none; }
@@ -3142,6 +3386,67 @@ h1 {
   resize: vertical;
 }
 
+/* Text task: input area */
+.text-input {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webai-space-3);
+}
+
+.text-input textarea {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-sans);
+  font-size: var(--webai-font-size-base);
+  padding: var(--webai-space-3);
+  resize: vertical;
+  min-height: 100px;
+}
+
+.text-input textarea:focus {
+  outline: 2px solid var(--webai-accent);
+  outline-offset: -2px;
+}
+
+/* Text task: run button */
+.run-btn {
+  align-self: flex-start;
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-2) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  cursor: pointer;
+  font-size: var(--webai-font-size-base);
+}
+
+.run-btn:hover { opacity: 0.9; }
+.run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Text task: generation output */
+.generation-output {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  padding: var(--webai-space-3);
+  white-space: pre-wrap;
+  font-family: var(--webai-font-sans);
+  min-height: 80px;
+}
+
+/* Zero-shot: label input */
+.labels-input {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  padding: var(--webai-space-2);
+}
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .result-bar { transition: none; }
@@ -3838,6 +4143,67 @@ h1 {
   color: var(--webai-text);
   padding: 0.75rem;
   resize: vertical;
+}
+
+/* Text task: input area */
+.text-input {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webai-space-3);
+}
+
+.text-input textarea {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-sans);
+  font-size: var(--webai-font-size-base);
+  padding: var(--webai-space-3);
+  resize: vertical;
+  min-height: 100px;
+}
+
+.text-input textarea:focus {
+  outline: 2px solid var(--webai-accent);
+  outline-offset: -2px;
+}
+
+/* Text task: run button */
+.run-btn {
+  align-self: flex-start;
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-2) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  cursor: pointer;
+  font-size: var(--webai-font-size-base);
+}
+
+.run-btn:hover { opacity: 0.9; }
+.run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Text task: generation output */
+.generation-output {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  padding: var(--webai-space-3);
+  white-space: pre-wrap;
+  font-family: var(--webai-font-sans);
+  min-height: 80px;
+}
+
+/* Zero-shot: label input */
+.labels-input {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  padding: var(--webai-space-2);
 }
 
 /* Reduced motion */
@@ -4707,6 +5073,67 @@ h1 {
   resize: vertical;
 }
 
+/* Text task: input area */
+.text-input {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webai-space-3);
+}
+
+.text-input textarea {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-sans);
+  font-size: var(--webai-font-size-base);
+  padding: var(--webai-space-3);
+  resize: vertical;
+  min-height: 100px;
+}
+
+.text-input textarea:focus {
+  outline: 2px solid var(--webai-accent);
+  outline-offset: -2px;
+}
+
+/* Text task: run button */
+.run-btn {
+  align-self: flex-start;
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-2) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  cursor: pointer;
+  font-size: var(--webai-font-size-base);
+}
+
+.run-btn:hover { opacity: 0.9; }
+.run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Text task: generation output */
+.generation-output {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  padding: var(--webai-space-3);
+  white-space: pre-wrap;
+  font-family: var(--webai-font-sans);
+  min-height: 80px;
+}
+
+/* Zero-shot: label input */
+.labels-input {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  padding: var(--webai-space-2);
+}
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .result-bar { transition: none; }
@@ -5500,6 +5927,67 @@ h1 {
   color: var(--webai-text);
   padding: 0.75rem;
   resize: vertical;
+}
+
+/* Text task: input area */
+.text-input {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webai-space-3);
+}
+
+.text-input textarea {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-sans);
+  font-size: var(--webai-font-size-base);
+  padding: var(--webai-space-3);
+  resize: vertical;
+  min-height: 100px;
+}
+
+.text-input textarea:focus {
+  outline: 2px solid var(--webai-accent);
+  outline-offset: -2px;
+}
+
+/* Text task: run button */
+.run-btn {
+  align-self: flex-start;
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-2) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  cursor: pointer;
+  font-size: var(--webai-font-size-base);
+}
+
+.run-btn:hover { opacity: 0.9; }
+.run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Text task: generation output */
+.generation-output {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  padding: var(--webai-space-3);
+  white-space: pre-wrap;
+  font-family: var(--webai-font-sans);
+  min-height: 80px;
+}
+
+/* Zero-shot: label input */
+.labels-input {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  padding: var(--webai-space-2);
 }
 
 /* Reduced motion */
@@ -6560,6 +7048,67 @@ h1 {
   resize: vertical;
 }
 
+/* Text task: input area */
+.text-input {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webai-space-3);
+}
+
+.text-input textarea {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-sans);
+  font-size: var(--webai-font-size-base);
+  padding: var(--webai-space-3);
+  resize: vertical;
+  min-height: 100px;
+}
+
+.text-input textarea:focus {
+  outline: 2px solid var(--webai-accent);
+  outline-offset: -2px;
+}
+
+/* Text task: run button */
+.run-btn {
+  align-self: flex-start;
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-2) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  cursor: pointer;
+  font-size: var(--webai-font-size-base);
+}
+
+.run-btn:hover { opacity: 0.9; }
+.run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Text task: generation output */
+.generation-output {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  padding: var(--webai-space-3);
+  white-space: pre-wrap;
+  font-family: var(--webai-font-sans);
+  min-height: 80px;
+}
+
+/* Zero-shot: label input */
+.labels-input {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  padding: var(--webai-space-2);
+}
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .result-bar { transition: none; }
@@ -7202,6 +7751,67 @@ h1 {
   color: var(--webai-text);
   padding: 0.75rem;
   resize: vertical;
+}
+
+/* Text task: input area */
+.text-input {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webai-space-3);
+}
+
+.text-input textarea {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-sans);
+  font-size: var(--webai-font-size-base);
+  padding: var(--webai-space-3);
+  resize: vertical;
+  min-height: 100px;
+}
+
+.text-input textarea:focus {
+  outline: 2px solid var(--webai-accent);
+  outline-offset: -2px;
+}
+
+/* Text task: run button */
+.run-btn {
+  align-self: flex-start;
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-2) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  cursor: pointer;
+  font-size: var(--webai-font-size-base);
+}
+
+.run-btn:hover { opacity: 0.9; }
+.run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Text task: generation output */
+.generation-output {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  padding: var(--webai-space-3);
+  white-space: pre-wrap;
+  font-family: var(--webai-font-sans);
+  min-height: 80px;
+}
+
+/* Zero-shot: label input */
+.labels-input {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  padding: var(--webai-space-2);
 }
 
 /* Reduced motion */
@@ -7950,6 +8560,67 @@ h1 {
   color: var(--webai-text);
   padding: 0.75rem;
   resize: vertical;
+}
+
+/* Text task: input area */
+.text-input {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webai-space-3);
+}
+
+.text-input textarea {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-sans);
+  font-size: var(--webai-font-size-base);
+  padding: var(--webai-space-3);
+  resize: vertical;
+  min-height: 100px;
+}
+
+.text-input textarea:focus {
+  outline: 2px solid var(--webai-accent);
+  outline-offset: -2px;
+}
+
+/* Text task: run button */
+.run-btn {
+  align-self: flex-start;
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-2) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  cursor: pointer;
+  font-size: var(--webai-font-size-base);
+}
+
+.run-btn:hover { opacity: 0.9; }
+.run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Text task: generation output */
+.generation-output {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  padding: var(--webai-space-3);
+  white-space: pre-wrap;
+  font-family: var(--webai-font-sans);
+  min-height: 80px;
+}
+
+/* Zero-shot: label input */
+.labels-input {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  padding: var(--webai-space-2);
 }
 
 /* Reduced motion */
@@ -8941,6 +9612,67 @@ h1 {
   resize: vertical;
 }
 
+/* Text task: input area */
+.text-input {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webai-space-3);
+}
+
+.text-input textarea {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-sans);
+  font-size: var(--webai-font-size-base);
+  padding: var(--webai-space-3);
+  resize: vertical;
+  min-height: 100px;
+}
+
+.text-input textarea:focus {
+  outline: 2px solid var(--webai-accent);
+  outline-offset: -2px;
+}
+
+/* Text task: run button */
+.run-btn {
+  align-self: flex-start;
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-2) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  cursor: pointer;
+  font-size: var(--webai-font-size-base);
+}
+
+.run-btn:hover { opacity: 0.9; }
+.run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Text task: generation output */
+.generation-output {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  padding: var(--webai-space-3);
+  white-space: pre-wrap;
+  font-family: var(--webai-font-sans);
+  min-height: 80px;
+}
+
+/* Zero-shot: label input */
+.labels-input {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  padding: var(--webai-space-2);
+}
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .result-bar { transition: none; }
@@ -9684,6 +10416,67 @@ h1 {
   resize: vertical;
 }
 
+/* Text task: input area */
+.text-input {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webai-space-3);
+}
+
+.text-input textarea {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-sans);
+  font-size: var(--webai-font-size-base);
+  padding: var(--webai-space-3);
+  resize: vertical;
+  min-height: 100px;
+}
+
+.text-input textarea:focus {
+  outline: 2px solid var(--webai-accent);
+  outline-offset: -2px;
+}
+
+/* Text task: run button */
+.run-btn {
+  align-self: flex-start;
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-2) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  cursor: pointer;
+  font-size: var(--webai-font-size-base);
+}
+
+.run-btn:hover { opacity: 0.9; }
+.run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Text task: generation output */
+.generation-output {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  padding: var(--webai-space-3);
+  white-space: pre-wrap;
+  font-family: var(--webai-font-sans);
+  min-height: 80px;
+}
+
+/* Zero-shot: label input */
+.labels-input {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  padding: var(--webai-space-2);
+}
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .result-bar { transition: none; }
@@ -10377,6 +11170,67 @@ h1 {
   resize: vertical;
 }
 
+/* Text task: input area */
+.text-input {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webai-space-3);
+}
+
+.text-input textarea {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-sans);
+  font-size: var(--webai-font-size-base);
+  padding: var(--webai-space-3);
+  resize: vertical;
+  min-height: 100px;
+}
+
+.text-input textarea:focus {
+  outline: 2px solid var(--webai-accent);
+  outline-offset: -2px;
+}
+
+/* Text task: run button */
+.run-btn {
+  align-self: flex-start;
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-2) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  cursor: pointer;
+  font-size: var(--webai-font-size-base);
+}
+
+.run-btn:hover { opacity: 0.9; }
+.run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Text task: generation output */
+.generation-output {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  padding: var(--webai-space-3);
+  white-space: pre-wrap;
+  font-family: var(--webai-font-sans);
+  min-height: 80px;
+}
+
+/* Zero-shot: label input */
+.labels-input {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  padding: var(--webai-space-2);
+}
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .result-bar { transition: none; }
@@ -10802,6 +11656,67 @@ h1 {
   color: var(--webai-text);
   padding: 0.75rem;
   resize: vertical;
+}
+
+/* Text task: input area */
+.text-input {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webai-space-3);
+}
+
+.text-input textarea {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-sans);
+  font-size: var(--webai-font-size-base);
+  padding: var(--webai-space-3);
+  resize: vertical;
+  min-height: 100px;
+}
+
+.text-input textarea:focus {
+  outline: 2px solid var(--webai-accent);
+  outline-offset: -2px;
+}
+
+/* Text task: run button */
+.run-btn {
+  align-self: flex-start;
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-2) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  cursor: pointer;
+  font-size: var(--webai-font-size-base);
+}
+
+.run-btn:hover { opacity: 0.9; }
+.run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Text task: generation output */
+.generation-output {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  padding: var(--webai-space-3);
+  white-space: pre-wrap;
+  font-family: var(--webai-font-sans);
+  min-height: 80px;
+}
+
+/* Zero-shot: label input */
+.labels-input {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  padding: var(--webai-space-2);
 }
 
 /* Reduced motion */
@@ -11688,6 +12603,67 @@ h1 {
   resize: vertical;
 }
 
+/* Text task: input area */
+.text-input {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webai-space-3);
+}
+
+.text-input textarea {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-sans);
+  font-size: var(--webai-font-size-base);
+  padding: var(--webai-space-3);
+  resize: vertical;
+  min-height: 100px;
+}
+
+.text-input textarea:focus {
+  outline: 2px solid var(--webai-accent);
+  outline-offset: -2px;
+}
+
+/* Text task: run button */
+.run-btn {
+  align-self: flex-start;
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-2) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  cursor: pointer;
+  font-size: var(--webai-font-size-base);
+}
+
+.run-btn:hover { opacity: 0.9; }
+.run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Text task: generation output */
+.generation-output {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  padding: var(--webai-space-3);
+  white-space: pre-wrap;
+  font-family: var(--webai-font-sans);
+  min-height: 80px;
+}
+
+/* Zero-shot: label input */
+.labels-input {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  padding: var(--webai-space-2);
+}
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .result-bar { transition: none; }
@@ -12230,6 +13206,67 @@ h1 {
   color: var(--webai-text);
   padding: 0.75rem;
   resize: vertical;
+}
+
+/* Text task: input area */
+.text-input {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webai-space-3);
+}
+
+.text-input textarea {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-sans);
+  font-size: var(--webai-font-size-base);
+  padding: var(--webai-space-3);
+  resize: vertical;
+  min-height: 100px;
+}
+
+.text-input textarea:focus {
+  outline: 2px solid var(--webai-accent);
+  outline-offset: -2px;
+}
+
+/* Text task: run button */
+.run-btn {
+  align-self: flex-start;
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-2) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  cursor: pointer;
+  font-size: var(--webai-font-size-base);
+}
+
+.run-btn:hover { opacity: 0.9; }
+.run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Text task: generation output */
+.generation-output {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  padding: var(--webai-space-3);
+  white-space: pre-wrap;
+  font-family: var(--webai-font-sans);
+  min-height: 80px;
+}
+
+/* Zero-shot: label input */
+.labels-input {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  padding: var(--webai-space-2);
 }
 
 /* Reduced motion */
@@ -13203,6 +14240,67 @@ h1 {
   resize: vertical;
 }
 
+/* Text task: input area */
+.text-input {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webai-space-3);
+}
+
+.text-input textarea {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-sans);
+  font-size: var(--webai-font-size-base);
+  padding: var(--webai-space-3);
+  resize: vertical;
+  min-height: 100px;
+}
+
+.text-input textarea:focus {
+  outline: 2px solid var(--webai-accent);
+  outline-offset: -2px;
+}
+
+/* Text task: run button */
+.run-btn {
+  align-self: flex-start;
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-2) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  cursor: pointer;
+  font-size: var(--webai-font-size-base);
+}
+
+.run-btn:hover { opacity: 0.9; }
+.run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Text task: generation output */
+.generation-output {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  padding: var(--webai-space-3);
+  white-space: pre-wrap;
+  font-family: var(--webai-font-sans);
+  min-height: 80px;
+}
+
+/* Zero-shot: label input */
+.labels-input {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  padding: var(--webai-space-2);
+}
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .result-bar { transition: none; }
@@ -13829,6 +14927,67 @@ h1 {
   color: var(--webai-text);
   padding: 0.75rem;
   resize: vertical;
+}
+
+/* Text task: input area */
+.text-input {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webai-space-3);
+}
+
+.text-input textarea {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-sans);
+  font-size: var(--webai-font-size-base);
+  padding: var(--webai-space-3);
+  resize: vertical;
+  min-height: 100px;
+}
+
+.text-input textarea:focus {
+  outline: 2px solid var(--webai-accent);
+  outline-offset: -2px;
+}
+
+/* Text task: run button */
+.run-btn {
+  align-self: flex-start;
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-2) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  cursor: pointer;
+  font-size: var(--webai-font-size-base);
+}
+
+.run-btn:hover { opacity: 0.9; }
+.run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Text task: generation output */
+.generation-output {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  padding: var(--webai-space-3);
+  white-space: pre-wrap;
+  font-family: var(--webai-font-sans);
+  min-height: 80px;
+}
+
+/* Zero-shot: label input */
+.labels-input {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  padding: var(--webai-space-2);
 }
 
 /* Reduced motion */
@@ -14575,6 +15734,67 @@ h1 {
   resize: vertical;
 }
 
+/* Text task: input area */
+.text-input {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webai-space-3);
+}
+
+.text-input textarea {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-sans);
+  font-size: var(--webai-font-size-base);
+  padding: var(--webai-space-3);
+  resize: vertical;
+  min-height: 100px;
+}
+
+.text-input textarea:focus {
+  outline: 2px solid var(--webai-accent);
+  outline-offset: -2px;
+}
+
+/* Text task: run button */
+.run-btn {
+  align-self: flex-start;
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-2) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  cursor: pointer;
+  font-size: var(--webai-font-size-base);
+}
+
+.run-btn:hover { opacity: 0.9; }
+.run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Text task: generation output */
+.generation-output {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  padding: var(--webai-space-3);
+  white-space: pre-wrap;
+  font-family: var(--webai-font-sans);
+  min-height: 80px;
+}
+
+/* Zero-shot: label input */
+.labels-input {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  padding: var(--webai-space-2);
+}
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .result-bar { transition: none; }
@@ -15287,6 +16507,67 @@ h1 {
   color: var(--webai-text);
   padding: 0.75rem;
   resize: vertical;
+}
+
+/* Text task: input area */
+.text-input {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webai-space-3);
+}
+
+.text-input textarea {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-sans);
+  font-size: var(--webai-font-size-base);
+  padding: var(--webai-space-3);
+  resize: vertical;
+  min-height: 100px;
+}
+
+.text-input textarea:focus {
+  outline: 2px solid var(--webai-accent);
+  outline-offset: -2px;
+}
+
+/* Text task: run button */
+.run-btn {
+  align-self: flex-start;
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-2) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  cursor: pointer;
+  font-size: var(--webai-font-size-base);
+}
+
+.run-btn:hover { opacity: 0.9; }
+.run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Text task: generation output */
+.generation-output {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  padding: var(--webai-space-3);
+  white-space: pre-wrap;
+  font-family: var(--webai-font-sans);
+  min-height: 80px;
+}
+
+/* Zero-shot: label input */
+.labels-input {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  padding: var(--webai-space-2);
 }
 
 /* Reduced motion */
@@ -16086,6 +17367,67 @@ h1 {
   resize: vertical;
 }
 
+/* Text task: input area */
+.text-input {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webai-space-3);
+}
+
+.text-input textarea {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-sans);
+  font-size: var(--webai-font-size-base);
+  padding: var(--webai-space-3);
+  resize: vertical;
+  min-height: 100px;
+}
+
+.text-input textarea:focus {
+  outline: 2px solid var(--webai-accent);
+  outline-offset: -2px;
+}
+
+/* Text task: run button */
+.run-btn {
+  align-self: flex-start;
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-2) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  cursor: pointer;
+  font-size: var(--webai-font-size-base);
+}
+
+.run-btn:hover { opacity: 0.9; }
+.run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Text task: generation output */
+.generation-output {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  padding: var(--webai-space-3);
+  white-space: pre-wrap;
+  font-family: var(--webai-font-sans);
+  min-height: 80px;
+}
+
+/* Zero-shot: label input */
+.labels-input {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  padding: var(--webai-space-2);
+}
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .result-bar { transition: none; }
@@ -16678,6 +18020,5109 @@ Generated by [webai.js](https://github.com/ibelem/webai.js)
 ## Files
 
 - \`index.html\`
+- \`README.md\`
+"
+`;
+
+exports[`text task snapshots > text-classification + html + file + ort 1`] = `
+"=== index.html ===
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>bert-sentiment — Text Classification</title>
+  <style>
+:root {
+  /* Colors — dark theme (default) */
+  --webai-bg: #0a0a0a;
+  --webai-surface: #1a1a1a;
+  --webai-text: #e5e5e5;
+  --webai-text-muted: #737373;
+  --webai-accent: #3b82f6;
+  --webai-success: #22c55e;
+  --webai-warning: #eab308;
+  --webai-error: #ef4444;
+  --webai-border: #262626;
+
+  /* Typography */
+  --webai-font-mono: ui-monospace, 'Cascadia Code', 'Source Code Pro', monospace;
+  --webai-font-sans: system-ui, -apple-system, sans-serif;
+  --webai-font-size-sm: 12px;
+  --webai-font-size-base: 14px;
+  --webai-font-size-lg: 16px;
+
+  /* Spacing (4px base unit) */
+  --webai-space-1: 4px;
+  --webai-space-2: 8px;
+  --webai-space-3: 12px;
+  --webai-space-4: 16px;
+  --webai-space-6: 24px;
+  --webai-space-8: 32px;
+
+  /* Layout */
+  --webai-status-height: 32px;
+  --webai-radius: 4px;
+}
+
+/* Light theme override */
+:root[data-theme="light"] {
+  --webai-bg: #fafafa;
+  --webai-surface: #ffffff;
+  --webai-text: #171717;
+  --webai-text-muted: #737373;
+  --webai-border: #e5e5e5;
+}
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--webai-bg);
+  color: var(--webai-text);
+  font-family: var(--webai-font-sans);
+  font-size: var(--webai-font-size-base);
+  min-height: 100vh;
+  padding-bottom: var(--webai-status-height);
+}
+
+main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: var(--webai-space-8) var(--webai-space-4);
+}
+
+h1 {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: var(--webai-space-6);
+}
+
+.container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--webai-space-6);
+  align-items: start;
+}
+
+@media (max-width: 640px) {
+  .container {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Drop zone */
+.drop-zone {
+  border: 2px dashed var(--webai-border);
+  border-radius: var(--webai-radius);
+  padding: var(--webai-space-8);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.drop-zone:hover,
+.drop-zone:focus-visible,
+.drop-zone.drag-over {
+  border-color: var(--webai-accent);
+}
+
+.drop-zone:focus-visible {
+  outline: 2px solid var(--webai-accent);
+  outline-offset: 2px;
+}
+
+.drop-zone .hint {
+  color: var(--webai-text-muted);
+  font-size: var(--webai-font-size-sm);
+  margin-top: var(--webai-space-2);
+}
+
+/* Preview */
+.preview img {
+  max-width: 100%;
+  border-radius: var(--webai-radius);
+  display: block;
+}
+
+.preview .change-btn {
+  margin-top: var(--webai-space-2);
+  background: none;
+  border: 1px solid var(--webai-border);
+  color: var(--webai-text-muted);
+  padding: var(--webai-space-1) var(--webai-space-3);
+  border-radius: var(--webai-radius);
+  cursor: pointer;
+  font-size: var(--webai-font-size-sm);
+}
+
+.preview .change-btn:hover {
+  border-color: var(--webai-text-muted);
+}
+
+/* Results */
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webai-space-1);
+}
+
+.result-row {
+  display: grid;
+  grid-template-columns: 120px 1fr 60px;
+  align-items: center;
+  gap: var(--webai-space-2);
+  height: 24px;
+  opacity: 0.7;
+}
+
+.result-row:focus-visible {
+  outline: 1px solid var(--webai-accent);
+  outline-offset: 1px;
+  border-radius: 2px;
+}
+
+.result-row.top-result {
+  opacity: 1;
+  font-weight: 600;
+}
+
+.result-label {
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.result-bar-container {
+  height: 16px;
+  background: var(--webai-surface);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.result-bar {
+  height: 100%;
+  background: var(--webai-accent);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.result-pct {
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  text-align: right;
+  color: var(--webai-text-muted);
+}
+
+.result-row.top-result .result-pct {
+  color: var(--webai-text);
+}
+
+/* Status bar */
+.status-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--webai-status-height);
+  background: var(--webai-surface);
+  border-top: 1px solid var(--webai-border);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--webai-space-4);
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  color: var(--webai-text-muted);
+}
+
+/* Footer */
+.footer {
+  position: fixed;
+  bottom: var(--webai-status-height);
+  right: var(--webai-space-4);
+  font-size: var(--webai-font-size-sm);
+  color: var(--webai-text-muted);
+  opacity: 0.5;
+  padding: var(--webai-space-1);
+}
+
+/* Skip link */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: var(--webai-space-2);
+  background: var(--webai-accent);
+  color: white;
+  padding: var(--webai-space-2) var(--webai-space-4);
+  border-radius: var(--webai-radius);
+  z-index: 100;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  left: var(--webai-space-2);
+}
+
+/* Audio: transcript display */
+.transcript {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: 8px;
+  padding: 1rem;
+  min-height: 100px;
+  white-space: pre-wrap;
+}
+
+/* Audio: controls */
+.controls { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+.controls button {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  background: var(--webai-accent);
+  color: white;
+}
+.controls button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Audio: TTS input */
+.tts-input { display: flex; flex-direction: column; gap: 0.5rem; }
+.tts-input textarea {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: 6px;
+  color: var(--webai-text);
+  padding: 0.75rem;
+  resize: vertical;
+}
+
+/* Text task: input area */
+.text-input {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webai-space-3);
+}
+
+.text-input textarea {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-sans);
+  font-size: var(--webai-font-size-base);
+  padding: var(--webai-space-3);
+  resize: vertical;
+  min-height: 100px;
+}
+
+.text-input textarea:focus {
+  outline: 2px solid var(--webai-accent);
+  outline-offset: -2px;
+}
+
+/* Text task: run button */
+.run-btn {
+  align-self: flex-start;
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-2) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  cursor: pointer;
+  font-size: var(--webai-font-size-base);
+}
+
+.run-btn:hover { opacity: 0.9; }
+.run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Text task: generation output */
+.generation-output {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  padding: var(--webai-space-3);
+  white-space: pre-wrap;
+  font-family: var(--webai-font-sans);
+  min-height: 80px;
+}
+
+/* Zero-shot: label input */
+.labels-input {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  padding: var(--webai-space-2);
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .result-bar { transition: none; }
+}
+  </style>
+</head>
+<body>
+  <a href="#results" class="skip-link">Skip to results</a>
+
+  <main>
+    <h1>bert-sentiment — Text Classification</h1>
+
+    <h2>Text Classification</h2>
+
+    <div class="text-input">
+      <label for="textInput">Enter text to classify</label>
+      <textarea id="textInput" rows="4" aria-label="Text to classify">This movie was absolutely wonderful.</textarea>
+      <button id="classifyBtn" class="run-btn" aria-label="Classify text">Classify</button>
+    </div>
+
+    <div id="results" class="results" role="status" aria-live="polite" aria-atomic="true">
+    </div>
+  </main>
+
+  <aside class="status-bar">
+    <span id="status">bert-sentiment · Loading...</span>
+  </aside>
+
+  <div class="footer">Generated by webai.js · bert-sentiment · ORT Web</div>
+
+  <script type="module">
+import * as ort from 'https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/esm/ort.min.mjs';
+
+// --- Preprocessing ---
+/**
+ * BPE Tokenizer: loads tokenizer.json and encodes text to token IDs.
+ */
+class BPETokenizer {
+  constructor(tokenizerJson) {
+    this.vocab = new Map(Object.entries(tokenizerJson.model.vocab));
+    this.reverseVocab = new Map();
+    for (const [token, id] of this.vocab) {
+      this.reverseVocab.set(id, token);
+    }
+    this.mergeRank = new Map();
+    const merges = tokenizerJson.model.merges;
+    for (let i = 0; i < merges.length; i++) {
+      this.mergeRank.set(merges[i], i);
+    }
+  }
+
+  encode(text, maxLength) {
+    if (!text) return { inputIds: [], attentionMask: [] };
+
+    const chars = Array.from(text);
+    const tokens = this._applyBPE(chars);
+    const unkId = this.vocab.get('<unk>') ?? 0;
+    let inputIds = tokens.map((t) => this.vocab.get(t) ?? unkId);
+    let attentionMask = inputIds.map(() => 1);
+
+    if (maxLength !== undefined && inputIds.length > maxLength) {
+      inputIds = inputIds.slice(0, maxLength);
+      attentionMask = attentionMask.slice(0, maxLength);
+    }
+
+    return { inputIds, attentionMask };
+  }
+
+  decode(ids) {
+    return ids.map((id) => this.reverseVocab.get(id) ?? '').join('');
+  }
+
+  getVocabSize() {
+    return this.vocab.size;
+  }
+
+  _applyBPE(tokens) {
+    if (tokens.length <= 1) return tokens;
+    let symbols = [...tokens];
+
+    while (symbols.length > 1) {
+      let bestRank = Infinity;
+      let bestIdx = -1;
+      for (let i = 0; i < symbols.length - 1; i++) {
+        const key = symbols[i] + ' ' + symbols[i + 1];
+        const rank = this.mergeRank.get(key);
+        if (rank !== undefined && rank < bestRank) {
+          bestRank = rank;
+          bestIdx = i;
+        }
+      }
+      if (bestIdx === -1) break;
+      const merged = symbols[bestIdx] + symbols[bestIdx + 1];
+      symbols = [...symbols.slice(0, bestIdx), merged, ...symbols.slice(bestIdx + 2)];
+    }
+    return symbols;
+  }
+}
+
+/**
+ * Load a HuggingFace tokenizer.json and return a BPETokenizer instance.
+ *
+ * @param url - URL or path to tokenizer.json
+ * @returns BPETokenizer instance ready for encoding
+ */
+async function loadTokenizer(url) {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error('Failed to load tokenizer: ' + response.status);
+  const json = await response.json();
+  return new BPETokenizer(json);
+}
+
+/**
+ * Tokenize text input for model inference.
+ * Returns typed arrays suitable for creating ORT tensors.
+ *
+ * @param tokenizer - BPETokenizer instance
+ * @param text - Input text string
+ * @param maxLength - Maximum sequence length (truncates if exceeded)
+ * @returns Object with inputIds and attentionMask as BigInt64Arrays
+ */
+function tokenizeText(
+  tokenizer,
+  text,
+  maxLength = 128
+) {
+  const encoded = tokenizer.encode(text, maxLength);
+  const inputIds = new BigInt64Array(encoded.inputIds.map((id) => BigInt(id)));
+  const attentionMask = new BigInt64Array(encoded.attentionMask.map((m) => BigInt(m)));
+  return { inputIds, attentionMask };
+}
+
+// --- Inference ---
+/**
+ * Create an ORT Web inference session with backend selection.
+ * The execution provider list determines hardware acceleration priority.
+ */
+async function createSession(modelPath) {
+  // Backend auto-selection: try best available, fall through to WASM
+  const providers = [];
+  if ('ml' in navigator) {
+    providers.push({ name: 'webnn', deviceType: 'npu' });
+    providers.push({ name: 'webnn', deviceType: 'gpu' });
+  }
+  if (navigator.gpu) providers.push('webgpu');
+  providers.push('wasm');
+
+  const session = await ort.InferenceSession.create(modelPath, {
+    executionProviders: providers,
+  });
+
+  // Log which backend was selected
+  console.log('Inference session created');
+
+  return session;
+}
+
+/**
+ * Run inference on preprocessed input data.
+ * Input: Float32Array from preprocessImage()
+ * Output: Float32Array of raw model output (logits/scores)
+ */
+async function runInference(
+  session,
+  inputData
+) {
+  const tensor = new ort.Tensor('float32', inputData, [1, 128]);
+  const feeds = { 'input_ids': tensor };
+
+  const results = await session.run(feeds);
+  const outputName = session.outputNames[0];
+  const output = results[outputName];
+
+  return output.data;
+}
+
+/**
+ * Get a display string for the active backend.
+ * Used by the status bar: "yolov8n · 8ms · WebNN (NPU)"
+ */
+function getBackendLabel(session) {
+  // ORT Web doesn't expose the selected EP directly in session.
+  // We infer from the handler metadata if available.
+  return 'ORT Web';
+}
+
+// --- Postprocessing ---
+/**
+ * Softmax: convert raw logits to probabilities.
+ * Uses max-subtraction for numerical stability.
+ */
+function softmax(logits) {
+  const len = logits.length;
+  const out = new Float32Array(len);
+
+  let max = -Infinity;
+  for (let i = 0; i < len; i++) {
+    if (logits[i] > max) max = logits[i];
+  }
+
+  let sum = 0;
+  for (let i = 0; i < len; i++) {
+    out[i] = Math.exp(logits[i] - max);
+    sum += out[i];
+  }
+
+  for (let i = 0; i < len; i++) {
+    out[i] /= sum;
+  }
+
+  return out;
+}
+
+/**
+ * Return the top K elements by value, descending.
+ * Ties are broken by lower index first.
+ */
+function topK(arr, k) {
+  const len = arr.length;
+  const n = Math.min(k, len);
+
+  const indices = Array.from({ length: len }, (_, i) => i);
+  indices.sort((a, b) => {
+    const diff = arr[b] - arr[a];
+    return diff !== 0 ? diff : a - b;
+  });
+
+  const topIndices = indices.slice(0, n);
+  const topValues = topIndices.map((i) => arr[i]);
+
+  return { indices: topIndices, values: topValues };
+}
+
+/**
+ * Postprocess model output: softmax → top-5 results.
+ */
+function postprocessResults(output) {
+  const probs = softmax(output);
+  return topK(probs, 5);
+}
+
+// --- Application ---
+const MODEL_PATH = './bert-sentiment.onnx';
+const TOKENIZER_PATH = MODEL_PATH.replace(/\\.onnx$/, '') + '/tokenizer.json';
+let session = null;
+let tokenizer = null;
+
+function updateStatus(text) {
+  document.getElementById('status').textContent = text;
+}
+
+async function init() {
+  updateStatus('Loading model and tokenizer...');
+  try {
+    [session, tokenizer] = await Promise.all([
+      createSession(MODEL_PATH),
+      loadTokenizer(TOKENIZER_PATH),
+    ]);
+    updateStatus('bert-sentiment \\u00b7 Ready');
+  } catch (e) {
+    updateStatus('Failed to load model');
+    console.error('Model load error:', e);
+  }
+}
+
+const textInput = document.getElementById('textInput');
+const classifyBtn = document.getElementById('classifyBtn');
+const resultsDiv = document.getElementById('results');
+
+classifyBtn.addEventListener('click', async () => {
+  const text = textInput.value.trim();
+  if (!text) return;
+
+  if (!session || !tokenizer) {
+    resultsDiv.textContent = 'Model not loaded yet. Please wait.';
+    return;
+  }
+
+  updateStatus('bert-sentiment \\u00b7 Processing...');
+  const start = performance.now();
+
+  const { inputIds, attentionMask } = tokenizeText(tokenizer, text);
+  const output = await runInference(session, inputIds);
+  const results = postprocessResults(output);
+
+  const elapsed = (performance.now() - start).toFixed(1);
+  updateStatus('bert-sentiment \\u00b7 ' + elapsed + 'ms \\u00b7 ' + getBackendLabel(session));
+
+  renderResults(results);
+});
+
+function renderResults(results) {
+  resultsDiv.innerHTML = '';
+  const maxValue = results.values[0] || 1;
+
+  for (let i = 0; i < results.indices.length; i++) {
+    const pct = (results.values[i] * 100).toFixed(1);
+    if (results.values[i] < 0.01) continue;
+
+    const row = document.createElement('div');
+    row.className = 'result-row' + (i === 0 ? ' top-result' : '');
+    row.setAttribute('tabindex', '0');
+    row.setAttribute('aria-label', 'Class ' + results.indices[i] + ': ' + pct + ' percent');
+
+    row.innerHTML =
+      '<span class="result-label">Class ' + results.indices[i] + '</span>' +
+      '<div class="result-bar-container"><div class="result-bar" style="width:' +
+      ((results.values[i] / maxValue) * 100) + '%"></div></div>' +
+      '<span class="result-pct">' + pct + '%</span>';
+
+    resultsDiv.appendChild(row);
+  }
+}
+
+init();
+  </script>
+</body>
+</html>
+
+=== README.md ===
+# bert-sentiment — Text Classification
+
+Generated by [webai.js](https://github.com/ibelem/webai.js)
+
+## Quick Start
+
+1. Copy your model file (\`bert-sentiment.onnx\`) into this directory
+2. Start a local server: \`npx serve .\` (or any static file server)
+3. Open \`index.html\` in your browser
+
+## How It Works
+
+1. **Preprocessing**: Image is resized to 224x224px, normalized with
+   mean=[0, 0, 0] and std=[1, 1, 1], then transposed to NCHW layout.
+2. **Inference**: Model runs via ORT Web with automatic backend selection (WebNN NPU > WebNN GPU > WebGPU > WASM).
+3. **Postprocessing**: Raw logits are converted to probabilities (softmax), then top-5 results are extracted.
+
+## Configuration
+
+| Setting | Value |
+|---------|-------|
+| Task | Text Classification |
+| Engine | ORT Web |
+| Backend | auto |
+| Framework | html |
+| Model | bert-sentiment |
+| Input | file |
+
+## Files
+
+- \`index.html\`
+- \`README.md\`
+"
+`;
+
+exports[`text task snapshots > text-classification + react-vite + file + ort 1`] = `
+"=== package.json ===
+{
+  "name": "bert-sentiment",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "onnxruntime-web": "^1.21.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.0",
+    "vite": "^6.0.0"
+  }
+}
+
+=== vite.config.js ===
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+
+export default defineConfig({
+  plugins: [react()],
+});
+
+
+=== index.html ===
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>bert-sentiment — Text Classification</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
+
+
+=== src/main.jsx ===
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import App from './App.jsx';
+import './App.css';
+
+createRoot(document.getElementById('root')).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+);
+
+
+=== src/App.jsx ===
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { createSession, runInference, getBackendLabel } from './lib/inference.js';
+import { loadTokenizer, tokenizeText } from './lib/preprocess.js';
+import { postprocessResults } from './lib/postprocess.js';
+
+const MODEL_PATH = '/bert-sentiment.onnx';
+const TOKENIZER_PATH = MODEL_PATH.replace(/\\.onnx$/, '') + '/tokenizer.json';
+
+export default function App() {
+  const [results, setResults] = useState(null);
+  const [status, setStatus] = useState('Loading model...');
+  const [text, setText] = useState('This is an amazing product!');
+  const sessionRef = useRef(null);
+  const tokenizerRef = useRef(null);
+
+  useEffect(() => {
+    Promise.all([
+      createSession(MODEL_PATH),
+      loadTokenizer(TOKENIZER_PATH)
+    ]).then(([s, tok]) => {
+      sessionRef.current = s;
+      tokenizerRef.current = tok;
+      setStatus('bert-sentiment \\u00b7 Ready');
+    }).catch((e) => {
+      setStatus('Failed to load model');
+      console.error('Model load error:', e);
+    });
+  }, []);
+
+  const handleClassify = useCallback(async () => {
+    if (!sessionRef.current || !tokenizerRef.current || !text.trim()) return;
+
+    setStatus('bert-sentiment \\u00b7 Processing...');
+    const start = performance.now();
+
+    const { inputIds, attentionMask } = tokenizeText(tokenizerRef.current, text, 128);
+    const output = await runInference(sessionRef.current, inputIds, attentionMask);
+    const r = postprocessResults(output);
+
+    const elapsed = (performance.now() - start).toFixed(1);
+    setStatus(\`bert-sentiment \\u00b7 \${elapsed}ms \\u00b7 \${getBackendLabel(sessionRef.current)}\`);
+    setResults(r);
+  }, [text]);
+
+  return (
+    <>
+      <a href="#results" className="skip-link">Skip to results</a>
+      <main>
+        <h1>bert-sentiment — Text Classification</h1>
+        <div className="text-input">
+          <label htmlFor="textInput">Enter text to classify</label>
+          <textarea id="textInput" rows={4} value={text} onChange={(e) => setText(e.target.value)} aria-label="Text to classify" />
+          <button className="primary-btn" onClick={handleClassify} aria-label="Classify text">Classify</button>
+        </div>
+        <div id="results" className="results" role="status" aria-live="polite" aria-atomic="true">
+          {results && results.indices.map((idx, i) => {
+            const pct = (results.values[i] * 100).toFixed(1);
+            if (results.values[i] < 0.01) return null;
+            const maxVal = results.values[0] || 1;
+            return (
+              <div key={idx} className={\`result-row\${i === 0 ? ' top-result' : ''}\`} tabIndex={0}
+                   aria-label={\`Class \${idx}: \${pct} percent\`}>
+                <span className="result-label">Class {idx}</span>
+                <div className="result-bar-container">
+                  <div className="result-bar" style={{ width: \`\${(results.values[i] / maxVal) * 100}%\` }} />
+                </div>
+                <span className="result-pct">{pct}%</span>
+              </div>
+            );
+          })}
+        </div>
+      </main>
+      <aside className="status-bar"><span>{status}</span></aside>
+      <div className="footer">Generated by webai.js · bert-sentiment · ORT Web</div>
+    </>
+  );
+}
+
+
+=== src/App.css ===
+:root {
+  /* Colors — dark theme (default) */
+  --webai-bg: #0a0a0a;
+  --webai-surface: #1a1a1a;
+  --webai-text: #e5e5e5;
+  --webai-text-muted: #737373;
+  --webai-accent: #3b82f6;
+  --webai-success: #22c55e;
+  --webai-warning: #eab308;
+  --webai-error: #ef4444;
+  --webai-border: #262626;
+
+  /* Typography */
+  --webai-font-mono: ui-monospace, 'Cascadia Code', 'Source Code Pro', monospace;
+  --webai-font-sans: system-ui, -apple-system, sans-serif;
+  --webai-font-size-sm: 12px;
+  --webai-font-size-base: 14px;
+  --webai-font-size-lg: 16px;
+
+  /* Spacing (4px base unit) */
+  --webai-space-1: 4px;
+  --webai-space-2: 8px;
+  --webai-space-3: 12px;
+  --webai-space-4: 16px;
+  --webai-space-6: 24px;
+  --webai-space-8: 32px;
+
+  /* Layout */
+  --webai-status-height: 32px;
+  --webai-radius: 4px;
+}
+
+/* Light theme override */
+:root[data-theme="light"] {
+  --webai-bg: #fafafa;
+  --webai-surface: #ffffff;
+  --webai-text: #171717;
+  --webai-text-muted: #737373;
+  --webai-border: #e5e5e5;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--webai-bg);
+  color: var(--webai-text);
+  font-family: var(--webai-font-sans);
+  font-size: var(--webai-font-size-base);
+  min-height: 100vh;
+  padding-bottom: var(--webai-status-height);
+}
+
+main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: var(--webai-space-8) var(--webai-space-4);
+}
+
+h1 {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: var(--webai-space-6);
+}
+
+.container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--webai-space-6);
+  align-items: start;
+}
+
+@media (max-width: 640px) {
+  .container {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Drop zone */
+.drop-zone {
+  border: 2px dashed var(--webai-border);
+  border-radius: var(--webai-radius);
+  padding: var(--webai-space-8);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.drop-zone:hover,
+.drop-zone:focus-visible,
+.drop-zone.drag-over {
+  border-color: var(--webai-accent);
+}
+
+.drop-zone:focus-visible {
+  outline: 2px solid var(--webai-accent);
+  outline-offset: 2px;
+}
+
+.drop-zone .hint {
+  color: var(--webai-text-muted);
+  font-size: var(--webai-font-size-sm);
+  margin-top: var(--webai-space-2);
+}
+
+/* Preview */
+.preview img {
+  max-width: 100%;
+  border-radius: var(--webai-radius);
+  display: block;
+}
+
+.preview .change-btn {
+  margin-top: var(--webai-space-2);
+  background: none;
+  border: 1px solid var(--webai-border);
+  color: var(--webai-text-muted);
+  padding: var(--webai-space-1) var(--webai-space-3);
+  border-radius: var(--webai-radius);
+  cursor: pointer;
+  font-size: var(--webai-font-size-sm);
+}
+
+.preview .change-btn:hover {
+  border-color: var(--webai-text-muted);
+}
+
+/* Results */
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webai-space-1);
+}
+
+.result-row {
+  display: grid;
+  grid-template-columns: 120px 1fr 60px;
+  align-items: center;
+  gap: var(--webai-space-2);
+  height: 24px;
+  opacity: 0.7;
+}
+
+.result-row:focus-visible {
+  outline: 1px solid var(--webai-accent);
+  outline-offset: 1px;
+  border-radius: 2px;
+}
+
+.result-row.top-result {
+  opacity: 1;
+  font-weight: 600;
+}
+
+.result-label {
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.result-bar-container {
+  height: 16px;
+  background: var(--webai-surface);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.result-bar {
+  height: 100%;
+  background: var(--webai-accent);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.result-pct {
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  text-align: right;
+  color: var(--webai-text-muted);
+}
+
+.result-row.top-result .result-pct {
+  color: var(--webai-text);
+}
+
+/* Status bar */
+.status-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--webai-status-height);
+  background: var(--webai-surface);
+  border-top: 1px solid var(--webai-border);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--webai-space-4);
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  color: var(--webai-text-muted);
+}
+
+/* Footer */
+.footer {
+  position: fixed;
+  bottom: var(--webai-status-height);
+  right: var(--webai-space-4);
+  font-size: var(--webai-font-size-sm);
+  color: var(--webai-text-muted);
+  opacity: 0.5;
+  padding: var(--webai-space-1);
+}
+
+/* Skip link */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: var(--webai-space-2);
+  background: var(--webai-accent);
+  color: white;
+  padding: var(--webai-space-2) var(--webai-space-4);
+  border-radius: var(--webai-radius);
+  z-index: 100;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  left: var(--webai-space-2);
+}
+
+/* Audio: transcript display */
+.transcript {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: 8px;
+  padding: 1rem;
+  min-height: 100px;
+  white-space: pre-wrap;
+}
+
+/* Audio: controls */
+.controls { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+.controls button {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  background: var(--webai-accent);
+  color: white;
+}
+.controls button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Audio: TTS input */
+.tts-input { display: flex; flex-direction: column; gap: 0.5rem; }
+.tts-input textarea {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: 6px;
+  color: var(--webai-text);
+  padding: 0.75rem;
+  resize: vertical;
+}
+
+/* Text task: input area */
+.text-input {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webai-space-3);
+}
+
+.text-input textarea {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-sans);
+  font-size: var(--webai-font-size-base);
+  padding: var(--webai-space-3);
+  resize: vertical;
+  min-height: 100px;
+}
+
+.text-input textarea:focus {
+  outline: 2px solid var(--webai-accent);
+  outline-offset: -2px;
+}
+
+/* Text task: run button */
+.run-btn {
+  align-self: flex-start;
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-2) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  cursor: pointer;
+  font-size: var(--webai-font-size-base);
+}
+
+.run-btn:hover { opacity: 0.9; }
+.run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Text task: generation output */
+.generation-output {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  padding: var(--webai-space-3);
+  white-space: pre-wrap;
+  font-family: var(--webai-font-sans);
+  min-height: 80px;
+}
+
+/* Zero-shot: label input */
+.labels-input {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  padding: var(--webai-space-2);
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .result-bar { transition: none; }
+}
+
+=== src/lib/preprocess.js ===
+/**
+ * BPE Tokenizer: loads tokenizer.json and encodes text to token IDs.
+ */
+class BPETokenizer {
+  constructor(tokenizerJson) {
+    this.vocab = new Map(Object.entries(tokenizerJson.model.vocab));
+    this.reverseVocab = new Map();
+    for (const [token, id] of this.vocab) {
+      this.reverseVocab.set(id, token);
+    }
+    this.mergeRank = new Map();
+    const merges = tokenizerJson.model.merges;
+    for (let i = 0; i < merges.length; i++) {
+      this.mergeRank.set(merges[i], i);
+    }
+  }
+
+  encode(text, maxLength) {
+    if (!text) return { inputIds: [], attentionMask: [] };
+
+    const chars = Array.from(text);
+    const tokens = this._applyBPE(chars);
+    const unkId = this.vocab.get('<unk>') ?? 0;
+    let inputIds = tokens.map((t) => this.vocab.get(t) ?? unkId);
+    let attentionMask = inputIds.map(() => 1);
+
+    if (maxLength !== undefined && inputIds.length > maxLength) {
+      inputIds = inputIds.slice(0, maxLength);
+      attentionMask = attentionMask.slice(0, maxLength);
+    }
+
+    return { inputIds, attentionMask };
+  }
+
+  decode(ids) {
+    return ids.map((id) => this.reverseVocab.get(id) ?? '').join('');
+  }
+
+  getVocabSize() {
+    return this.vocab.size;
+  }
+
+  _applyBPE(tokens) {
+    if (tokens.length <= 1) return tokens;
+    let symbols = [...tokens];
+
+    while (symbols.length > 1) {
+      let bestRank = Infinity;
+      let bestIdx = -1;
+      for (let i = 0; i < symbols.length - 1; i++) {
+        const key = symbols[i] + ' ' + symbols[i + 1];
+        const rank = this.mergeRank.get(key);
+        if (rank !== undefined && rank < bestRank) {
+          bestRank = rank;
+          bestIdx = i;
+        }
+      }
+      if (bestIdx === -1) break;
+      const merged = symbols[bestIdx] + symbols[bestIdx + 1];
+      symbols = [...symbols.slice(0, bestIdx), merged, ...symbols.slice(bestIdx + 2)];
+    }
+    return symbols;
+  }
+}
+
+/**
+ * Load a HuggingFace tokenizer.json and return a BPETokenizer instance.
+ *
+ * @param url - URL or path to tokenizer.json
+ * @returns BPETokenizer instance ready for encoding
+ */
+export async function loadTokenizer(url) {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error('Failed to load tokenizer: ' + response.status);
+  const json = await response.json();
+  return new BPETokenizer(json);
+}
+
+/**
+ * Tokenize text input for model inference.
+ * Returns typed arrays suitable for creating ORT tensors.
+ *
+ * @param tokenizer - BPETokenizer instance
+ * @param text - Input text string
+ * @param maxLength - Maximum sequence length (truncates if exceeded)
+ * @returns Object with inputIds and attentionMask as BigInt64Arrays
+ */
+export function tokenizeText(
+  tokenizer,
+  text,
+  maxLength = 128
+) {
+  const encoded = tokenizer.encode(text, maxLength);
+  const inputIds = new BigInt64Array(encoded.inputIds.map((id) => BigInt(id)));
+  const attentionMask = new BigInt64Array(encoded.attentionMask.map((m) => BigInt(m)));
+  return { inputIds, attentionMask };
+}
+
+=== src/lib/inference.js ===
+import * as ort from 'onnxruntime-web';
+
+
+
+/**
+ * Create an ORT Web inference session with backend selection.
+ * The execution provider list determines hardware acceleration priority.
+ */
+export async function createSession(modelPath) {
+  // Backend auto-selection: try best available, fall through to WASM
+  const providers = [];
+  if ('ml' in navigator) {
+    providers.push({ name: 'webnn', deviceType: 'npu' });
+    providers.push({ name: 'webnn', deviceType: 'gpu' });
+  }
+  if (navigator.gpu) providers.push('webgpu');
+  providers.push('wasm');
+
+  const session = await ort.InferenceSession.create(modelPath, {
+    executionProviders: providers,
+  });
+
+  // Log which backend was selected
+  console.log('Inference session created');
+
+  return session;
+}
+
+/**
+ * Run inference on preprocessed input data.
+ * Input: Float32Array from preprocessImage()
+ * Output: Float32Array of raw model output (logits/scores)
+ */
+export async function runInference(
+  session,
+  inputData
+) {
+  const tensor = new ort.Tensor('float32', inputData, [1, 128]);
+  const feeds = { 'input_ids': tensor };
+
+  const results = await session.run(feeds);
+  const outputName = session.outputNames[0];
+  const output = results[outputName];
+
+  return output.data;
+}
+
+/**
+ * Get a display string for the active backend.
+ * Used by the status bar: "yolov8n · 8ms · WebNN (NPU)"
+ */
+export function getBackendLabel(session) {
+  // ORT Web doesn't expose the selected EP directly in session.
+  // We infer from the handler metadata if available.
+  return 'ORT Web';
+}
+
+=== src/lib/postprocess.js ===
+/**
+ * Softmax: convert raw logits to probabilities.
+ * Uses max-subtraction for numerical stability.
+ */
+export function softmax(logits) {
+  const len = logits.length;
+  const out = new Float32Array(len);
+
+  let max = -Infinity;
+  for (let i = 0; i < len; i++) {
+    if (logits[i] > max) max = logits[i];
+  }
+
+  let sum = 0;
+  for (let i = 0; i < len; i++) {
+    out[i] = Math.exp(logits[i] - max);
+    sum += out[i];
+  }
+
+  for (let i = 0; i < len; i++) {
+    out[i] /= sum;
+  }
+
+  return out;
+}
+
+/**
+ * Return the top K elements by value, descending.
+ * Ties are broken by lower index first.
+ */
+export function topK(arr, k) {
+  const len = arr.length;
+  const n = Math.min(k, len);
+
+  const indices = Array.from({ length: len }, (_, i) => i);
+  indices.sort((a, b) => {
+    const diff = arr[b] - arr[a];
+    return diff !== 0 ? diff : a - b;
+  });
+
+  const topIndices = indices.slice(0, n);
+  const topValues = topIndices.map((i) => arr[i]);
+
+  return { indices: topIndices, values: topValues };
+}
+
+/**
+ * Postprocess model output: softmax → top-5 results.
+ */
+export function postprocessResults(output) {
+  const probs = softmax(output);
+  return topK(probs, 5);
+}
+
+=== README.md ===
+# bert-sentiment — Text Classification
+
+Generated by [webai.js](https://github.com/ibelem/webai.js)
+
+## Quick Start
+
+\`\`\`bash
+npm install
+# Copy your model file to public/
+cp /path/to/bert-sentiment.onnx public/
+npm run dev
+\`\`\`
+
+## How It Works
+
+1. **Preprocessing**: Image is resized to 224x224px, normalized with
+   mean=[0, 0, 0] and std=[1, 1, 1], then transposed to NCHW layout.
+2. **Inference**: Model runs via ORT Web with automatic backend selection (WebNN NPU > WebNN GPU > WebGPU > WASM).
+3. **Postprocessing**: Raw logits are converted to probabilities (softmax), then top-5 results are extracted.
+
+## Configuration
+
+| Setting | Value |
+|---------|-------|
+| Task | Text Classification |
+| Engine | ORT Web |
+| Backend | auto |
+| Framework | react-vite |
+| Model | bert-sentiment |
+| Input | file |
+
+## Files
+
+- \`package.json\`
+- \`vite.config.js\`
+- \`index.html\`
+- \`src/main.jsx\`
+- \`src/App.jsx\`
+- \`src/App.css\`
+- \`src/lib/preprocess.js\`
+- \`src/lib/inference.js\`
+- \`src/lib/postprocess.js\`
+- \`README.md\`
+"
+`;
+
+exports[`text task snapshots > text-classification + sveltekit + file + ort + ts 1`] = `
+"=== package.json ===
+{
+  "name": "bert-sentiment",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "onnxruntime-web": "^1.21.0"
+  },
+  "devDependencies": {
+    "@sveltejs/adapter-static": "^3.0.0",
+    "@sveltejs/kit": "^2.0.0",
+    "@sveltejs/vite-plugin-svelte": "^4.0.0",
+    "svelte": "^5.0.0",
+    "vite": "^6.0.0",
+    "typescript": "^5.7.0"
+  }
+}
+
+=== svelte.config.js ===
+import adapter from '@sveltejs/adapter-static';
+
+/** @type {import('@sveltejs/kit').Config} */
+const config = {
+  kit: {
+    adapter: adapter({
+      fallback: 'index.html',
+    }),
+  },
+};
+
+export default config;
+
+
+=== vite.config.js ===
+import { sveltekit } from '@sveltejs/kit/vite';
+import { defineConfig } from 'vite';
+
+export default defineConfig({
+  plugins: [sveltekit()],
+});
+
+
+=== src/app.html ===
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>bert-sentiment — Text Classification</title>
+    %sveltekit.head%
+  </head>
+  <body>
+    %sveltekit.body%
+  </body>
+</html>
+
+
+=== src/app.css ===
+:root {
+  /* Colors — dark theme (default) */
+  --webai-bg: #0a0a0a;
+  --webai-surface: #1a1a1a;
+  --webai-text: #e5e5e5;
+  --webai-text-muted: #737373;
+  --webai-accent: #3b82f6;
+  --webai-success: #22c55e;
+  --webai-warning: #eab308;
+  --webai-error: #ef4444;
+  --webai-border: #262626;
+
+  /* Typography */
+  --webai-font-mono: ui-monospace, 'Cascadia Code', 'Source Code Pro', monospace;
+  --webai-font-sans: system-ui, -apple-system, sans-serif;
+  --webai-font-size-sm: 12px;
+  --webai-font-size-base: 14px;
+  --webai-font-size-lg: 16px;
+
+  /* Spacing (4px base unit) */
+  --webai-space-1: 4px;
+  --webai-space-2: 8px;
+  --webai-space-3: 12px;
+  --webai-space-4: 16px;
+  --webai-space-6: 24px;
+  --webai-space-8: 32px;
+
+  /* Layout */
+  --webai-status-height: 32px;
+  --webai-radius: 4px;
+}
+
+/* Light theme override */
+:root[data-theme="light"] {
+  --webai-bg: #fafafa;
+  --webai-surface: #ffffff;
+  --webai-text: #171717;
+  --webai-text-muted: #737373;
+  --webai-border: #e5e5e5;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--webai-bg);
+  color: var(--webai-text);
+  font-family: var(--webai-font-sans);
+  font-size: var(--webai-font-size-base);
+  min-height: 100vh;
+  padding-bottom: var(--webai-status-height);
+}
+
+main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: var(--webai-space-8) var(--webai-space-4);
+}
+
+h1 {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: var(--webai-space-6);
+}
+
+.container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--webai-space-6);
+  align-items: start;
+}
+
+@media (max-width: 640px) {
+  .container {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Drop zone */
+.drop-zone {
+  border: 2px dashed var(--webai-border);
+  border-radius: var(--webai-radius);
+  padding: var(--webai-space-8);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.drop-zone:hover,
+.drop-zone:focus-visible,
+.drop-zone.drag-over {
+  border-color: var(--webai-accent);
+}
+
+.drop-zone:focus-visible {
+  outline: 2px solid var(--webai-accent);
+  outline-offset: 2px;
+}
+
+.drop-zone .hint {
+  color: var(--webai-text-muted);
+  font-size: var(--webai-font-size-sm);
+  margin-top: var(--webai-space-2);
+}
+
+/* Preview */
+.preview img {
+  max-width: 100%;
+  border-radius: var(--webai-radius);
+  display: block;
+}
+
+.preview .change-btn {
+  margin-top: var(--webai-space-2);
+  background: none;
+  border: 1px solid var(--webai-border);
+  color: var(--webai-text-muted);
+  padding: var(--webai-space-1) var(--webai-space-3);
+  border-radius: var(--webai-radius);
+  cursor: pointer;
+  font-size: var(--webai-font-size-sm);
+}
+
+.preview .change-btn:hover {
+  border-color: var(--webai-text-muted);
+}
+
+/* Results */
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webai-space-1);
+}
+
+.result-row {
+  display: grid;
+  grid-template-columns: 120px 1fr 60px;
+  align-items: center;
+  gap: var(--webai-space-2);
+  height: 24px;
+  opacity: 0.7;
+}
+
+.result-row:focus-visible {
+  outline: 1px solid var(--webai-accent);
+  outline-offset: 1px;
+  border-radius: 2px;
+}
+
+.result-row.top-result {
+  opacity: 1;
+  font-weight: 600;
+}
+
+.result-label {
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.result-bar-container {
+  height: 16px;
+  background: var(--webai-surface);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.result-bar {
+  height: 100%;
+  background: var(--webai-accent);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.result-pct {
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  text-align: right;
+  color: var(--webai-text-muted);
+}
+
+.result-row.top-result .result-pct {
+  color: var(--webai-text);
+}
+
+/* Status bar */
+.status-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--webai-status-height);
+  background: var(--webai-surface);
+  border-top: 1px solid var(--webai-border);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--webai-space-4);
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  color: var(--webai-text-muted);
+}
+
+/* Footer */
+.footer {
+  position: fixed;
+  bottom: var(--webai-status-height);
+  right: var(--webai-space-4);
+  font-size: var(--webai-font-size-sm);
+  color: var(--webai-text-muted);
+  opacity: 0.5;
+  padding: var(--webai-space-1);
+}
+
+/* Skip link */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: var(--webai-space-2);
+  background: var(--webai-accent);
+  color: white;
+  padding: var(--webai-space-2) var(--webai-space-4);
+  border-radius: var(--webai-radius);
+  z-index: 100;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  left: var(--webai-space-2);
+}
+
+/* Audio: transcript display */
+.transcript {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: 8px;
+  padding: 1rem;
+  min-height: 100px;
+  white-space: pre-wrap;
+}
+
+/* Audio: controls */
+.controls { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+.controls button {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  background: var(--webai-accent);
+  color: white;
+}
+.controls button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Audio: TTS input */
+.tts-input { display: flex; flex-direction: column; gap: 0.5rem; }
+.tts-input textarea {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: 6px;
+  color: var(--webai-text);
+  padding: 0.75rem;
+  resize: vertical;
+}
+
+/* Text task: input area */
+.text-input {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webai-space-3);
+}
+
+.text-input textarea {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-sans);
+  font-size: var(--webai-font-size-base);
+  padding: var(--webai-space-3);
+  resize: vertical;
+  min-height: 100px;
+}
+
+.text-input textarea:focus {
+  outline: 2px solid var(--webai-accent);
+  outline-offset: -2px;
+}
+
+/* Text task: run button */
+.run-btn {
+  align-self: flex-start;
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-2) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  cursor: pointer;
+  font-size: var(--webai-font-size-base);
+}
+
+.run-btn:hover { opacity: 0.9; }
+.run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Text task: generation output */
+.generation-output {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  padding: var(--webai-space-3);
+  white-space: pre-wrap;
+  font-family: var(--webai-font-sans);
+  min-height: 80px;
+}
+
+/* Zero-shot: label input */
+.labels-input {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  padding: var(--webai-space-2);
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .result-bar { transition: none; }
+}
+
+=== src/routes/+layout.svelte ===
+<script>
+  import '../app.css';
+  let { children } = $props();
+</script>
+
+{@render children()}
+
+
+=== src/routes/+page.svelte ===
+<script lang="ts">
+  import { onMount } from 'svelte';
+  import { createSession, runInference, getBackendLabel } from '$lib/inference.ts';
+  import { loadTokenizer, tokenizeText } from '$lib/preprocess.ts';
+  import { postprocessResults } from '$lib/postprocess.ts';
+
+  const MODEL_PATH = '/bert-sentiment.onnx';
+  const TOKENIZER_PATH = MODEL_PATH.replace(/\\.onnx$/, '') + '/tokenizer.json';
+
+  let session: Awaited<ReturnType<typeof createSession>> | null = $state(null);
+  let tokenizer: Awaited<ReturnType<typeof loadTokenizer>> | null = $state(null);
+  let results: { indices: number[]; values: number[] } | null = $state(null);
+  let text = $state('');
+  let status: string = $state('Loading model and tokenizer...');
+
+  onMount(() => {
+    Promise.all([
+      createSession(MODEL_PATH),
+      loadTokenizer(TOKENIZER_PATH),
+    ]).then(([s, tok]) => {
+      session = s;
+      tokenizer = tok;
+      status = 'bert-sentiment \\u00b7 Ready';
+    }).catch((e) => { status = 'Failed to load model or tokenizer'; console.error('Load error:', e); });
+  });
+
+  async function handleClassify() {
+    const trimmed = text.trim();
+    if (!trimmed || !session || !tokenizer) return;
+
+    status = 'bert-sentiment \\u00b7 Processing...';
+    const start = performance.now();
+
+    const { inputIds, attentionMask } = tokenizeText(tokenizer, trimmed);
+    const output = await runInference(session, inputIds);
+    const r = postprocessResults(output);
+
+    const elapsed = (performance.now() - start).toFixed(1);
+    status = \`bert-sentiment \\u00b7 \${elapsed}ms \\u00b7 \${getBackendLabel(session)}\`;
+    results = r;
+  }
+</script>
+
+<a href="#results" class="skip-link">Skip to results</a>
+<main>
+  <h1>bert-sentiment — Text Classification</h1>
+  <div>
+    <label for="textInput">Enter text to classify</label>
+    <textarea id="textInput" rows="4" bind:value={text} aria-label="Text to classify"></textarea>
+    <button class="primary-btn" onclick={handleClassify} disabled={!session || !tokenizer} aria-label="Classify text">Classify</button>
+  </div>
+  <div id="results" class="results" role="status" aria-live="polite" aria-atomic="true">
+    {#if results}
+      {#each results.indices as idx, i}
+        {#if results.values[i] >= 0.01}
+          {@const pct = (results.values[i] * 100).toFixed(1)}
+          {@const maxVal = results.values[0] || 1}
+          <div class="result-row" class:top-result={i === 0} tabindex="0" aria-label="Class {idx}: {pct} percent">
+            <span class="result-label">Class {idx}</span>
+            <div class="result-bar-container">
+              <div class="result-bar" style="width: {(results.values[i] / maxVal) * 100}%"></div>
+            </div>
+            <span class="result-pct">{pct}%</span>
+          </div>
+        {/if}
+      {/each}
+    {/if}
+  </div>
+</main>
+<aside class="status-bar"><span>{status}</span></aside>
+<div class="footer">Generated by webai.js · bert-sentiment · ORT Web</div>
+
+
+=== src/lib/preprocess.ts ===
+/**
+ * BPE Tokenizer: loads tokenizer.json and encodes text to token IDs.
+ */
+class BPETokenizer {
+  constructor(tokenizerJson: any) {
+    this.vocab = new Map(Object.entries(tokenizerJson.model.vocab));
+    this.reverseVocab = new Map(<number, string>);
+    for (const [token, id] of this.vocab) {
+      this.reverseVocab.set(id as number, token);
+    }
+    this.mergeRank = new Map(<string, number>);
+    const merges = tokenizerJson.model.merges;
+    for (let i = 0; i < merges.length; i++) {
+      this.mergeRank.set(merges[i], i);
+    }
+  }
+
+  encode(text: string, maxLength?: number): { inputIds: number[]; attentionMask: number[] } {
+    if (!text) return { inputIds: [], attentionMask: [] };
+
+    const chars = Array.from(text);
+    const tokens = this._applyBPE(chars);
+    const unkId = this.vocab.get('<unk>') ?? 0;
+    let inputIds = tokens.map((t) => this.vocab.get(t) ?? unkId);
+    let attentionMask = inputIds.map(() => 1);
+
+    if (maxLength !== undefined && inputIds.length > maxLength) {
+      inputIds = inputIds.slice(0, maxLength);
+      attentionMask = attentionMask.slice(0, maxLength);
+    }
+
+    return { inputIds, attentionMask };
+  }
+
+  decode(ids: number[]): string {
+    return ids.map((id) => this.reverseVocab.get(id) ?? '').join('');
+  }
+
+  getVocabSize(): number {
+    return this.vocab.size;
+  }
+
+  _applyBPE(tokens: string[]): string[] {
+    if (tokens.length <= 1) return tokens;
+    let symbols = [...tokens];
+
+    while (symbols.length > 1) {
+      let bestRank = Infinity;
+      let bestIdx = -1;
+      for (let i = 0; i < symbols.length - 1; i++) {
+        const key = symbols[i] + ' ' + symbols[i + 1];
+        const rank = this.mergeRank.get(key);
+        if (rank !== undefined && rank < bestRank) {
+          bestRank = rank;
+          bestIdx = i;
+        }
+      }
+      if (bestIdx === -1) break;
+      const merged = symbols[bestIdx] + symbols[bestIdx + 1];
+      symbols = [...symbols.slice(0, bestIdx), merged, ...symbols.slice(bestIdx + 2)];
+    }
+    return symbols;
+  }
+}
+
+/**
+ * Load a HuggingFace tokenizer.json and return a BPETokenizer instance.
+ *
+ * @param url - URL or path to tokenizer.json
+ * @returns BPETokenizer instance ready for encoding
+ */
+export async function loadTokenizer(url: string): Promise<BPETokenizer> {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error('Failed to load tokenizer: ' + response.status);
+  const json = await response.json();
+  return new BPETokenizer(json);
+}
+
+/**
+ * Tokenize text input for model inference.
+ * Returns typed arrays suitable for creating ORT tensors.
+ *
+ * @param tokenizer - BPETokenizer instance
+ * @param text - Input text string
+ * @param maxLength - Maximum sequence length (truncates if exceeded)
+ * @returns Object with inputIds and attentionMask as BigInt64Arrays
+ */
+export function tokenizeText(
+  tokenizer: BPETokenizer,
+  text: string,
+  maxLength: number = 128
+): { inputIds: BigInt64Array; attentionMask: BigInt64Array } {
+  const encoded = tokenizer.encode(text, maxLength);
+  const inputIds = new BigInt64Array(encoded.inputIds.map((id) => BigInt(id)));
+  const attentionMask = new BigInt64Array(encoded.attentionMask.map((m) => BigInt(m)));
+  return { inputIds, attentionMask };
+}
+
+=== src/lib/inference.ts ===
+import * as ort from 'onnxruntime-web';
+
+
+
+/**
+ * Create an ORT Web inference session with backend selection.
+ * The execution provider list determines hardware acceleration priority.
+ */
+export async function createSession(modelPath: string): Promise<ort.InferenceSession> {
+  // Backend auto-selection: try best available, fall through to WASM
+  const providers: (string | { name: string; deviceType?: string })[] = [];
+  if ('ml' in navigator) {
+    providers.push({ name: 'webnn', deviceType: 'npu' });
+    providers.push({ name: 'webnn', deviceType: 'gpu' });
+  }
+  if (navigator.gpu) providers.push('webgpu');
+  providers.push('wasm');
+
+  const session = await ort.InferenceSession.create(modelPath, {
+    executionProviders: providers,
+  });
+
+  // Log which backend was selected
+  console.log('Inference session created');
+
+  return session;
+}
+
+/**
+ * Run inference on preprocessed input data.
+ * Input: Float32Array from preprocessImage()
+ * Output: Float32Array of raw model output (logits/scores)
+ */
+export async function runInference(
+  session: ort.InferenceSession,
+  inputData: Float32Array
+): Promise<Float32Array> {
+  const tensor = new ort.Tensor('float32', inputData, [1, 128]);
+  const feeds: Record<string, ort.Tensor> = { 'input_ids': tensor };
+
+  const results = await session.run(feeds);
+  const outputName = session.outputNames[0];
+  const output = results[outputName];
+
+  return output.data as Float32Array;
+}
+
+/**
+ * Get a display string for the active backend.
+ * Used by the status bar: "yolov8n · 8ms · WebNN (NPU)"
+ */
+export function getBackendLabel(session: ort.InferenceSession): string {
+  // ORT Web doesn't expose the selected EP directly in session.
+  // We infer from the handler metadata if available.
+  return 'ORT Web';
+}
+
+=== src/lib/postprocess.ts ===
+/**
+ * Softmax: convert raw logits to probabilities.
+ * Uses max-subtraction for numerical stability.
+ */
+export function softmax(logits: ArrayLike<number>): Float32Array {
+  const len = logits.length;
+  const out = new Float32Array(len);
+
+  let max = -Infinity;
+  for (let i = 0; i < len; i++) {
+    if (logits[i] > max) max = logits[i];
+  }
+
+  let sum = 0;
+  for (let i = 0; i < len; i++) {
+    out[i] = Math.exp(logits[i] - max);
+    sum += out[i];
+  }
+
+  for (let i = 0; i < len; i++) {
+    out[i] /= sum;
+  }
+
+  return out;
+}
+
+/**
+ * Return the top K elements by value, descending.
+ * Ties are broken by lower index first.
+ */
+export function topK(arr: ArrayLike<number>, k: number): { indices: number[]; values: number[] } {
+  const len = arr.length;
+  const n = Math.min(k, len);
+
+  const indices = Array.from({ length: len }, (_, i) => i);
+  indices.sort((a, b) => {
+    const diff = arr[b] - arr[a];
+    return diff !== 0 ? diff : a - b;
+  });
+
+  const topIndices = indices.slice(0, n);
+  const topValues = topIndices.map((i) => arr[i]);
+
+  return { indices: topIndices, values: topValues };
+}
+
+/**
+ * Postprocess model output: softmax → top-5 results.
+ */
+export function postprocessResults(output: ArrayLike<number>): { indices: number[]; values: number[] } {
+  const probs = softmax(output);
+  return topK(probs, 5);
+}
+
+=== README.md ===
+# bert-sentiment — Text Classification
+
+Generated by [webai.js](https://github.com/ibelem/webai.js)
+
+## Quick Start
+
+\`\`\`bash
+npm install
+npm run dev
+\`\`\`
+
+## How It Works
+
+1. **Preprocessing**: Image is resized to 224x224px, normalized with
+   mean=[0, 0, 0] and std=[1, 1, 1], then transposed to NCHW layout.
+2. **Inference**: Model runs via ORT Web with automatic backend selection (WebNN NPU > WebNN GPU > WebGPU > WASM).
+3. **Postprocessing**: Raw logits are converted to probabilities (softmax), then top-5 results are extracted.
+
+## Configuration
+
+| Setting | Value |
+|---------|-------|
+| Task | Text Classification |
+| Engine | ORT Web |
+| Backend | auto |
+| Framework | sveltekit |
+| Model | bert-sentiment |
+| Input | file |
+
+## Files
+
+- \`package.json\`
+- \`svelte.config.js\`
+- \`vite.config.js\`
+- \`src/app.html\`
+- \`src/app.css\`
+- \`src/routes/+layout.svelte\`
+- \`src/routes/+page.svelte\`
+- \`src/lib/preprocess.ts\`
+- \`src/lib/inference.ts\`
+- \`src/lib/postprocess.ts\`
+- \`README.md\`
+"
+`;
+
+exports[`text task snapshots > text-generation + html + file + ort 1`] = `
+"=== index.html ===
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>gpt2 — Text Generation</title>
+  <style>
+:root {
+  /* Colors — dark theme (default) */
+  --webai-bg: #0a0a0a;
+  --webai-surface: #1a1a1a;
+  --webai-text: #e5e5e5;
+  --webai-text-muted: #737373;
+  --webai-accent: #3b82f6;
+  --webai-success: #22c55e;
+  --webai-warning: #eab308;
+  --webai-error: #ef4444;
+  --webai-border: #262626;
+
+  /* Typography */
+  --webai-font-mono: ui-monospace, 'Cascadia Code', 'Source Code Pro', monospace;
+  --webai-font-sans: system-ui, -apple-system, sans-serif;
+  --webai-font-size-sm: 12px;
+  --webai-font-size-base: 14px;
+  --webai-font-size-lg: 16px;
+
+  /* Spacing (4px base unit) */
+  --webai-space-1: 4px;
+  --webai-space-2: 8px;
+  --webai-space-3: 12px;
+  --webai-space-4: 16px;
+  --webai-space-6: 24px;
+  --webai-space-8: 32px;
+
+  /* Layout */
+  --webai-status-height: 32px;
+  --webai-radius: 4px;
+}
+
+/* Light theme override */
+:root[data-theme="light"] {
+  --webai-bg: #fafafa;
+  --webai-surface: #ffffff;
+  --webai-text: #171717;
+  --webai-text-muted: #737373;
+  --webai-border: #e5e5e5;
+}
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--webai-bg);
+  color: var(--webai-text);
+  font-family: var(--webai-font-sans);
+  font-size: var(--webai-font-size-base);
+  min-height: 100vh;
+  padding-bottom: var(--webai-status-height);
+}
+
+main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: var(--webai-space-8) var(--webai-space-4);
+}
+
+h1 {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: var(--webai-space-6);
+}
+
+.container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--webai-space-6);
+  align-items: start;
+}
+
+@media (max-width: 640px) {
+  .container {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Drop zone */
+.drop-zone {
+  border: 2px dashed var(--webai-border);
+  border-radius: var(--webai-radius);
+  padding: var(--webai-space-8);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.drop-zone:hover,
+.drop-zone:focus-visible,
+.drop-zone.drag-over {
+  border-color: var(--webai-accent);
+}
+
+.drop-zone:focus-visible {
+  outline: 2px solid var(--webai-accent);
+  outline-offset: 2px;
+}
+
+.drop-zone .hint {
+  color: var(--webai-text-muted);
+  font-size: var(--webai-font-size-sm);
+  margin-top: var(--webai-space-2);
+}
+
+/* Preview */
+.preview img {
+  max-width: 100%;
+  border-radius: var(--webai-radius);
+  display: block;
+}
+
+.preview .change-btn {
+  margin-top: var(--webai-space-2);
+  background: none;
+  border: 1px solid var(--webai-border);
+  color: var(--webai-text-muted);
+  padding: var(--webai-space-1) var(--webai-space-3);
+  border-radius: var(--webai-radius);
+  cursor: pointer;
+  font-size: var(--webai-font-size-sm);
+}
+
+.preview .change-btn:hover {
+  border-color: var(--webai-text-muted);
+}
+
+/* Results */
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webai-space-1);
+}
+
+.result-row {
+  display: grid;
+  grid-template-columns: 120px 1fr 60px;
+  align-items: center;
+  gap: var(--webai-space-2);
+  height: 24px;
+  opacity: 0.7;
+}
+
+.result-row:focus-visible {
+  outline: 1px solid var(--webai-accent);
+  outline-offset: 1px;
+  border-radius: 2px;
+}
+
+.result-row.top-result {
+  opacity: 1;
+  font-weight: 600;
+}
+
+.result-label {
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.result-bar-container {
+  height: 16px;
+  background: var(--webai-surface);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.result-bar {
+  height: 100%;
+  background: var(--webai-accent);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.result-pct {
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  text-align: right;
+  color: var(--webai-text-muted);
+}
+
+.result-row.top-result .result-pct {
+  color: var(--webai-text);
+}
+
+/* Status bar */
+.status-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--webai-status-height);
+  background: var(--webai-surface);
+  border-top: 1px solid var(--webai-border);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--webai-space-4);
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  color: var(--webai-text-muted);
+}
+
+/* Footer */
+.footer {
+  position: fixed;
+  bottom: var(--webai-status-height);
+  right: var(--webai-space-4);
+  font-size: var(--webai-font-size-sm);
+  color: var(--webai-text-muted);
+  opacity: 0.5;
+  padding: var(--webai-space-1);
+}
+
+/* Skip link */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: var(--webai-space-2);
+  background: var(--webai-accent);
+  color: white;
+  padding: var(--webai-space-2) var(--webai-space-4);
+  border-radius: var(--webai-radius);
+  z-index: 100;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  left: var(--webai-space-2);
+}
+
+/* Audio: transcript display */
+.transcript {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: 8px;
+  padding: 1rem;
+  min-height: 100px;
+  white-space: pre-wrap;
+}
+
+/* Audio: controls */
+.controls { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+.controls button {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  background: var(--webai-accent);
+  color: white;
+}
+.controls button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Audio: TTS input */
+.tts-input { display: flex; flex-direction: column; gap: 0.5rem; }
+.tts-input textarea {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: 6px;
+  color: var(--webai-text);
+  padding: 0.75rem;
+  resize: vertical;
+}
+
+/* Text task: input area */
+.text-input {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webai-space-3);
+}
+
+.text-input textarea {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-sans);
+  font-size: var(--webai-font-size-base);
+  padding: var(--webai-space-3);
+  resize: vertical;
+  min-height: 100px;
+}
+
+.text-input textarea:focus {
+  outline: 2px solid var(--webai-accent);
+  outline-offset: -2px;
+}
+
+/* Text task: run button */
+.run-btn {
+  align-self: flex-start;
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-2) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  cursor: pointer;
+  font-size: var(--webai-font-size-base);
+}
+
+.run-btn:hover { opacity: 0.9; }
+.run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Text task: generation output */
+.generation-output {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  padding: var(--webai-space-3);
+  white-space: pre-wrap;
+  font-family: var(--webai-font-sans);
+  min-height: 80px;
+}
+
+/* Zero-shot: label input */
+.labels-input {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  padding: var(--webai-space-2);
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .result-bar { transition: none; }
+}
+  </style>
+</head>
+<body>
+  <a href="#results" class="skip-link">Skip to results</a>
+
+  <main>
+    <h1>gpt2 — Text Generation</h1>
+
+    <h2>Text Generation</h2>
+
+    <div class="text-input">
+      <label for="textInput">Enter a prompt</label>
+      <textarea id="textInput" rows="4" aria-label="Prompt for text generation">Once upon a time</textarea>
+      <button id="generateBtn" class="run-btn" aria-label="Generate text">Generate</button>
+    </div>
+
+    <div id="output" class="generation-output" role="status" aria-live="polite" aria-atomic="true">
+    </div>
+  </main>
+
+  <aside class="status-bar">
+    <span id="status">gpt2 · Loading...</span>
+  </aside>
+
+  <div class="footer">Generated by webai.js · gpt2 · ORT Web</div>
+
+  <script type="module">
+import * as ort from 'https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/esm/ort.min.mjs';
+
+// --- Preprocessing ---
+/**
+ * BPE Tokenizer: loads tokenizer.json and encodes text to token IDs.
+ */
+class BPETokenizer {
+  constructor(tokenizerJson) {
+    this.vocab = new Map(Object.entries(tokenizerJson.model.vocab));
+    this.reverseVocab = new Map();
+    for (const [token, id] of this.vocab) {
+      this.reverseVocab.set(id, token);
+    }
+    this.mergeRank = new Map();
+    const merges = tokenizerJson.model.merges;
+    for (let i = 0; i < merges.length; i++) {
+      this.mergeRank.set(merges[i], i);
+    }
+  }
+
+  encode(text, maxLength) {
+    if (!text) return { inputIds: [], attentionMask: [] };
+
+    const chars = Array.from(text);
+    const tokens = this._applyBPE(chars);
+    const unkId = this.vocab.get('<unk>') ?? 0;
+    let inputIds = tokens.map((t) => this.vocab.get(t) ?? unkId);
+    let attentionMask = inputIds.map(() => 1);
+
+    if (maxLength !== undefined && inputIds.length > maxLength) {
+      inputIds = inputIds.slice(0, maxLength);
+      attentionMask = attentionMask.slice(0, maxLength);
+    }
+
+    return { inputIds, attentionMask };
+  }
+
+  decode(ids) {
+    return ids.map((id) => this.reverseVocab.get(id) ?? '').join('');
+  }
+
+  getVocabSize() {
+    return this.vocab.size;
+  }
+
+  _applyBPE(tokens) {
+    if (tokens.length <= 1) return tokens;
+    let symbols = [...tokens];
+
+    while (symbols.length > 1) {
+      let bestRank = Infinity;
+      let bestIdx = -1;
+      for (let i = 0; i < symbols.length - 1; i++) {
+        const key = symbols[i] + ' ' + symbols[i + 1];
+        const rank = this.mergeRank.get(key);
+        if (rank !== undefined && rank < bestRank) {
+          bestRank = rank;
+          bestIdx = i;
+        }
+      }
+      if (bestIdx === -1) break;
+      const merged = symbols[bestIdx] + symbols[bestIdx + 1];
+      symbols = [...symbols.slice(0, bestIdx), merged, ...symbols.slice(bestIdx + 2)];
+    }
+    return symbols;
+  }
+}
+
+/**
+ * Load a HuggingFace tokenizer.json and return a BPETokenizer instance.
+ *
+ * @param url - URL or path to tokenizer.json
+ * @returns BPETokenizer instance ready for encoding
+ */
+async function loadTokenizer(url) {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error('Failed to load tokenizer: ' + response.status);
+  const json = await response.json();
+  return new BPETokenizer(json);
+}
+
+/**
+ * Tokenize text input for model inference.
+ * Returns typed arrays suitable for creating ORT tensors.
+ *
+ * @param tokenizer - BPETokenizer instance
+ * @param text - Input text string
+ * @param maxLength - Maximum sequence length (truncates if exceeded)
+ * @returns Object with inputIds and attentionMask as BigInt64Arrays
+ */
+function tokenizeText(
+  tokenizer,
+  text,
+  maxLength = 128
+) {
+  const encoded = tokenizer.encode(text, maxLength);
+  const inputIds = new BigInt64Array(encoded.inputIds.map((id) => BigInt(id)));
+  const attentionMask = new BigInt64Array(encoded.attentionMask.map((m) => BigInt(m)));
+  return { inputIds, attentionMask };
+}
+
+// --- Inference ---
+/**
+ * Create an ORT Web inference session with backend selection.
+ * The execution provider list determines hardware acceleration priority.
+ */
+async function createSession(modelPath) {
+  // Backend auto-selection: try best available, fall through to WASM
+  const providers = [];
+  if ('ml' in navigator) {
+    providers.push({ name: 'webnn', deviceType: 'npu' });
+    providers.push({ name: 'webnn', deviceType: 'gpu' });
+  }
+  if (navigator.gpu) providers.push('webgpu');
+  providers.push('wasm');
+
+  const session = await ort.InferenceSession.create(modelPath, {
+    executionProviders: providers,
+  });
+
+  // Log which backend was selected
+  console.log('Inference session created');
+
+  return session;
+}
+
+/**
+ * Run inference on preprocessed input data.
+ * Input: Float32Array from preprocessImage()
+ * Output: Float32Array of raw model output (logits/scores)
+ */
+async function runInference(
+  session,
+  inputData
+) {
+  const tensor = new ort.Tensor('float32', inputData, [1, 128]);
+  const feeds = { 'input_ids': tensor };
+
+  const results = await session.run(feeds);
+  const outputName = session.outputNames[0];
+  const output = results[outputName];
+
+  return output.data;
+}
+
+/**
+ * Get a display string for the active backend.
+ * Used by the status bar: "yolov8n · 8ms · WebNN (NPU)"
+ */
+function getBackendLabel(session) {
+  // ORT Web doesn't expose the selected EP directly in session.
+  // We infer from the handler metadata if available.
+  return 'ORT Web';
+}
+
+// --- Postprocessing ---
+/**
+ * Sample the next token from logits using greedy decoding (argmax).
+ *
+ * @param logits - Raw model output logits for the last position
+ * @returns Token ID with the highest probability
+ */
+function sampleNextToken(logits) {
+  let bestIdx = 0;
+  let bestVal = logits[0];
+  for (let i = 1; i < logits.length; i++) {
+    if (logits[i] > bestVal) {
+      bestVal = logits[i];
+      bestIdx = i;
+    }
+  }
+  return bestIdx;
+}
+
+/**
+ * Postprocess text generation: extract next-token logits from model output.
+ * For autoregressive models, the last position's logits predict the next token.
+ *
+ * @param output - Raw model output (Float32Array), shape [1, seqLen, vocabSize]
+ * @param seqLen - Sequence length
+ * @param vocabSize - Vocabulary size
+ * @returns Logits for the last position (Float32Array of size vocabSize)
+ */
+function postprocessGeneration(
+  output,
+  seqLen,
+  vocabSize
+) {
+  const lastOffset = (seqLen - 1) * vocabSize;
+  return output.slice(lastOffset, lastOffset + vocabSize);
+}
+
+// --- Application ---
+const MODEL_PATH = './gpt2.onnx';
+const TOKENIZER_PATH = MODEL_PATH.replace(/\\.onnx$/, '') + '/tokenizer.json';
+const MAX_NEW_TOKENS = 50;
+const EOS_TOKEN_ID = 2;
+let session = null;
+let tokenizer = null;
+
+function updateStatus(text) {
+  document.getElementById('status').textContent = text;
+}
+
+async function init() {
+  updateStatus('Loading model and tokenizer...');
+  try {
+    [session, tokenizer] = await Promise.all([
+      createSession(MODEL_PATH),
+      loadTokenizer(TOKENIZER_PATH),
+    ]);
+    updateStatus('gpt2 \\u00b7 Ready');
+  } catch (e) {
+    updateStatus('Failed to load model');
+    console.error('Model load error:', e);
+  }
+}
+
+const textInput = document.getElementById('textInput');
+const generateBtn = document.getElementById('generateBtn');
+const outputDiv = document.getElementById('output');
+
+generateBtn.addEventListener('click', async () => {
+  const prompt = textInput.value.trim();
+  if (!prompt) return;
+
+  if (!session || !tokenizer) {
+    outputDiv.textContent = 'Model not loaded yet. Please wait.';
+    return;
+  }
+
+  generateBtn.disabled = true;
+  updateStatus('gpt2 \\u00b7 Generating...');
+  const start = performance.now();
+
+  const encoded = tokenizer.encode(prompt);
+  let inputIds = encoded.inputIds;
+  outputDiv.textContent = prompt;
+
+  for (let i = 0; i < MAX_NEW_TOKENS; i++) {
+    const inputBigInt = new BigInt64Array(inputIds.map((id) => BigInt(id)));
+    const output = await runInference(session, inputBigInt);
+
+    const vocabSize = tokenizer.getVocabSize();
+    const seqLen = inputIds.length;
+    const logits = postprocessGeneration(output, seqLen, vocabSize);
+    const nextToken = sampleNextToken(logits);
+
+    if (nextToken === EOS_TOKEN_ID) break;
+
+    inputIds = [...inputIds, nextToken];
+    const decoded = tokenizer.decode(inputIds);
+    outputDiv.textContent = decoded;
+  }
+
+  const elapsed = (performance.now() - start).toFixed(1);
+  updateStatus('gpt2 \\u00b7 ' + elapsed + 'ms \\u00b7 ' + getBackendLabel(session));
+  generateBtn.disabled = false;
+});
+
+init();
+  </script>
+</body>
+</html>
+
+=== README.md ===
+# gpt2 — Text Generation
+
+Generated by [webai.js](https://github.com/ibelem/webai.js)
+
+## Quick Start
+
+1. Copy your model file (\`gpt2.onnx\`) into this directory
+2. Start a local server: \`npx serve .\` (or any static file server)
+3. Open \`index.html\` in your browser
+
+## How It Works
+
+1. **Preprocessing**: Image is resized to 224x224px, normalized with
+   mean=[0, 0, 0] and std=[1, 1, 1], then transposed to NCHW layout.
+2. **Inference**: Model runs via ORT Web with automatic backend selection (WebNN NPU > WebNN GPU > WebGPU > WASM).
+3. **Postprocessing**: Raw logits are converted to probabilities (softmax), then top-5 results are extracted.
+
+## Configuration
+
+| Setting | Value |
+|---------|-------|
+| Task | Text Generation |
+| Engine | ORT Web |
+| Backend | auto |
+| Framework | html |
+| Model | gpt2 |
+| Input | file |
+
+## Files
+
+- \`index.html\`
+- \`README.md\`
+"
+`;
+
+exports[`text task snapshots > text-generation + nextjs + file + ort + ts 1`] = `
+"=== package.json ===
+{
+  "name": "gpt2",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "next": "^15.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "onnxruntime-web": "^1.21.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@types/node": "^22.0.0"
+  }
+}
+
+=== next.config.mjs ===
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  // Configure webpack to handle ONNX WASM files
+  webpack(config) {
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      fs: false,
+      path: false,
+    };
+    return config;
+  },
+};
+
+export default nextConfig;
+
+
+=== tsconfig.json ===
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": [
+        "./*"
+      ]
+    }
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}
+
+=== app/layout.tsx ===
+import './globals.css';
+
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'gpt2 — Text Generation',
+  description: 'Text Generation powered by ORT Web',
+};
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en" data-theme="dark">
+      <body>{children}</body>
+    </html>
+  );
+}
+
+
+=== app/page.tsx ===
+'use client';
+
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { createSession, runInference, getBackendLabel } from '../lib/inference.ts';
+import { loadTokenizer } from '../lib/preprocess.ts';
+import { sampleNextToken, postprocessGeneration } from '../lib/postprocess.ts';
+
+const MODEL_PATH = '/gpt2.onnx';
+const TOKENIZER_PATH = MODEL_PATH.replace(/\\.onnx$/, '') + '/tokenizer.json';
+const MAX_NEW_TOKENS = 50;
+const EOS_TOKEN_ID = 2;
+
+export default function Page() {
+  const [status, setStatus] = useState('Loading model...');
+  const [text, setText] = useState('Once upon a time');
+  const [output, setOutput] = useState('');
+  const [generating, setGenerating] = useState(false);
+  const sessionRef = useRef<Awaited<ReturnType<typeof createSession>> | null>(null);
+  const tokenizerRef = useRef<any>(null);
+
+  useEffect(() => {
+    Promise.all([createSession(MODEL_PATH), loadTokenizer(TOKENIZER_PATH)])
+      .then(([s, tok]) => {
+        sessionRef.current = s;
+        tokenizerRef.current = tok;
+        setStatus('gpt2 \\u00b7 Ready');
+      })
+      .catch((e) => { setStatus('Failed to load model'); console.error('Model load error:', e); });
+  }, []);
+
+  const handleGenerate = useCallback(async () => {
+    const prompt = text.trim();
+    if (!prompt || !sessionRef.current || !tokenizerRef.current) return;
+
+    setGenerating(true);
+    setStatus('gpt2 \\u00b7 Generating...');
+    const start = performance.now();
+
+    const encoded = tokenizerRef.current.encode(prompt);
+    let inputIds = encoded.inputIds;
+    setOutput(prompt);
+
+    for (let i = 0; i < MAX_NEW_TOKENS; i++) {
+      const inputBigInt = new BigInt64Array(inputIds.map((id: number) => BigInt(id)));
+      const modelOutput = await runInference(sessionRef.current, inputBigInt);
+
+      const vocabSize = tokenizerRef.current.getVocabSize();
+      const seqLen = inputIds.length;
+      const logits = postprocessGeneration(modelOutput, seqLen, vocabSize);
+      const nextToken = sampleNextToken(logits);
+
+      if (nextToken === EOS_TOKEN_ID) break;
+
+      inputIds = [...inputIds, nextToken];
+      const decoded = tokenizerRef.current.decode(inputIds);
+      setOutput(decoded);
+    }
+
+    const elapsed = (performance.now() - start).toFixed(1);
+    setStatus(\`gpt2 \\u00b7 \${elapsed}ms \\u00b7 \${getBackendLabel(sessionRef.current)}\`);
+    setGenerating(false);
+  }, [text]);
+
+  return (
+    <>
+      <a href="#output" className="skip-link">Skip to output</a>
+      <main>
+        <h1>gpt2 — Text Generation</h1>
+        <div className="text-input-section">
+          <label htmlFor="textInput">Enter prompt text</label>
+          <textarea id="textInput" rows={3} value={text} onChange={(e) => setText(e.target.value)} aria-label="Text prompt for generation" />
+          <button className="primary-btn" onClick={handleGenerate} disabled={generating} aria-label="Generate text">Generate</button>
+        </div>
+        <div id="output" className="text-output" role="status" aria-live="polite" aria-atomic="true">
+          {output && <pre>{output}</pre>}
+        </div>
+      </main>
+      <aside className="status-bar"><span>{status}</span></aside>
+      <div className="footer">Generated by webai.js · gpt2 · ORT Web</div>
+    </>
+  );
+}
+
+
+=== app/globals.css ===
+:root {
+  /* Colors — dark theme (default) */
+  --webai-bg: #0a0a0a;
+  --webai-surface: #1a1a1a;
+  --webai-text: #e5e5e5;
+  --webai-text-muted: #737373;
+  --webai-accent: #3b82f6;
+  --webai-success: #22c55e;
+  --webai-warning: #eab308;
+  --webai-error: #ef4444;
+  --webai-border: #262626;
+
+  /* Typography */
+  --webai-font-mono: ui-monospace, 'Cascadia Code', 'Source Code Pro', monospace;
+  --webai-font-sans: system-ui, -apple-system, sans-serif;
+  --webai-font-size-sm: 12px;
+  --webai-font-size-base: 14px;
+  --webai-font-size-lg: 16px;
+
+  /* Spacing (4px base unit) */
+  --webai-space-1: 4px;
+  --webai-space-2: 8px;
+  --webai-space-3: 12px;
+  --webai-space-4: 16px;
+  --webai-space-6: 24px;
+  --webai-space-8: 32px;
+
+  /* Layout */
+  --webai-status-height: 32px;
+  --webai-radius: 4px;
+}
+
+/* Light theme override */
+:root[data-theme="light"] {
+  --webai-bg: #fafafa;
+  --webai-surface: #ffffff;
+  --webai-text: #171717;
+  --webai-text-muted: #737373;
+  --webai-border: #e5e5e5;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--webai-bg);
+  color: var(--webai-text);
+  font-family: var(--webai-font-sans);
+  font-size: var(--webai-font-size-base);
+  min-height: 100vh;
+  padding-bottom: var(--webai-status-height);
+}
+
+main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: var(--webai-space-8) var(--webai-space-4);
+}
+
+h1 {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: var(--webai-space-6);
+}
+
+.container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--webai-space-6);
+  align-items: start;
+}
+
+@media (max-width: 640px) {
+  .container {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Drop zone */
+.drop-zone {
+  border: 2px dashed var(--webai-border);
+  border-radius: var(--webai-radius);
+  padding: var(--webai-space-8);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.drop-zone:hover,
+.drop-zone:focus-visible,
+.drop-zone.drag-over {
+  border-color: var(--webai-accent);
+}
+
+.drop-zone:focus-visible {
+  outline: 2px solid var(--webai-accent);
+  outline-offset: 2px;
+}
+
+.drop-zone .hint {
+  color: var(--webai-text-muted);
+  font-size: var(--webai-font-size-sm);
+  margin-top: var(--webai-space-2);
+}
+
+/* Preview */
+.preview img {
+  max-width: 100%;
+  border-radius: var(--webai-radius);
+  display: block;
+}
+
+.preview .change-btn {
+  margin-top: var(--webai-space-2);
+  background: none;
+  border: 1px solid var(--webai-border);
+  color: var(--webai-text-muted);
+  padding: var(--webai-space-1) var(--webai-space-3);
+  border-radius: var(--webai-radius);
+  cursor: pointer;
+  font-size: var(--webai-font-size-sm);
+}
+
+.preview .change-btn:hover {
+  border-color: var(--webai-text-muted);
+}
+
+/* Results */
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webai-space-1);
+}
+
+.result-row {
+  display: grid;
+  grid-template-columns: 120px 1fr 60px;
+  align-items: center;
+  gap: var(--webai-space-2);
+  height: 24px;
+  opacity: 0.7;
+}
+
+.result-row:focus-visible {
+  outline: 1px solid var(--webai-accent);
+  outline-offset: 1px;
+  border-radius: 2px;
+}
+
+.result-row.top-result {
+  opacity: 1;
+  font-weight: 600;
+}
+
+.result-label {
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.result-bar-container {
+  height: 16px;
+  background: var(--webai-surface);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.result-bar {
+  height: 100%;
+  background: var(--webai-accent);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.result-pct {
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  text-align: right;
+  color: var(--webai-text-muted);
+}
+
+.result-row.top-result .result-pct {
+  color: var(--webai-text);
+}
+
+/* Status bar */
+.status-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--webai-status-height);
+  background: var(--webai-surface);
+  border-top: 1px solid var(--webai-border);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--webai-space-4);
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  color: var(--webai-text-muted);
+}
+
+/* Footer */
+.footer {
+  position: fixed;
+  bottom: var(--webai-status-height);
+  right: var(--webai-space-4);
+  font-size: var(--webai-font-size-sm);
+  color: var(--webai-text-muted);
+  opacity: 0.5;
+  padding: var(--webai-space-1);
+}
+
+/* Skip link */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: var(--webai-space-2);
+  background: var(--webai-accent);
+  color: white;
+  padding: var(--webai-space-2) var(--webai-space-4);
+  border-radius: var(--webai-radius);
+  z-index: 100;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  left: var(--webai-space-2);
+}
+
+/* Audio: transcript display */
+.transcript {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: 8px;
+  padding: 1rem;
+  min-height: 100px;
+  white-space: pre-wrap;
+}
+
+/* Audio: controls */
+.controls { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+.controls button {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  background: var(--webai-accent);
+  color: white;
+}
+.controls button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Audio: TTS input */
+.tts-input { display: flex; flex-direction: column; gap: 0.5rem; }
+.tts-input textarea {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: 6px;
+  color: var(--webai-text);
+  padding: 0.75rem;
+  resize: vertical;
+}
+
+/* Text task: input area */
+.text-input {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webai-space-3);
+}
+
+.text-input textarea {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-sans);
+  font-size: var(--webai-font-size-base);
+  padding: var(--webai-space-3);
+  resize: vertical;
+  min-height: 100px;
+}
+
+.text-input textarea:focus {
+  outline: 2px solid var(--webai-accent);
+  outline-offset: -2px;
+}
+
+/* Text task: run button */
+.run-btn {
+  align-self: flex-start;
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-2) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  cursor: pointer;
+  font-size: var(--webai-font-size-base);
+}
+
+.run-btn:hover { opacity: 0.9; }
+.run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Text task: generation output */
+.generation-output {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  padding: var(--webai-space-3);
+  white-space: pre-wrap;
+  font-family: var(--webai-font-sans);
+  min-height: 80px;
+}
+
+/* Zero-shot: label input */
+.labels-input {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  padding: var(--webai-space-2);
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .result-bar { transition: none; }
+}
+/* Canvas overlay */
+.preview-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.preview-wrapper .overlay-canvas,
+.video-wrapper canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+
+/* Video / Camera */
+.video-wrapper {
+  position: relative;
+}
+
+.video-wrapper video {
+  display: block;
+  max-width: 100%;
+  border-radius: var(--webai-radius);
+}
+
+/* Permission prompt */
+.permission-prompt {
+  text-align: center;
+  padding: var(--webai-space-8);
+}
+
+.primary-btn {
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-3) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  cursor: pointer;
+  font-size: var(--webai-font-size-lg);
+  margin-top: var(--webai-space-4);
+}
+
+.primary-btn:hover { opacity: 0.9; }
+
+.controls {
+  display: flex;
+  gap: var(--webai-space-2);
+  margin-top: var(--webai-space-2);
+}
+
+.control-btn {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  color: var(--webai-text);
+  padding: var(--webai-space-1) var(--webai-space-3);
+  border-radius: var(--webai-radius);
+  cursor: pointer;
+  font-size: var(--webai-font-size-sm);
+}
+
+/* Segmentation legend */
+.color-swatch {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  vertical-align: middle;
+  margin-right: var(--webai-space-1);
+}
+
+/* Embedding info */
+.embedding-info p {
+  margin-bottom: var(--webai-space-2);
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+}
+
+/* Text input section */
+.text-input-section {
+  margin-bottom: var(--webai-space-6);
+}
+
+.text-input-section label {
+  display: block;
+  margin-bottom: var(--webai-space-2);
+  font-weight: 500;
+  color: var(--webai-text);
+}
+
+.text-input-section textarea,
+.text-input-section input[type="text"] {
+  width: 100%;
+  padding: var(--webai-space-3);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  background: var(--webai-surface);
+  color: var(--webai-text);
+  font-family: inherit;
+  font-size: var(--webai-font-size-base);
+  margin-bottom: var(--webai-space-3);
+}
+
+.text-input-section textarea {
+  resize: vertical;
+}
+
+/* Text output */
+.text-output {
+  margin-top: var(--webai-space-4);
+}
+
+.text-output pre {
+  padding: var(--webai-space-4);
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-x: auto;
+}
+
+=== lib/preprocess.ts ===
+/**
+ * BPE Tokenizer: loads tokenizer.json and encodes text to token IDs.
+ */
+class BPETokenizer {
+  constructor(tokenizerJson: any) {
+    this.vocab = new Map(Object.entries(tokenizerJson.model.vocab));
+    this.reverseVocab = new Map(<number, string>);
+    for (const [token, id] of this.vocab) {
+      this.reverseVocab.set(id as number, token);
+    }
+    this.mergeRank = new Map(<string, number>);
+    const merges = tokenizerJson.model.merges;
+    for (let i = 0; i < merges.length; i++) {
+      this.mergeRank.set(merges[i], i);
+    }
+  }
+
+  encode(text: string, maxLength?: number): { inputIds: number[]; attentionMask: number[] } {
+    if (!text) return { inputIds: [], attentionMask: [] };
+
+    const chars = Array.from(text);
+    const tokens = this._applyBPE(chars);
+    const unkId = this.vocab.get('<unk>') ?? 0;
+    let inputIds = tokens.map((t) => this.vocab.get(t) ?? unkId);
+    let attentionMask = inputIds.map(() => 1);
+
+    if (maxLength !== undefined && inputIds.length > maxLength) {
+      inputIds = inputIds.slice(0, maxLength);
+      attentionMask = attentionMask.slice(0, maxLength);
+    }
+
+    return { inputIds, attentionMask };
+  }
+
+  decode(ids: number[]): string {
+    return ids.map((id) => this.reverseVocab.get(id) ?? '').join('');
+  }
+
+  getVocabSize(): number {
+    return this.vocab.size;
+  }
+
+  _applyBPE(tokens: string[]): string[] {
+    if (tokens.length <= 1) return tokens;
+    let symbols = [...tokens];
+
+    while (symbols.length > 1) {
+      let bestRank = Infinity;
+      let bestIdx = -1;
+      for (let i = 0; i < symbols.length - 1; i++) {
+        const key = symbols[i] + ' ' + symbols[i + 1];
+        const rank = this.mergeRank.get(key);
+        if (rank !== undefined && rank < bestRank) {
+          bestRank = rank;
+          bestIdx = i;
+        }
+      }
+      if (bestIdx === -1) break;
+      const merged = symbols[bestIdx] + symbols[bestIdx + 1];
+      symbols = [...symbols.slice(0, bestIdx), merged, ...symbols.slice(bestIdx + 2)];
+    }
+    return symbols;
+  }
+}
+
+/**
+ * Load a HuggingFace tokenizer.json and return a BPETokenizer instance.
+ *
+ * @param url - URL or path to tokenizer.json
+ * @returns BPETokenizer instance ready for encoding
+ */
+export async function loadTokenizer(url: string): Promise<BPETokenizer> {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error('Failed to load tokenizer: ' + response.status);
+  const json = await response.json();
+  return new BPETokenizer(json);
+}
+
+/**
+ * Tokenize text input for model inference.
+ * Returns typed arrays suitable for creating ORT tensors.
+ *
+ * @param tokenizer - BPETokenizer instance
+ * @param text - Input text string
+ * @param maxLength - Maximum sequence length (truncates if exceeded)
+ * @returns Object with inputIds and attentionMask as BigInt64Arrays
+ */
+export function tokenizeText(
+  tokenizer: BPETokenizer,
+  text: string,
+  maxLength: number = 128
+): { inputIds: BigInt64Array; attentionMask: BigInt64Array } {
+  const encoded = tokenizer.encode(text, maxLength);
+  const inputIds = new BigInt64Array(encoded.inputIds.map((id) => BigInt(id)));
+  const attentionMask = new BigInt64Array(encoded.attentionMask.map((m) => BigInt(m)));
+  return { inputIds, attentionMask };
+}
+
+=== lib/inference.ts ===
+import * as ort from 'onnxruntime-web';
+
+
+
+/**
+ * Create an ORT Web inference session with backend selection.
+ * The execution provider list determines hardware acceleration priority.
+ */
+export async function createSession(modelPath: string): Promise<ort.InferenceSession> {
+  // Backend auto-selection: try best available, fall through to WASM
+  const providers: (string | { name: string; deviceType?: string })[] = [];
+  if ('ml' in navigator) {
+    providers.push({ name: 'webnn', deviceType: 'npu' });
+    providers.push({ name: 'webnn', deviceType: 'gpu' });
+  }
+  if (navigator.gpu) providers.push('webgpu');
+  providers.push('wasm');
+
+  const session = await ort.InferenceSession.create(modelPath, {
+    executionProviders: providers,
+  });
+
+  // Log which backend was selected
+  console.log('Inference session created');
+
+  return session;
+}
+
+/**
+ * Run inference on preprocessed input data.
+ * Input: Float32Array from preprocessImage()
+ * Output: Float32Array of raw model output (logits/scores)
+ */
+export async function runInference(
+  session: ort.InferenceSession,
+  inputData: Float32Array
+): Promise<Float32Array> {
+  const tensor = new ort.Tensor('float32', inputData, [1, 128]);
+  const feeds: Record<string, ort.Tensor> = { 'input_ids': tensor };
+
+  const results = await session.run(feeds);
+  const outputName = session.outputNames[0];
+  const output = results[outputName];
+
+  return output.data as Float32Array;
+}
+
+/**
+ * Get a display string for the active backend.
+ * Used by the status bar: "yolov8n · 8ms · WebNN (NPU)"
+ */
+export function getBackendLabel(session: ort.InferenceSession): string {
+  // ORT Web doesn't expose the selected EP directly in session.
+  // We infer from the handler metadata if available.
+  return 'ORT Web';
+}
+
+=== lib/postprocess.ts ===
+/**
+ * Sample the next token from logits using greedy decoding (argmax).
+ *
+ * @param logits - Raw model output logits for the last position
+ * @returns Token ID with the highest probability
+ */
+export function sampleNextToken(logits: Float32Array | number[]): number {
+  let bestIdx = 0;
+  let bestVal = logits[0];
+  for (let i = 1; i < logits.length; i++) {
+    if (logits[i] > bestVal) {
+      bestVal = logits[i];
+      bestIdx = i;
+    }
+  }
+  return bestIdx;
+}
+
+/**
+ * Postprocess text generation: extract next-token logits from model output.
+ * For autoregressive models, the last position's logits predict the next token.
+ *
+ * @param output - Raw model output (Float32Array), shape [1, seqLen, vocabSize]
+ * @param seqLen - Sequence length
+ * @param vocabSize - Vocabulary size
+ * @returns Logits for the last position (Float32Array of size vocabSize)
+ */
+export function postprocessGeneration(
+  output: Float32Array,
+  seqLen: number,
+  vocabSize: number
+): Float32Array {
+  const lastOffset = (seqLen - 1) * vocabSize;
+  return output.slice(lastOffset, lastOffset + vocabSize);
+}
+
+=== README.md ===
+# gpt2 — Text Generation
+
+Generated by [webai.js](https://github.com/ibelem/webai.js)
+
+## Quick Start
+
+\`\`\`bash
+npm install
+npm run dev
+\`\`\`
+
+## How It Works
+
+1. **Preprocessing**: Image is resized to 224x224px, normalized with
+   mean=[0, 0, 0] and std=[1, 1, 1], then transposed to NCHW layout.
+2. **Inference**: Model runs via ORT Web with automatic backend selection (WebNN NPU > WebNN GPU > WebGPU > WASM).
+3. **Postprocessing**: Raw logits are converted to probabilities (softmax), then top-5 results are extracted.
+
+## Configuration
+
+| Setting | Value |
+|---------|-------|
+| Task | Text Generation |
+| Engine | ORT Web |
+| Backend | auto |
+| Framework | nextjs |
+| Model | gpt2 |
+| Input | file |
+
+## Files
+
+- \`package.json\`
+- \`next.config.mjs\`
+- \`tsconfig.json\`
+- \`app/layout.tsx\`
+- \`app/page.tsx\`
+- \`app/globals.css\`
+- \`lib/preprocess.ts\`
+- \`lib/inference.ts\`
+- \`lib/postprocess.ts\`
+- \`README.md\`
+"
+`;
+
+exports[`text task snapshots > zero-shot-classification + html + file + ort 1`] = `
+"=== index.html ===
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>bart-mnli — Zero-Shot Classification</title>
+  <style>
+:root {
+  /* Colors — dark theme (default) */
+  --webai-bg: #0a0a0a;
+  --webai-surface: #1a1a1a;
+  --webai-text: #e5e5e5;
+  --webai-text-muted: #737373;
+  --webai-accent: #3b82f6;
+  --webai-success: #22c55e;
+  --webai-warning: #eab308;
+  --webai-error: #ef4444;
+  --webai-border: #262626;
+
+  /* Typography */
+  --webai-font-mono: ui-monospace, 'Cascadia Code', 'Source Code Pro', monospace;
+  --webai-font-sans: system-ui, -apple-system, sans-serif;
+  --webai-font-size-sm: 12px;
+  --webai-font-size-base: 14px;
+  --webai-font-size-lg: 16px;
+
+  /* Spacing (4px base unit) */
+  --webai-space-1: 4px;
+  --webai-space-2: 8px;
+  --webai-space-3: 12px;
+  --webai-space-4: 16px;
+  --webai-space-6: 24px;
+  --webai-space-8: 32px;
+
+  /* Layout */
+  --webai-status-height: 32px;
+  --webai-radius: 4px;
+}
+
+/* Light theme override */
+:root[data-theme="light"] {
+  --webai-bg: #fafafa;
+  --webai-surface: #ffffff;
+  --webai-text: #171717;
+  --webai-text-muted: #737373;
+  --webai-border: #e5e5e5;
+}
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--webai-bg);
+  color: var(--webai-text);
+  font-family: var(--webai-font-sans);
+  font-size: var(--webai-font-size-base);
+  min-height: 100vh;
+  padding-bottom: var(--webai-status-height);
+}
+
+main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: var(--webai-space-8) var(--webai-space-4);
+}
+
+h1 {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: var(--webai-space-6);
+}
+
+.container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--webai-space-6);
+  align-items: start;
+}
+
+@media (max-width: 640px) {
+  .container {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Drop zone */
+.drop-zone {
+  border: 2px dashed var(--webai-border);
+  border-radius: var(--webai-radius);
+  padding: var(--webai-space-8);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.drop-zone:hover,
+.drop-zone:focus-visible,
+.drop-zone.drag-over {
+  border-color: var(--webai-accent);
+}
+
+.drop-zone:focus-visible {
+  outline: 2px solid var(--webai-accent);
+  outline-offset: 2px;
+}
+
+.drop-zone .hint {
+  color: var(--webai-text-muted);
+  font-size: var(--webai-font-size-sm);
+  margin-top: var(--webai-space-2);
+}
+
+/* Preview */
+.preview img {
+  max-width: 100%;
+  border-radius: var(--webai-radius);
+  display: block;
+}
+
+.preview .change-btn {
+  margin-top: var(--webai-space-2);
+  background: none;
+  border: 1px solid var(--webai-border);
+  color: var(--webai-text-muted);
+  padding: var(--webai-space-1) var(--webai-space-3);
+  border-radius: var(--webai-radius);
+  cursor: pointer;
+  font-size: var(--webai-font-size-sm);
+}
+
+.preview .change-btn:hover {
+  border-color: var(--webai-text-muted);
+}
+
+/* Results */
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webai-space-1);
+}
+
+.result-row {
+  display: grid;
+  grid-template-columns: 120px 1fr 60px;
+  align-items: center;
+  gap: var(--webai-space-2);
+  height: 24px;
+  opacity: 0.7;
+}
+
+.result-row:focus-visible {
+  outline: 1px solid var(--webai-accent);
+  outline-offset: 1px;
+  border-radius: 2px;
+}
+
+.result-row.top-result {
+  opacity: 1;
+  font-weight: 600;
+}
+
+.result-label {
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.result-bar-container {
+  height: 16px;
+  background: var(--webai-surface);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.result-bar {
+  height: 100%;
+  background: var(--webai-accent);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.result-pct {
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  text-align: right;
+  color: var(--webai-text-muted);
+}
+
+.result-row.top-result .result-pct {
+  color: var(--webai-text);
+}
+
+/* Status bar */
+.status-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--webai-status-height);
+  background: var(--webai-surface);
+  border-top: 1px solid var(--webai-border);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--webai-space-4);
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  color: var(--webai-text-muted);
+}
+
+/* Footer */
+.footer {
+  position: fixed;
+  bottom: var(--webai-status-height);
+  right: var(--webai-space-4);
+  font-size: var(--webai-font-size-sm);
+  color: var(--webai-text-muted);
+  opacity: 0.5;
+  padding: var(--webai-space-1);
+}
+
+/* Skip link */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: var(--webai-space-2);
+  background: var(--webai-accent);
+  color: white;
+  padding: var(--webai-space-2) var(--webai-space-4);
+  border-radius: var(--webai-radius);
+  z-index: 100;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  left: var(--webai-space-2);
+}
+
+/* Audio: transcript display */
+.transcript {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: 8px;
+  padding: 1rem;
+  min-height: 100px;
+  white-space: pre-wrap;
+}
+
+/* Audio: controls */
+.controls { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+.controls button {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  background: var(--webai-accent);
+  color: white;
+}
+.controls button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Audio: TTS input */
+.tts-input { display: flex; flex-direction: column; gap: 0.5rem; }
+.tts-input textarea {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: 6px;
+  color: var(--webai-text);
+  padding: 0.75rem;
+  resize: vertical;
+}
+
+/* Text task: input area */
+.text-input {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webai-space-3);
+}
+
+.text-input textarea {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-sans);
+  font-size: var(--webai-font-size-base);
+  padding: var(--webai-space-3);
+  resize: vertical;
+  min-height: 100px;
+}
+
+.text-input textarea:focus {
+  outline: 2px solid var(--webai-accent);
+  outline-offset: -2px;
+}
+
+/* Text task: run button */
+.run-btn {
+  align-self: flex-start;
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-2) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  cursor: pointer;
+  font-size: var(--webai-font-size-base);
+}
+
+.run-btn:hover { opacity: 0.9; }
+.run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Text task: generation output */
+.generation-output {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  padding: var(--webai-space-3);
+  white-space: pre-wrap;
+  font-family: var(--webai-font-sans);
+  min-height: 80px;
+}
+
+/* Zero-shot: label input */
+.labels-input {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  padding: var(--webai-space-2);
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .result-bar { transition: none; }
+}
+  </style>
+</head>
+<body>
+  <a href="#results" class="skip-link">Skip to results</a>
+
+  <main>
+    <h1>bart-mnli — Zero-Shot Classification</h1>
+
+    <h2>Zero-Shot Classification</h2>
+
+    <div class="text-input">
+      <label for="textInput">Enter text to classify</label>
+      <textarea id="textInput" rows="4" aria-label="Text to classify">The stock market surged today after the Fed announcement.</textarea>
+      <label for="labelsInput">Candidate labels (comma-separated)</label>
+      <input type="text" id="labelsInput" class="labels-input" value="politics, finance, sports, technology" aria-label="Comma-separated candidate labels">
+      <button id="classifyBtn" class="run-btn" aria-label="Classify text">Classify</button>
+    </div>
+
+    <div id="results" class="results" role="status" aria-live="polite" aria-atomic="true">
+    </div>
+  </main>
+
+  <aside class="status-bar">
+    <span id="status">bart-mnli · Loading...</span>
+  </aside>
+
+  <div class="footer">Generated by webai.js · bart-mnli · ORT Web</div>
+
+  <script type="module">
+import * as ort from 'https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/esm/ort.min.mjs';
+
+// --- Preprocessing ---
+/**
+ * BPE Tokenizer: loads tokenizer.json and encodes text to token IDs.
+ */
+class BPETokenizer {
+  constructor(tokenizerJson) {
+    this.vocab = new Map(Object.entries(tokenizerJson.model.vocab));
+    this.reverseVocab = new Map();
+    for (const [token, id] of this.vocab) {
+      this.reverseVocab.set(id, token);
+    }
+    this.mergeRank = new Map();
+    const merges = tokenizerJson.model.merges;
+    for (let i = 0; i < merges.length; i++) {
+      this.mergeRank.set(merges[i], i);
+    }
+  }
+
+  encode(text, maxLength) {
+    if (!text) return { inputIds: [], attentionMask: [] };
+
+    const chars = Array.from(text);
+    const tokens = this._applyBPE(chars);
+    const unkId = this.vocab.get('<unk>') ?? 0;
+    let inputIds = tokens.map((t) => this.vocab.get(t) ?? unkId);
+    let attentionMask = inputIds.map(() => 1);
+
+    if (maxLength !== undefined && inputIds.length > maxLength) {
+      inputIds = inputIds.slice(0, maxLength);
+      attentionMask = attentionMask.slice(0, maxLength);
+    }
+
+    return { inputIds, attentionMask };
+  }
+
+  decode(ids) {
+    return ids.map((id) => this.reverseVocab.get(id) ?? '').join('');
+  }
+
+  getVocabSize() {
+    return this.vocab.size;
+  }
+
+  _applyBPE(tokens) {
+    if (tokens.length <= 1) return tokens;
+    let symbols = [...tokens];
+
+    while (symbols.length > 1) {
+      let bestRank = Infinity;
+      let bestIdx = -1;
+      for (let i = 0; i < symbols.length - 1; i++) {
+        const key = symbols[i] + ' ' + symbols[i + 1];
+        const rank = this.mergeRank.get(key);
+        if (rank !== undefined && rank < bestRank) {
+          bestRank = rank;
+          bestIdx = i;
+        }
+      }
+      if (bestIdx === -1) break;
+      const merged = symbols[bestIdx] + symbols[bestIdx + 1];
+      symbols = [...symbols.slice(0, bestIdx), merged, ...symbols.slice(bestIdx + 2)];
+    }
+    return symbols;
+  }
+}
+
+/**
+ * Load a HuggingFace tokenizer.json and return a BPETokenizer instance.
+ *
+ * @param url - URL or path to tokenizer.json
+ * @returns BPETokenizer instance ready for encoding
+ */
+async function loadTokenizer(url) {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error('Failed to load tokenizer: ' + response.status);
+  const json = await response.json();
+  return new BPETokenizer(json);
+}
+
+/**
+ * Tokenize text input for model inference.
+ * Returns typed arrays suitable for creating ORT tensors.
+ *
+ * @param tokenizer - BPETokenizer instance
+ * @param text - Input text string
+ * @param maxLength - Maximum sequence length (truncates if exceeded)
+ * @returns Object with inputIds and attentionMask as BigInt64Arrays
+ */
+function tokenizeText(
+  tokenizer,
+  text,
+  maxLength = 128
+) {
+  const encoded = tokenizer.encode(text, maxLength);
+  const inputIds = new BigInt64Array(encoded.inputIds.map((id) => BigInt(id)));
+  const attentionMask = new BigInt64Array(encoded.attentionMask.map((m) => BigInt(m)));
+  return { inputIds, attentionMask };
+}
+
+// --- Inference ---
+/**
+ * Create an ORT Web inference session with backend selection.
+ * The execution provider list determines hardware acceleration priority.
+ */
+async function createSession(modelPath) {
+  // Backend auto-selection: try best available, fall through to WASM
+  const providers = [];
+  if ('ml' in navigator) {
+    providers.push({ name: 'webnn', deviceType: 'npu' });
+    providers.push({ name: 'webnn', deviceType: 'gpu' });
+  }
+  if (navigator.gpu) providers.push('webgpu');
+  providers.push('wasm');
+
+  const session = await ort.InferenceSession.create(modelPath, {
+    executionProviders: providers,
+  });
+
+  // Log which backend was selected
+  console.log('Inference session created');
+
+  return session;
+}
+
+/**
+ * Run inference on preprocessed input data.
+ * Input: Float32Array from preprocessImage()
+ * Output: Float32Array of raw model output (logits/scores)
+ */
+async function runInference(
+  session,
+  inputData
+) {
+  const tensor = new ort.Tensor('float32', inputData, [1, 128]);
+  const feeds = { 'input_ids': tensor };
+
+  const results = await session.run(feeds);
+  const outputName = session.outputNames[0];
+  const output = results[outputName];
+
+  return output.data;
+}
+
+/**
+ * Get a display string for the active backend.
+ * Used by the status bar: "yolov8n · 8ms · WebNN (NPU)"
+ */
+function getBackendLabel(session) {
+  // ORT Web doesn't expose the selected EP directly in session.
+  // We infer from the handler metadata if available.
+  return 'ORT Web';
+}
+
+// --- Postprocessing ---
+/**
+ * Postprocess zero-shot classification results.
+ * Takes entailment scores for each candidate label and normalizes with softmax.
+ *
+ * @param scores - Array of entailment scores, one per candidate label
+ * @param labels - Array of candidate label strings
+ * @returns Sorted results: { label, score } pairs, descending by score
+ */
+function postprocessZeroShot(
+  scores,
+  labels
+) {
+  // Softmax over scores
+  const maxScore = Math.max(...scores);
+  const expScores = scores.map((s) => Math.exp(s - maxScore));
+  const sumExp = expScores.reduce((a, b) => a + b, 0);
+  const probs = expScores.map((e) => e / sumExp);
+
+  // Pair labels with probabilities and sort descending
+  const results = labels.map((label, i) => ({ label, score: probs[i] }));
+  results.sort((a, b) => b.score - a.score);
+  return results;
+}
+
+// --- Application ---
+const MODEL_PATH = './bart-mnli.onnx';
+const TOKENIZER_PATH = MODEL_PATH.replace(/\\.onnx$/, '') + '/tokenizer.json';
+let session = null;
+let tokenizer = null;
+
+function updateStatus(text) {
+  document.getElementById('status').textContent = text;
+}
+
+async function init() {
+  updateStatus('Loading model and tokenizer...');
+  try {
+    [session, tokenizer] = await Promise.all([
+      createSession(MODEL_PATH),
+      loadTokenizer(TOKENIZER_PATH),
+    ]);
+    updateStatus('bart-mnli \\u00b7 Ready');
+  } catch (e) {
+    updateStatus('Failed to load model');
+    console.error('Model load error:', e);
+  }
+}
+
+const textInput = document.getElementById('textInput');
+const labelsInput = document.getElementById('labelsInput');
+const classifyBtn = document.getElementById('classifyBtn');
+const resultsDiv = document.getElementById('results');
+
+classifyBtn.addEventListener('click', async () => {
+  const text = textInput.value.trim();
+  const labelsRaw = labelsInput.value.trim();
+  if (!text || !labelsRaw) return;
+
+  if (!session || !tokenizer) {
+    resultsDiv.textContent = 'Model not loaded yet. Please wait.';
+    return;
+  }
+
+  const labels = labelsRaw.split(',').map((l) => l.trim()).filter(Boolean);
+  if (labels.length === 0) return;
+
+  updateStatus('bart-mnli \\u00b7 Processing...');
+  const start = performance.now();
+
+  const scores = [];
+  for (const label of labels) {
+    const hypothesis = text + ' </s></s> ' + 'This is about ' + label + '.';
+    const { inputIds } = tokenizeText(tokenizer, hypothesis);
+    const output = await runInference(session, inputIds);
+    const score = output[output.length > 2 ? 2 : output.length - 1];
+    scores.push(score);
+  }
+
+  const results = postprocessZeroShot(scores, labels);
+
+  const elapsed = (performance.now() - start).toFixed(1);
+  updateStatus('bart-mnli \\u00b7 ' + elapsed + 'ms \\u00b7 ' + getBackendLabel(session));
+
+  renderResults(results);
+});
+
+function renderResults(results) {
+  resultsDiv.innerHTML = '';
+  const maxValue = results[0]?.score || 1;
+
+  for (let i = 0; i < results.length; i++) {
+    const pct = (results[i].score * 100).toFixed(1);
+
+    const row = document.createElement('div');
+    row.className = 'result-row' + (i === 0 ? ' top-result' : '');
+    row.setAttribute('tabindex', '0');
+    row.setAttribute('aria-label', results[i].label + ': ' + pct + ' percent');
+
+    row.innerHTML =
+      '<span class="result-label">' + results[i].label + '</span>' +
+      '<div class="result-bar-container"><div class="result-bar" style="width:' +
+      ((results[i].score / maxValue) * 100) + '%"></div></div>' +
+      '<span class="result-pct">' + pct + '%</span>';
+
+    resultsDiv.appendChild(row);
+  }
+}
+
+init();
+  </script>
+</body>
+</html>
+
+=== README.md ===
+# bart-mnli — Zero-Shot Classification
+
+Generated by [webai.js](https://github.com/ibelem/webai.js)
+
+## Quick Start
+
+1. Copy your model file (\`bart-mnli.onnx\`) into this directory
+2. Start a local server: \`npx serve .\` (or any static file server)
+3. Open \`index.html\` in your browser
+
+## How It Works
+
+1. **Preprocessing**: Image is resized to 224x224px, normalized with
+   mean=[0, 0, 0] and std=[1, 1, 1], then transposed to NCHW layout.
+2. **Inference**: Model runs via ORT Web with automatic backend selection (WebNN NPU > WebNN GPU > WebGPU > WASM).
+3. **Postprocessing**: Raw logits are converted to probabilities (softmax), then top-5 results are extracted.
+
+## Configuration
+
+| Setting | Value |
+|---------|-------|
+| Task | Zero-Shot Classification |
+| Engine | ORT Web |
+| Backend | auto |
+| Framework | html |
+| Model | bart-mnli |
+| Input | file |
+
+## Files
+
+- \`index.html\`
+- \`README.md\`
+"
+`;
+
+exports[`text task snapshots > zero-shot-classification + vanilla-vite + file + ort + ts 1`] = `
+"=== package.json ===
+{
+  "name": "bart-mnli",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "onnxruntime-web": "^1.21.0"
+  },
+  "devDependencies": {
+    "vite": "^6.0.0",
+    "typescript": "^5.7.0"
+  }
+}
+
+=== vite.config.js ===
+import { defineConfig } from 'vite';
+
+export default defineConfig({});
+
+
+=== index.html ===
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>bart-mnli — Zero-Shot Classification</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <a href="#results" class="skip-link">Skip to results</a>
+    <main>
+      <h1>bart-mnli — Zero-Shot Classification</h1>
+      <h2>Zero-Shot Classification</h2>
+      <div class="text-input">
+        <label for="textInput">Enter text to classify</label>
+        <textarea id="textInput" rows="4" aria-label="Text to classify">The stock market surged today after the Fed announcement.</textarea>
+        <label for="labelsInput">Candidate labels (comma-separated)</label>
+        <input type="text" id="labelsInput" class="labels-input" value="politics, finance, sports, technology" aria-label="Comma-separated candidate labels">
+        <button id="runBtn" class="primary-btn" aria-label="Classify text">Classify</button>
+      </div>
+      <div id="results" class="results" role="status" aria-live="polite" aria-atomic="true">
+      </div>
+    </main>
+    <aside class="status-bar">
+      <span id="status">bart-mnli · Loading...</span>
+    </aside>
+    <div class="footer">Generated by webai.js · bart-mnli · ORT Web</div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
+
+
+=== src/main.ts ===
+import { createSession, runInference, getBackendLabel } from './lib/inference.ts';
+import { loadTokenizer, tokenizeText } from './lib/preprocess.ts';
+import { postprocessZeroShot } from './lib/postprocess.ts';
+import './style.css';
+
+const MODEL_PATH = '/bart-mnli.onnx';
+const TOKENIZER_PATH = MODEL_PATH.replace(/\\.onnx$/, '') + '/tokenizer.json';
+let session: Awaited<ReturnType<typeof createSession>> | null = null;
+let tokenizer: any = null;
+
+function updateStatus(text: string) {
+  document.getElementById('status')!.textContent = text;
+}
+
+async function init() {
+  updateStatus('Loading model and tokenizer...');
+  try {
+    [session, tokenizer] = await Promise.all([
+      createSession(MODEL_PATH),
+      loadTokenizer(TOKENIZER_PATH),
+    ]);
+    updateStatus('bart-mnli \\u00b7 Ready');
+  } catch (e) {
+    updateStatus('Failed to load model');
+    console.error('Model load error:', e);
+  }
+}
+
+const textInput = document.getElementById('textInput') as HTMLTextAreaElement;
+const labelsInput = document.getElementById('labelsInput') as HTMLInputElement;
+const runBtn = document.getElementById('runBtn')!;
+const resultsDiv = document.getElementById('results')!;
+
+runBtn.addEventListener('click', async () => {
+  const text = textInput.value.trim();
+  const labelsRaw = labelsInput.value.trim();
+  if (!text || !labelsRaw || !session || !tokenizer) return;
+
+  const labels = labelsRaw.split(',').map((l: string) => l.trim()).filter(Boolean);
+  if (labels.length === 0) return;
+
+  updateStatus('bart-mnli \\u00b7 Processing...');
+  const start = performance.now();
+
+  const scores = [];
+  for (const label of labels) {
+    const hypothesis = text + ' </s></s> ' + 'This is about ' + label + '.';
+    const { inputIds } = tokenizeText(tokenizer, hypothesis);
+    const output = await runInference(session, inputIds);
+    const score = output[output.length > 2 ? 2 : output.length - 1];
+    scores.push(score);
+  }
+
+  const results = postprocessZeroShot(scores, labels);
+
+  const elapsed = (performance.now() - start).toFixed(1);
+  updateStatus(\`bart-mnli \\u00b7 \${elapsed}ms \\u00b7 \${getBackendLabel(session)}\`);
+
+  renderResults(results);
+});
+
+function renderResults(results: { label: string; score: number }[]) {
+  resultsDiv.innerHTML = '';
+  const maxValue = results[0]?.score || 1;
+
+  for (let i = 0; i < results.length; i++) {
+    const pct = (results[i].score * 100).toFixed(1);
+
+    const row = document.createElement('div');
+    row.className = 'result-row' + (i === 0 ? ' top-result' : '');
+    row.setAttribute('tabindex', '0');
+    row.setAttribute('aria-label', \`\${results[i].label}: \${pct} percent\`);
+
+    row.innerHTML =
+      '<span class="result-label">' + results[i].label + '</span>' +
+      '<div class="result-bar-container"><div class="result-bar" style="width:' +
+      ((results[i].score / maxValue) * 100) + '%"></div></div>' +
+      '<span class="result-pct">' + pct + '%</span>';
+
+    resultsDiv.appendChild(row);
+  }
+}
+
+init();
+
+
+=== src/style.css ===
+:root {
+  /* Colors — dark theme (default) */
+  --webai-bg: #0a0a0a;
+  --webai-surface: #1a1a1a;
+  --webai-text: #e5e5e5;
+  --webai-text-muted: #737373;
+  --webai-accent: #3b82f6;
+  --webai-success: #22c55e;
+  --webai-warning: #eab308;
+  --webai-error: #ef4444;
+  --webai-border: #262626;
+
+  /* Typography */
+  --webai-font-mono: ui-monospace, 'Cascadia Code', 'Source Code Pro', monospace;
+  --webai-font-sans: system-ui, -apple-system, sans-serif;
+  --webai-font-size-sm: 12px;
+  --webai-font-size-base: 14px;
+  --webai-font-size-lg: 16px;
+
+  /* Spacing (4px base unit) */
+  --webai-space-1: 4px;
+  --webai-space-2: 8px;
+  --webai-space-3: 12px;
+  --webai-space-4: 16px;
+  --webai-space-6: 24px;
+  --webai-space-8: 32px;
+
+  /* Layout */
+  --webai-status-height: 32px;
+  --webai-radius: 4px;
+}
+
+/* Light theme override */
+:root[data-theme="light"] {
+  --webai-bg: #fafafa;
+  --webai-surface: #ffffff;
+  --webai-text: #171717;
+  --webai-text-muted: #737373;
+  --webai-border: #e5e5e5;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--webai-bg);
+  color: var(--webai-text);
+  font-family: var(--webai-font-sans);
+  font-size: var(--webai-font-size-base);
+  min-height: 100vh;
+  padding-bottom: var(--webai-status-height);
+}
+
+main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: var(--webai-space-8) var(--webai-space-4);
+}
+
+h1 {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: var(--webai-space-6);
+}
+
+.container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--webai-space-6);
+  align-items: start;
+}
+
+@media (max-width: 640px) {
+  .container {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Drop zone */
+.drop-zone {
+  border: 2px dashed var(--webai-border);
+  border-radius: var(--webai-radius);
+  padding: var(--webai-space-8);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.drop-zone:hover,
+.drop-zone:focus-visible,
+.drop-zone.drag-over {
+  border-color: var(--webai-accent);
+}
+
+.drop-zone:focus-visible {
+  outline: 2px solid var(--webai-accent);
+  outline-offset: 2px;
+}
+
+.drop-zone .hint {
+  color: var(--webai-text-muted);
+  font-size: var(--webai-font-size-sm);
+  margin-top: var(--webai-space-2);
+}
+
+/* Preview */
+.preview img {
+  max-width: 100%;
+  border-radius: var(--webai-radius);
+  display: block;
+}
+
+.preview .change-btn {
+  margin-top: var(--webai-space-2);
+  background: none;
+  border: 1px solid var(--webai-border);
+  color: var(--webai-text-muted);
+  padding: var(--webai-space-1) var(--webai-space-3);
+  border-radius: var(--webai-radius);
+  cursor: pointer;
+  font-size: var(--webai-font-size-sm);
+}
+
+.preview .change-btn:hover {
+  border-color: var(--webai-text-muted);
+}
+
+/* Results */
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webai-space-1);
+}
+
+.result-row {
+  display: grid;
+  grid-template-columns: 120px 1fr 60px;
+  align-items: center;
+  gap: var(--webai-space-2);
+  height: 24px;
+  opacity: 0.7;
+}
+
+.result-row:focus-visible {
+  outline: 1px solid var(--webai-accent);
+  outline-offset: 1px;
+  border-radius: 2px;
+}
+
+.result-row.top-result {
+  opacity: 1;
+  font-weight: 600;
+}
+
+.result-label {
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.result-bar-container {
+  height: 16px;
+  background: var(--webai-surface);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.result-bar {
+  height: 100%;
+  background: var(--webai-accent);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.result-pct {
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  text-align: right;
+  color: var(--webai-text-muted);
+}
+
+.result-row.top-result .result-pct {
+  color: var(--webai-text);
+}
+
+/* Status bar */
+.status-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--webai-status-height);
+  background: var(--webai-surface);
+  border-top: 1px solid var(--webai-border);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--webai-space-4);
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  color: var(--webai-text-muted);
+}
+
+/* Footer */
+.footer {
+  position: fixed;
+  bottom: var(--webai-status-height);
+  right: var(--webai-space-4);
+  font-size: var(--webai-font-size-sm);
+  color: var(--webai-text-muted);
+  opacity: 0.5;
+  padding: var(--webai-space-1);
+}
+
+/* Skip link */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: var(--webai-space-2);
+  background: var(--webai-accent);
+  color: white;
+  padding: var(--webai-space-2) var(--webai-space-4);
+  border-radius: var(--webai-radius);
+  z-index: 100;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  left: var(--webai-space-2);
+}
+
+/* Audio: transcript display */
+.transcript {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: 8px;
+  padding: 1rem;
+  min-height: 100px;
+  white-space: pre-wrap;
+}
+
+/* Audio: controls */
+.controls { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+.controls button {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  background: var(--webai-accent);
+  color: white;
+}
+.controls button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Audio: TTS input */
+.tts-input { display: flex; flex-direction: column; gap: 0.5rem; }
+.tts-input textarea {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: 6px;
+  color: var(--webai-text);
+  padding: 0.75rem;
+  resize: vertical;
+}
+
+/* Text task: input area */
+.text-input {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webai-space-3);
+}
+
+.text-input textarea {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-sans);
+  font-size: var(--webai-font-size-base);
+  padding: var(--webai-space-3);
+  resize: vertical;
+  min-height: 100px;
+}
+
+.text-input textarea:focus {
+  outline: 2px solid var(--webai-accent);
+  outline-offset: -2px;
+}
+
+/* Text task: run button */
+.run-btn {
+  align-self: flex-start;
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-2) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  cursor: pointer;
+  font-size: var(--webai-font-size-base);
+}
+
+.run-btn:hover { opacity: 0.9; }
+.run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Text task: generation output */
+.generation-output {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  padding: var(--webai-space-3);
+  white-space: pre-wrap;
+  font-family: var(--webai-font-sans);
+  min-height: 80px;
+}
+
+/* Zero-shot: label input */
+.labels-input {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  padding: var(--webai-space-2);
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .result-bar { transition: none; }
+}
+
+=== src/lib/preprocess.ts ===
+/**
+ * BPE Tokenizer: loads tokenizer.json and encodes text to token IDs.
+ */
+class BPETokenizer {
+  constructor(tokenizerJson: any) {
+    this.vocab = new Map(Object.entries(tokenizerJson.model.vocab));
+    this.reverseVocab = new Map(<number, string>);
+    for (const [token, id] of this.vocab) {
+      this.reverseVocab.set(id as number, token);
+    }
+    this.mergeRank = new Map(<string, number>);
+    const merges = tokenizerJson.model.merges;
+    for (let i = 0; i < merges.length; i++) {
+      this.mergeRank.set(merges[i], i);
+    }
+  }
+
+  encode(text: string, maxLength?: number): { inputIds: number[]; attentionMask: number[] } {
+    if (!text) return { inputIds: [], attentionMask: [] };
+
+    const chars = Array.from(text);
+    const tokens = this._applyBPE(chars);
+    const unkId = this.vocab.get('<unk>') ?? 0;
+    let inputIds = tokens.map((t) => this.vocab.get(t) ?? unkId);
+    let attentionMask = inputIds.map(() => 1);
+
+    if (maxLength !== undefined && inputIds.length > maxLength) {
+      inputIds = inputIds.slice(0, maxLength);
+      attentionMask = attentionMask.slice(0, maxLength);
+    }
+
+    return { inputIds, attentionMask };
+  }
+
+  decode(ids: number[]): string {
+    return ids.map((id) => this.reverseVocab.get(id) ?? '').join('');
+  }
+
+  getVocabSize(): number {
+    return this.vocab.size;
+  }
+
+  _applyBPE(tokens: string[]): string[] {
+    if (tokens.length <= 1) return tokens;
+    let symbols = [...tokens];
+
+    while (symbols.length > 1) {
+      let bestRank = Infinity;
+      let bestIdx = -1;
+      for (let i = 0; i < symbols.length - 1; i++) {
+        const key = symbols[i] + ' ' + symbols[i + 1];
+        const rank = this.mergeRank.get(key);
+        if (rank !== undefined && rank < bestRank) {
+          bestRank = rank;
+          bestIdx = i;
+        }
+      }
+      if (bestIdx === -1) break;
+      const merged = symbols[bestIdx] + symbols[bestIdx + 1];
+      symbols = [...symbols.slice(0, bestIdx), merged, ...symbols.slice(bestIdx + 2)];
+    }
+    return symbols;
+  }
+}
+
+/**
+ * Load a HuggingFace tokenizer.json and return a BPETokenizer instance.
+ *
+ * @param url - URL or path to tokenizer.json
+ * @returns BPETokenizer instance ready for encoding
+ */
+export async function loadTokenizer(url: string): Promise<BPETokenizer> {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error('Failed to load tokenizer: ' + response.status);
+  const json = await response.json();
+  return new BPETokenizer(json);
+}
+
+/**
+ * Tokenize text input for model inference.
+ * Returns typed arrays suitable for creating ORT tensors.
+ *
+ * @param tokenizer - BPETokenizer instance
+ * @param text - Input text string
+ * @param maxLength - Maximum sequence length (truncates if exceeded)
+ * @returns Object with inputIds and attentionMask as BigInt64Arrays
+ */
+export function tokenizeText(
+  tokenizer: BPETokenizer,
+  text: string,
+  maxLength: number = 128
+): { inputIds: BigInt64Array; attentionMask: BigInt64Array } {
+  const encoded = tokenizer.encode(text, maxLength);
+  const inputIds = new BigInt64Array(encoded.inputIds.map((id) => BigInt(id)));
+  const attentionMask = new BigInt64Array(encoded.attentionMask.map((m) => BigInt(m)));
+  return { inputIds, attentionMask };
+}
+
+=== src/lib/inference.ts ===
+import * as ort from 'onnxruntime-web';
+
+
+
+/**
+ * Create an ORT Web inference session with backend selection.
+ * The execution provider list determines hardware acceleration priority.
+ */
+export async function createSession(modelPath: string): Promise<ort.InferenceSession> {
+  // Backend auto-selection: try best available, fall through to WASM
+  const providers: (string | { name: string; deviceType?: string })[] = [];
+  if ('ml' in navigator) {
+    providers.push({ name: 'webnn', deviceType: 'npu' });
+    providers.push({ name: 'webnn', deviceType: 'gpu' });
+  }
+  if (navigator.gpu) providers.push('webgpu');
+  providers.push('wasm');
+
+  const session = await ort.InferenceSession.create(modelPath, {
+    executionProviders: providers,
+  });
+
+  // Log which backend was selected
+  console.log('Inference session created');
+
+  return session;
+}
+
+/**
+ * Run inference on preprocessed input data.
+ * Input: Float32Array from preprocessImage()
+ * Output: Float32Array of raw model output (logits/scores)
+ */
+export async function runInference(
+  session: ort.InferenceSession,
+  inputData: Float32Array
+): Promise<Float32Array> {
+  const tensor = new ort.Tensor('float32', inputData, [1, 128]);
+  const feeds: Record<string, ort.Tensor> = { 'input_ids': tensor };
+
+  const results = await session.run(feeds);
+  const outputName = session.outputNames[0];
+  const output = results[outputName];
+
+  return output.data as Float32Array;
+}
+
+/**
+ * Get a display string for the active backend.
+ * Used by the status bar: "yolov8n · 8ms · WebNN (NPU)"
+ */
+export function getBackendLabel(session: ort.InferenceSession): string {
+  // ORT Web doesn't expose the selected EP directly in session.
+  // We infer from the handler metadata if available.
+  return 'ORT Web';
+}
+
+=== src/lib/postprocess.ts ===
+/**
+ * Postprocess zero-shot classification results.
+ * Takes entailment scores for each candidate label and normalizes with softmax.
+ *
+ * @param scores - Array of entailment scores, one per candidate label
+ * @param labels - Array of candidate label strings
+ * @returns Sorted results: { label, score } pairs, descending by score
+ */
+export function postprocessZeroShot(
+  scores: number[],
+  labels: string[]
+): Array<{ label: string; score: number }> {
+  // Softmax over scores
+  const maxScore = Math.max(...scores);
+  const expScores = scores.map((s) => Math.exp(s - maxScore));
+  const sumExp = expScores.reduce((a, b) => a + b, 0);
+  const probs = expScores.map((e) => e / sumExp);
+
+  // Pair labels with probabilities and sort descending
+  const results = labels.map((label, i) => ({ label, score: probs[i] }));
+  results.sort((a, b) => b.score - a.score);
+  return results;
+}
+
+=== README.md ===
+# bart-mnli — Zero-Shot Classification
+
+Generated by [webai.js](https://github.com/ibelem/webai.js)
+
+## Quick Start
+
+\`\`\`bash
+npm install
+npm run dev
+\`\`\`
+
+## How It Works
+
+1. **Preprocessing**: Image is resized to 224x224px, normalized with
+   mean=[0, 0, 0] and std=[1, 1, 1], then transposed to NCHW layout.
+2. **Inference**: Model runs via ORT Web with automatic backend selection (WebNN NPU > WebNN GPU > WebGPU > WASM).
+3. **Postprocessing**: Raw logits are converted to probabilities (softmax), then top-5 results are extracted.
+
+## Configuration
+
+| Setting | Value |
+|---------|-------|
+| Task | Zero-Shot Classification |
+| Engine | ORT Web |
+| Backend | auto |
+| Framework | vanilla-vite |
+| Model | bart-mnli |
+| Input | file |
+
+## Files
+
+- \`package.json\`
+- \`vite.config.js\`
+- \`index.html\`
+- \`src/main.ts\`
+- \`src/style.css\`
+- \`src/lib/preprocess.ts\`
+- \`src/lib/inference.ts\`
+- \`src/lib/postprocess.ts\`
 - \`README.md\`
 "
 `;

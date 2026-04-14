@@ -21,6 +21,7 @@ const TASK_INPUT_MATRIX: Record<TaskType, Set<InputMode>> = {
   'text-to-speech': new Set(['file']),
   'text-classification': new Set(['file']),
   'text-generation': new Set(['file']),
+  'zero-shot-classification': new Set(['file']),
 };
 
 /**
@@ -36,6 +37,7 @@ const TASK_ENGINE_MATRIX: Record<TaskType, Set<Engine>> = {
   'text-to-speech': new Set(['ort']),
   'text-classification': new Set(['ort', 'litert', 'webnn']),
   'text-generation': new Set(['ort', 'litert', 'webnn']),
+  'zero-shot-classification': new Set(['ort', 'litert', 'webnn']),
 };
 
 export class ConfigValidationError extends Error {

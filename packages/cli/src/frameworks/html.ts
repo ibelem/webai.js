@@ -1196,6 +1196,255 @@ synthesizeBtn.addEventListener('click', async () => {
 init();`;
 }
 
+// ---- Text Classification script ----
+
+function emitTextClassificationScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
+  return `${emitBlockCode(config, blocks)}
+
+// --- Application ---
+const MODEL_PATH = '${getModelPath(config, '.')}';
+const TOKENIZER_PATH = MODEL_PATH.replace(/\\.onnx$/, '') + '/tokenizer.json';
+let session = null;
+let tokenizer = null;
+
+function updateStatus(text) {
+  document.getElementById('status').textContent = text;
+}
+
+async function init() {
+  updateStatus('Loading model and tokenizer...');
+  try {
+    [session, tokenizer] = await Promise.all([
+      createSession(MODEL_PATH),
+      loadTokenizer(TOKENIZER_PATH),
+    ]);
+    updateStatus('${config.modelName} \\u00b7 Ready');
+  } catch (e) {
+    updateStatus('Failed to load model');
+    console.error('Model load error:', e);
+  }
+}
+
+const textInput = document.getElementById('textInput');
+const classifyBtn = document.getElementById('classifyBtn');
+const resultsDiv = document.getElementById('results');
+
+classifyBtn.addEventListener('click', async () => {
+  const text = textInput.value.trim();
+  if (!text) return;
+
+  if (!session || !tokenizer) {
+    resultsDiv.textContent = 'Model not loaded yet. Please wait.';
+    return;
+  }
+
+  updateStatus('${config.modelName} \\u00b7 Processing...');
+  const start = performance.now();
+
+  const { inputIds, attentionMask } = tokenizeText(tokenizer, text);
+  const output = await runInference(session, inputIds);
+  const results = postprocessResults(output);
+
+  const elapsed = (performance.now() - start).toFixed(1);
+  updateStatus('${config.modelName} \\u00b7 ' + elapsed + 'ms \\u00b7 ' + getBackendLabel(session));
+
+  renderResults(results);
+});
+
+function renderResults(results) {
+  resultsDiv.innerHTML = '';
+  const maxValue = results.values[0] || 1;
+
+  for (let i = 0; i < results.indices.length; i++) {
+    const pct = (results.values[i] * 100).toFixed(1);
+    if (results.values[i] < 0.01) continue;
+
+    const row = document.createElement('div');
+    row.className = 'result-row' + (i === 0 ? ' top-result' : '');
+    row.setAttribute('tabindex', '0');
+    row.setAttribute('aria-label', 'Class ' + results.indices[i] + ': ' + pct + ' percent');
+
+    row.innerHTML =
+      '<span class="result-label">Class ' + results.indices[i] + '</span>' +
+      '<div class="result-bar-container"><div class="result-bar" style="width:' +
+      ((results.values[i] / maxValue) * 100) + '%"></div></div>' +
+      '<span class="result-pct">' + pct + '%</span>';
+
+    resultsDiv.appendChild(row);
+  }
+}
+
+init();`;
+}
+
+// ---- Zero-Shot Classification script ----
+
+function emitZeroShotScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
+  return `${emitBlockCode(config, blocks)}
+
+// --- Application ---
+const MODEL_PATH = '${getModelPath(config, '.')}';
+const TOKENIZER_PATH = MODEL_PATH.replace(/\\.onnx$/, '') + '/tokenizer.json';
+let session = null;
+let tokenizer = null;
+
+function updateStatus(text) {
+  document.getElementById('status').textContent = text;
+}
+
+async function init() {
+  updateStatus('Loading model and tokenizer...');
+  try {
+    [session, tokenizer] = await Promise.all([
+      createSession(MODEL_PATH),
+      loadTokenizer(TOKENIZER_PATH),
+    ]);
+    updateStatus('${config.modelName} \\u00b7 Ready');
+  } catch (e) {
+    updateStatus('Failed to load model');
+    console.error('Model load error:', e);
+  }
+}
+
+const textInput = document.getElementById('textInput');
+const labelsInput = document.getElementById('labelsInput');
+const classifyBtn = document.getElementById('classifyBtn');
+const resultsDiv = document.getElementById('results');
+
+classifyBtn.addEventListener('click', async () => {
+  const text = textInput.value.trim();
+  const labelsRaw = labelsInput.value.trim();
+  if (!text || !labelsRaw) return;
+
+  if (!session || !tokenizer) {
+    resultsDiv.textContent = 'Model not loaded yet. Please wait.';
+    return;
+  }
+
+  const labels = labelsRaw.split(',').map((l) => l.trim()).filter(Boolean);
+  if (labels.length === 0) return;
+
+  updateStatus('${config.modelName} \\u00b7 Processing...');
+  const start = performance.now();
+
+  const scores = [];
+  for (const label of labels) {
+    const hypothesis = text + ' </s></s> ' + 'This is about ' + label + '.';
+    const { inputIds } = tokenizeText(tokenizer, hypothesis);
+    const output = await runInference(session, inputIds);
+    const score = output[output.length > 2 ? 2 : output.length - 1];
+    scores.push(score);
+  }
+
+  const results = postprocessZeroShot(scores, labels);
+
+  const elapsed = (performance.now() - start).toFixed(1);
+  updateStatus('${config.modelName} \\u00b7 ' + elapsed + 'ms \\u00b7 ' + getBackendLabel(session));
+
+  renderResults(results);
+});
+
+function renderResults(results) {
+  resultsDiv.innerHTML = '';
+  const maxValue = results[0]?.score || 1;
+
+  for (let i = 0; i < results.length; i++) {
+    const pct = (results[i].score * 100).toFixed(1);
+
+    const row = document.createElement('div');
+    row.className = 'result-row' + (i === 0 ? ' top-result' : '');
+    row.setAttribute('tabindex', '0');
+    row.setAttribute('aria-label', results[i].label + ': ' + pct + ' percent');
+
+    row.innerHTML =
+      '<span class="result-label">' + results[i].label + '</span>' +
+      '<div class="result-bar-container"><div class="result-bar" style="width:' +
+      ((results[i].score / maxValue) * 100) + '%"></div></div>' +
+      '<span class="result-pct">' + pct + '%</span>';
+
+    resultsDiv.appendChild(row);
+  }
+}
+
+init();`;
+}
+
+// ---- Text Generation script ----
+
+function emitTextGenerationScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
+  return `${emitBlockCode(config, blocks)}
+
+// --- Application ---
+const MODEL_PATH = '${getModelPath(config, '.')}';
+const TOKENIZER_PATH = MODEL_PATH.replace(/\\.onnx$/, '') + '/tokenizer.json';
+const MAX_NEW_TOKENS = 50;
+const EOS_TOKEN_ID = 2;
+let session = null;
+let tokenizer = null;
+
+function updateStatus(text) {
+  document.getElementById('status').textContent = text;
+}
+
+async function init() {
+  updateStatus('Loading model and tokenizer...');
+  try {
+    [session, tokenizer] = await Promise.all([
+      createSession(MODEL_PATH),
+      loadTokenizer(TOKENIZER_PATH),
+    ]);
+    updateStatus('${config.modelName} \\u00b7 Ready');
+  } catch (e) {
+    updateStatus('Failed to load model');
+    console.error('Model load error:', e);
+  }
+}
+
+const textInput = document.getElementById('textInput');
+const generateBtn = document.getElementById('generateBtn');
+const outputDiv = document.getElementById('output');
+
+generateBtn.addEventListener('click', async () => {
+  const prompt = textInput.value.trim();
+  if (!prompt) return;
+
+  if (!session || !tokenizer) {
+    outputDiv.textContent = 'Model not loaded yet. Please wait.';
+    return;
+  }
+
+  generateBtn.disabled = true;
+  updateStatus('${config.modelName} \\u00b7 Generating...');
+  const start = performance.now();
+
+  const encoded = tokenizer.encode(prompt);
+  let inputIds = encoded.inputIds;
+  outputDiv.textContent = prompt;
+
+  for (let i = 0; i < MAX_NEW_TOKENS; i++) {
+    const inputBigInt = new BigInt64Array(inputIds.map((id) => BigInt(id)));
+    const output = await runInference(session, inputBigInt);
+
+    const vocabSize = tokenizer.getVocabSize();
+    const seqLen = inputIds.length;
+    const logits = postprocessGeneration(output, seqLen, vocabSize);
+    const nextToken = sampleNextToken(logits);
+
+    if (nextToken === EOS_TOKEN_ID) break;
+
+    inputIds = [...inputIds, nextToken];
+    const decoded = tokenizer.decode(inputIds);
+    outputDiv.textContent = decoded;
+  }
+
+  const elapsed = (performance.now() - start).toFixed(1);
+  updateStatus('${config.modelName} \\u00b7 ' + elapsed + 'ms \\u00b7 ' + getBackendLabel(session));
+  generateBtn.disabled = false;
+});
+
+init();`;
+}
+
 // ---- Script dispatcher ----
 
 function emitAppScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
@@ -1215,6 +1464,11 @@ function emitAppScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
   if (config.task === 'text-to-speech') {
     return emitTextToSpeechScript(config, blocks);
   }
+
+  // Text tasks
+  if (config.task === 'text-classification') return emitTextClassificationScript(config, blocks);
+  if (config.task === 'zero-shot-classification') return emitZeroShotScript(config, blocks);
+  if (config.task === 'text-generation') return emitTextGenerationScript(config, blocks);
 
   // Realtime input modes (visual)
   if (config.input === 'camera' || config.input === 'screen') {
@@ -1365,6 +1619,53 @@ function emitTtsBody(): string {
     </div>`;
 }
 
+/** Text Classification body */
+function emitTextClassificationBody(config: ResolvedConfig): string {
+  const taskLabel = getTaskLabel(config.task);
+  return `    <h2>${taskLabel}</h2>
+
+    <div class="text-input">
+      <label for="textInput">Enter text to classify</label>
+      <textarea id="textInput" rows="4" aria-label="Text to classify">This movie was absolutely wonderful.</textarea>
+      <button id="classifyBtn" class="run-btn" aria-label="Classify text">Classify</button>
+    </div>
+
+    <div id="results" class="results" role="status" aria-live="polite" aria-atomic="true">
+    </div>`;
+}
+
+/** Zero-Shot Classification body */
+function emitZeroShotBody(config: ResolvedConfig): string {
+  const taskLabel = getTaskLabel(config.task);
+  return `    <h2>${taskLabel}</h2>
+
+    <div class="text-input">
+      <label for="textInput">Enter text to classify</label>
+      <textarea id="textInput" rows="4" aria-label="Text to classify">The stock market surged today after the Fed announcement.</textarea>
+      <label for="labelsInput">Candidate labels (comma-separated)</label>
+      <input type="text" id="labelsInput" class="labels-input" value="politics, finance, sports, technology" aria-label="Comma-separated candidate labels">
+      <button id="classifyBtn" class="run-btn" aria-label="Classify text">Classify</button>
+    </div>
+
+    <div id="results" class="results" role="status" aria-live="polite" aria-atomic="true">
+    </div>`;
+}
+
+/** Text Generation body */
+function emitTextGenerationBody(config: ResolvedConfig): string {
+  const taskLabel = getTaskLabel(config.task);
+  return `    <h2>${taskLabel}</h2>
+
+    <div class="text-input">
+      <label for="textInput">Enter a prompt</label>
+      <textarea id="textInput" rows="4" aria-label="Prompt for text generation">Once upon a time</textarea>
+      <button id="generateBtn" class="run-btn" aria-label="Generate text">Generate</button>
+    </div>
+
+    <div id="output" class="generation-output" role="status" aria-live="polite" aria-atomic="true">
+    </div>`;
+}
+
 function emitBodyContent(config: ResolvedConfig): string {
   // Audio tasks
   if (config.task === 'text-to-speech') {
@@ -1376,6 +1677,11 @@ function emitBodyContent(config: ResolvedConfig): string {
     }
     return emitAudioFileBody(config);
   }
+
+  // Text tasks
+  if (config.task === 'text-classification') return emitTextClassificationBody(config);
+  if (config.task === 'zero-shot-classification') return emitZeroShotBody(config);
+  if (config.task === 'text-generation') return emitTextGenerationBody(config);
 
   if (config.input === 'camera' || config.input === 'screen') {
     return emitRealtimeBody(config);

@@ -90,4 +90,12 @@ export const TASK_PROFILES: Record<TaskType, TaskProfile> = {
     preprocess: null,
     postprocess: [],
   },
+  'zero-shot-classification': {
+    task: 'zero-shot-classification',
+    label: 'Zero-Shot Classification',
+    defaultInput: 'file',
+    supportedInputs: ['file'],
+    preprocess: null,
+    postprocess: ['softmax'],
+  },
 };

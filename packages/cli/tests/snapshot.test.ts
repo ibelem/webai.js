@@ -451,3 +451,146 @@ describe('audio task snapshots', () => {
     expect(files).toMatchSnapshot();
   });
 });
+
+// ---- Text task snapshots ----
+
+const textClassMeta: ModelMetadata = {
+  format: 'onnx',
+  inputs: [
+    { name: 'input_ids', dataType: 'int64', shape: [1, 128] },
+    { name: 'attention_mask', dataType: 'int64', shape: [1, 128] },
+  ],
+  outputs: [{ name: 'logits', dataType: 'float32', shape: [1, 2] }],
+};
+
+const zeroShotMeta: ModelMetadata = {
+  format: 'onnx',
+  inputs: [
+    { name: 'input_ids', dataType: 'int64', shape: [1, 128] },
+    { name: 'attention_mask', dataType: 'int64', shape: [1, 128] },
+  ],
+  outputs: [{ name: 'logits', dataType: 'float32', shape: [1, 3] }],
+};
+
+const textGenMeta: ModelMetadata = {
+  format: 'onnx',
+  inputs: [
+    { name: 'input_ids', dataType: 'int64', shape: [1, 128] },
+    { name: 'attention_mask', dataType: 'int64', shape: [1, 128] },
+  ],
+  outputs: [{ name: 'logits', dataType: 'float32', shape: [1, 128, 50257] }],
+};
+
+const textPreprocess = {
+  imageSize: 224,
+  mean: [0, 0, 0] as readonly number[],
+  std: [1, 1, 1] as readonly number[],
+  layout: 'nchw' as const,
+};
+
+describe('text task snapshots', () => {
+  it('text-classification + html + file + ort', () => {
+    const config = makeConfig({
+      task: 'text-classification',
+      input: 'file',
+      engine: 'ort',
+      framework: 'html',
+      lang: 'js',
+      modelMeta: textClassMeta,
+      modelPath: './bert-sentiment.onnx',
+      modelName: 'bert-sentiment',
+      preprocess: textPreprocess,
+    });
+    expect(serializeFiles(config)).toMatchSnapshot();
+  });
+
+  it('text-classification + react-vite + file + ort', () => {
+    const config = makeConfig({
+      task: 'text-classification',
+      input: 'file',
+      engine: 'ort',
+      framework: 'react-vite',
+      lang: 'js',
+      modelMeta: textClassMeta,
+      modelPath: './bert-sentiment.onnx',
+      modelName: 'bert-sentiment',
+      preprocess: textPreprocess,
+    });
+    expect(serializeFiles(config)).toMatchSnapshot();
+  });
+
+  it('zero-shot-classification + html + file + ort', () => {
+    const config = makeConfig({
+      task: 'zero-shot-classification',
+      input: 'file',
+      engine: 'ort',
+      framework: 'html',
+      lang: 'js',
+      modelMeta: zeroShotMeta,
+      modelPath: './bart-mnli.onnx',
+      modelName: 'bart-mnli',
+      preprocess: textPreprocess,
+    });
+    expect(serializeFiles(config)).toMatchSnapshot();
+  });
+
+  it('zero-shot-classification + vanilla-vite + file + ort + ts', () => {
+    const config = makeConfig({
+      task: 'zero-shot-classification',
+      input: 'file',
+      engine: 'ort',
+      framework: 'vanilla-vite',
+      lang: 'ts',
+      modelMeta: zeroShotMeta,
+      modelPath: './bart-mnli.onnx',
+      modelName: 'bart-mnli',
+      preprocess: textPreprocess,
+    });
+    expect(serializeFiles(config)).toMatchSnapshot();
+  });
+
+  it('text-generation + html + file + ort', () => {
+    const config = makeConfig({
+      task: 'text-generation',
+      input: 'file',
+      engine: 'ort',
+      framework: 'html',
+      lang: 'js',
+      modelMeta: textGenMeta,
+      modelPath: './gpt2.onnx',
+      modelName: 'gpt2',
+      preprocess: textPreprocess,
+    });
+    expect(serializeFiles(config)).toMatchSnapshot();
+  });
+
+  it('text-generation + nextjs + file + ort + ts', () => {
+    const config = makeConfig({
+      task: 'text-generation',
+      input: 'file',
+      engine: 'ort',
+      framework: 'nextjs',
+      lang: 'ts',
+      modelMeta: textGenMeta,
+      modelPath: './gpt2.onnx',
+      modelName: 'gpt2',
+      preprocess: textPreprocess,
+    });
+    expect(serializeFiles(config)).toMatchSnapshot();
+  });
+
+  it('text-classification + sveltekit + file + ort + ts', () => {
+    const config = makeConfig({
+      task: 'text-classification',
+      input: 'file',
+      engine: 'ort',
+      framework: 'sveltekit',
+      lang: 'ts',
+      modelMeta: textClassMeta,
+      modelPath: './bert-sentiment.onnx',
+      modelName: 'bert-sentiment',
+      preprocess: textPreprocess,
+    });
+    expect(serializeFiles(config)).toMatchSnapshot();
+  });
+});

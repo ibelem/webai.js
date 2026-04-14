@@ -11,7 +11,8 @@ export type TaskType =
   | 'audio-classification'
   | 'text-to-speech'
   | 'text-classification'
-  | 'text-generation';
+  | 'text-generation'
+  | 'zero-shot-classification';
 
 export type Confidence = 'high' | 'medium' | 'low';
 

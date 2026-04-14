@@ -419,18 +419,93 @@ function postprocessAudio(output${t ? ': Float32Array' : ''})${t ? ': Float32Arr
 }`;
 }
 
+// ---- Zero-Shot Classification: entailment scoring ----
+
+function emitPostprocessZeroShot(ts: boolean): string {
+  const t = ts;
+  return `/**
+ * Postprocess zero-shot classification results.
+ * Takes entailment scores for each candidate label and normalizes with softmax.
+ *
+ * @param scores - Array of entailment scores, one per candidate label
+ * @param labels - Array of candidate label strings
+ * @returns Sorted results: { label, score } pairs, descending by score
+ */
+function postprocessZeroShot(
+  scores${t ? ': number[]' : ''},
+  labels${t ? ': string[]' : ''}
+)${t ? ': Array<{ label: string; score: number }>' : ''} {
+  // Softmax over scores
+  const maxScore = Math.max(...scores);
+  const expScores = scores.map((s) => Math.exp(s - maxScore));
+  const sumExp = expScores.reduce((a, b) => a + b, 0);
+  const probs = expScores.map((e) => e / sumExp);
+
+  // Pair labels with probabilities and sort descending
+  const results = labels.map((label, i) => ({ label, score: probs[i] }));
+  results.sort((a, b) => b.score - a.score);
+  return results;
+}`;
+}
+
+// ---- Text Generation: greedy token sampling ----
+
+function emitSampleNextToken(ts: boolean): string {
+  const t = ts;
+  return `/**
+ * Sample the next token from logits using greedy decoding (argmax).
+ *
+ * @param logits - Raw model output logits for the last position
+ * @returns Token ID with the highest probability
+ */
+function sampleNextToken(logits${t ? ': Float32Array | number[]' : ''})${t ? ': number' : ''} {
+  let bestIdx = 0;
+  let bestVal = logits[0];
+  for (let i = 1; i < logits.length; i++) {
+    if (logits[i] > bestVal) {
+      bestVal = logits[i];
+      bestIdx = i;
+    }
+  }
+  return bestIdx;
+}`;
+}
+
+function emitPostprocessGeneration(ts: boolean): string {
+  const t = ts;
+  return `/**
+ * Postprocess text generation: extract next-token logits from model output.
+ * For autoregressive models, the last position's logits predict the next token.
+ *
+ * @param output - Raw model output (Float32Array), shape [1, seqLen, vocabSize]
+ * @param seqLen - Sequence length
+ * @param vocabSize - Vocabulary size
+ * @returns Logits for the last position (Float32Array of size vocabSize)
+ */
+function postprocessGeneration(
+  output${t ? ': Float32Array' : ''},
+  seqLen${t ? ': number' : ''},
+  vocabSize${t ? ': number' : ''}
+)${t ? ': Float32Array' : ''} {
+  const lastOffset = (seqLen - 1) * vocabSize;
+  return output.slice(lastOffset, lastOffset + vocabSize);
+}`;
+}
+
 // ---- Block emitter dispatch ----
 
 /**
  * Emit the postprocess CodeBlock for a given config.
  *
  * Dispatches by task:
- *   image-classification  → softmax + topK + postprocessResults
- *   object-detection      → BoundingBox type + iou + nms + decodeDetections + postprocessDetections
- *   image-segmentation    → argmaxMask + postprocessSegmentation
- *   feature-extraction    → postprocessEmbeddings
- *   speech-to-text        → greedyDecode + postprocessTranscript
- *   text-to-speech        → playAudio + postprocessAudio
+ *   image-classification     → softmax + topK + postprocessResults
+ *   object-detection         → BoundingBox type + iou + nms + decodeDetections + postprocessDetections
+ *   image-segmentation       → argmaxMask + postprocessSegmentation
+ *   feature-extraction       → postprocessEmbeddings
+ *   speech-to-text           → greedyDecode + postprocessTranscript
+ *   text-to-speech           → playAudio + postprocessAudio
+ *   zero-shot-classification → postprocessZeroShot
+ *   text-generation          → sampleNextToken + postprocessGeneration
  */
 export function emitPostprocessBlock(config: ResolvedConfig): CodeBlock {
   const ts = config.lang === 'ts';
@@ -446,6 +521,11 @@ export function emitPostprocessBlock(config: ResolvedConfig): CodeBlock {
       parts.push(emitTopK(ts));
       parts.push(emitPostprocessClassification(ts));
       exports.push('softmax', 'topK', 'postprocessResults');
+      break;
+
+    case 'zero-shot-classification':
+      parts.push(emitPostprocessZeroShot(ts));
+      exports.push('postprocessZeroShot');
       break;
 
     case 'object-detection': {
@@ -482,8 +562,14 @@ export function emitPostprocessBlock(config: ResolvedConfig): CodeBlock {
       exports.push('postprocessAudio', 'playAudio');
       break;
 
+    case 'text-generation':
+      parts.push(emitSampleNextToken(ts));
+      parts.push(emitPostprocessGeneration(ts));
+      exports.push('sampleNextToken', 'postprocessGeneration');
+      break;
+
     default:
-      // Tasks without postprocessing (text-generation)
+      // Tasks without postprocessing
       break;
   }
 

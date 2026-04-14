@@ -170,6 +170,44 @@ function emitTtsBody(): string {
       </div>`;
 }
 
+function emitTextClassificationBody(config: ResolvedConfig): string {
+  const taskLabel = getTaskLabel(config.task);
+  return `      <h2>${taskLabel}</h2>
+      <div class="text-input">
+        <label for="textInput">Enter text to classify</label>
+        <textarea id="textInput" rows="4" aria-label="Text to classify">This movie was absolutely wonderful.</textarea>
+        <button id="runBtn" class="primary-btn" aria-label="Classify text">Classify</button>
+      </div>
+      <div id="results" class="results" role="status" aria-live="polite" aria-atomic="true">
+      </div>`;
+}
+
+function emitZeroShotBody(config: ResolvedConfig): string {
+  const taskLabel = getTaskLabel(config.task);
+  return `      <h2>${taskLabel}</h2>
+      <div class="text-input">
+        <label for="textInput">Enter text to classify</label>
+        <textarea id="textInput" rows="4" aria-label="Text to classify">The stock market surged today after the Fed announcement.</textarea>
+        <label for="labelsInput">Candidate labels (comma-separated)</label>
+        <input type="text" id="labelsInput" class="labels-input" value="politics, finance, sports, technology" aria-label="Comma-separated candidate labels">
+        <button id="runBtn" class="primary-btn" aria-label="Classify text">Classify</button>
+      </div>
+      <div id="results" class="results" role="status" aria-live="polite" aria-atomic="true">
+      </div>`;
+}
+
+function emitTextGenerationBody(config: ResolvedConfig): string {
+  const taskLabel = getTaskLabel(config.task);
+  return `      <h2>${taskLabel}</h2>
+      <div class="text-input">
+        <label for="textInput">Enter a prompt</label>
+        <textarea id="textInput" rows="4" aria-label="Prompt for text generation">Once upon a time</textarea>
+        <button id="runBtn" class="primary-btn" aria-label="Generate text">Generate</button>
+      </div>
+      <div id="generationOutput" class="generation-output" role="status" aria-live="polite" aria-atomic="true">
+      </div>`;
+}
+
 function emitBodyContent(config: ResolvedConfig): string {
   // Audio tasks
   if (config.task === 'text-to-speech') return emitTtsBody();
@@ -177,6 +215,11 @@ function emitBodyContent(config: ResolvedConfig): string {
     if (config.input === 'mic') return emitAudioMicBody(config);
     return emitAudioFileBody(config);
   }
+
+  // Text tasks
+  if (config.task === 'text-classification') return emitTextClassificationBody(config);
+  if (config.task === 'zero-shot-classification') return emitZeroShotBody(config);
+  if (config.task === 'text-generation') return emitTextGenerationBody(config);
 
   if (config.input === 'camera' || config.input === 'screen') return emitRealtimeBody(config);
   if (config.task === 'object-detection' || config.task === 'image-segmentation') return emitFileOverlayBody(config);
@@ -1279,6 +1322,258 @@ init();
 `;
 }
 
+// ---- Text Classification main ----
+
+function emitTextClassificationMain(config: ResolvedConfig): string {
+  const le = libExt(config);
+  const t = config.lang === 'ts';
+
+  return `import { createSession, runInference, getBackendLabel } from './lib/inference.${le}';
+import { loadTokenizer, tokenizeText } from './lib/preprocess.${le}';
+import { postprocessResults } from './lib/postprocess.${le}';
+import './style.css';
+
+const MODEL_PATH = '${getModelPath(config, '')}';
+const TOKENIZER_PATH = MODEL_PATH.replace(/\\.onnx$/, '') + '/tokenizer.json';
+let session${t ? ': Awaited<ReturnType<typeof createSession>> | null' : ''} = null;
+let tokenizer${t ? ': any' : ''} = null;
+
+function updateStatus(text${t ? ': string' : ''}) {
+  document.getElementById('status')${t ? '!' : ''}.textContent = text;
+}
+
+async function init() {
+  updateStatus('Loading model and tokenizer...');
+  try {
+    [session, tokenizer] = await Promise.all([
+      createSession(MODEL_PATH),
+      loadTokenizer(TOKENIZER_PATH),
+    ]);
+    updateStatus('${config.modelName} \\u00b7 Ready');
+  } catch (e) {
+    updateStatus('Failed to load model');
+    console.error('Model load error:', e);
+  }
+}
+
+const textInput = document.getElementById('textInput') as ${t ? 'HTMLTextAreaElement' : 'any'};
+const runBtn = document.getElementById('runBtn')${t ? '!' : ''};
+const resultsDiv = document.getElementById('results')${t ? '!' : ''};
+
+runBtn.addEventListener('click', async () => {
+  const text = textInput.value.trim();
+  if (!text || !session || !tokenizer) return;
+
+  updateStatus('${config.modelName} \\u00b7 Processing...');
+  const start = performance.now();
+
+  const { inputIds } = tokenizeText(tokenizer, text);
+  const output = await runInference(session, inputIds);
+  const results = postprocessResults(output);
+
+  const elapsed = (performance.now() - start).toFixed(1);
+  updateStatus(\`${config.modelName} \\u00b7 \${elapsed}ms \\u00b7 \${getBackendLabel(session)}\`);
+
+  renderResults(results);
+});
+
+function renderResults(results${t ? ': { indices: number[]; values: number[] }' : ''}) {
+  resultsDiv.innerHTML = '';
+  const maxValue = results.values[0] || 1;
+
+  for (let i = 0; i < results.indices.length; i++) {
+    const pct = (results.values[i] * 100).toFixed(1);
+    if (results.values[i] < 0.01) continue;
+
+    const row = document.createElement('div');
+    row.className = 'result-row' + (i === 0 ? ' top-result' : '');
+    row.setAttribute('tabindex', '0');
+    row.setAttribute('aria-label', \`Class \${results.indices[i]}: \${pct} percent\`);
+
+    row.innerHTML =
+      '<span class="result-label">Class ' + results.indices[i] + '</span>' +
+      '<div class="result-bar-container"><div class="result-bar" style="width:' +
+      ((results.values[i] / maxValue) * 100) + '%"></div></div>' +
+      '<span class="result-pct">' + pct + '%</span>';
+
+    resultsDiv.appendChild(row);
+  }
+}
+
+init();
+`;
+}
+
+// ---- Zero-Shot Classification main ----
+
+function emitZeroShotMain(config: ResolvedConfig): string {
+  const le = libExt(config);
+  const t = config.lang === 'ts';
+
+  return `import { createSession, runInference, getBackendLabel } from './lib/inference.${le}';
+import { loadTokenizer, tokenizeText } from './lib/preprocess.${le}';
+import { postprocessZeroShot } from './lib/postprocess.${le}';
+import './style.css';
+
+const MODEL_PATH = '${getModelPath(config, '')}';
+const TOKENIZER_PATH = MODEL_PATH.replace(/\\.onnx$/, '') + '/tokenizer.json';
+let session${t ? ': Awaited<ReturnType<typeof createSession>> | null' : ''} = null;
+let tokenizer${t ? ': any' : ''} = null;
+
+function updateStatus(text${t ? ': string' : ''}) {
+  document.getElementById('status')${t ? '!' : ''}.textContent = text;
+}
+
+async function init() {
+  updateStatus('Loading model and tokenizer...');
+  try {
+    [session, tokenizer] = await Promise.all([
+      createSession(MODEL_PATH),
+      loadTokenizer(TOKENIZER_PATH),
+    ]);
+    updateStatus('${config.modelName} \\u00b7 Ready');
+  } catch (e) {
+    updateStatus('Failed to load model');
+    console.error('Model load error:', e);
+  }
+}
+
+const textInput = document.getElementById('textInput') as ${t ? 'HTMLTextAreaElement' : 'any'};
+const labelsInput = document.getElementById('labelsInput') as ${t ? 'HTMLInputElement' : 'any'};
+const runBtn = document.getElementById('runBtn')${t ? '!' : ''};
+const resultsDiv = document.getElementById('results')${t ? '!' : ''};
+
+runBtn.addEventListener('click', async () => {
+  const text = textInput.value.trim();
+  const labelsRaw = labelsInput.value.trim();
+  if (!text || !labelsRaw || !session || !tokenizer) return;
+
+  const labels = labelsRaw.split(',').map((l${t ? ': string' : ''}) => l.trim()).filter(Boolean);
+  if (labels.length === 0) return;
+
+  updateStatus('${config.modelName} \\u00b7 Processing...');
+  const start = performance.now();
+
+  const scores = [];
+  for (const label of labels) {
+    const hypothesis = text + ' </s></s> ' + 'This is about ' + label + '.';
+    const { inputIds } = tokenizeText(tokenizer, hypothesis);
+    const output = await runInference(session, inputIds);
+    const score = output[output.length > 2 ? 2 : output.length - 1];
+    scores.push(score);
+  }
+
+  const results = postprocessZeroShot(scores, labels);
+
+  const elapsed = (performance.now() - start).toFixed(1);
+  updateStatus(\`${config.modelName} \\u00b7 \${elapsed}ms \\u00b7 \${getBackendLabel(session)}\`);
+
+  renderResults(results);
+});
+
+function renderResults(results${t ? ': { label: string; score: number }[]' : ''}) {
+  resultsDiv.innerHTML = '';
+  const maxValue = results[0]?.score || 1;
+
+  for (let i = 0; i < results.length; i++) {
+    const pct = (results[i].score * 100).toFixed(1);
+
+    const row = document.createElement('div');
+    row.className = 'result-row' + (i === 0 ? ' top-result' : '');
+    row.setAttribute('tabindex', '0');
+    row.setAttribute('aria-label', \`\${results[i].label}: \${pct} percent\`);
+
+    row.innerHTML =
+      '<span class="result-label">' + results[i].label + '</span>' +
+      '<div class="result-bar-container"><div class="result-bar" style="width:' +
+      ((results[i].score / maxValue) * 100) + '%"></div></div>' +
+      '<span class="result-pct">' + pct + '%</span>';
+
+    resultsDiv.appendChild(row);
+  }
+}
+
+init();
+`;
+}
+
+// ---- Text Generation main ----
+
+function emitTextGenerationMain(config: ResolvedConfig): string {
+  const le = libExt(config);
+  const t = config.lang === 'ts';
+
+  return `import { createSession, runInference, getBackendLabel } from './lib/inference.${le}';
+import { loadTokenizer } from './lib/preprocess.${le}';
+import { postprocessGeneration, sampleNextToken } from './lib/postprocess.${le}';
+import './style.css';
+
+const MODEL_PATH = '${getModelPath(config, '')}';
+const TOKENIZER_PATH = MODEL_PATH.replace(/\\.onnx$/, '') + '/tokenizer.json';
+const MAX_NEW_TOKENS = 50;
+const EOS_TOKEN_ID = 2;
+let session${t ? ': Awaited<ReturnType<typeof createSession>> | null' : ''} = null;
+let tokenizer${t ? ': any' : ''} = null;
+
+function updateStatus(text${t ? ': string' : ''}) {
+  document.getElementById('status')${t ? '!' : ''}.textContent = text;
+}
+
+async function init() {
+  updateStatus('Loading model and tokenizer...');
+  try {
+    [session, tokenizer] = await Promise.all([
+      createSession(MODEL_PATH),
+      loadTokenizer(TOKENIZER_PATH),
+    ]);
+    updateStatus('${config.modelName} \\u00b7 Ready');
+  } catch (e) {
+    updateStatus('Failed to load model');
+    console.error('Model load error:', e);
+  }
+}
+
+const textInput = document.getElementById('textInput') as ${t ? 'HTMLTextAreaElement' : 'any'};
+const runBtn = document.getElementById('runBtn') as ${t ? 'HTMLButtonElement' : 'any'};
+const outputDiv = document.getElementById('generationOutput')${t ? '!' : ''};
+
+runBtn.addEventListener('click', async () => {
+  const prompt = textInput.value.trim();
+  if (!prompt || !session || !tokenizer) return;
+
+  runBtn.disabled = true;
+  updateStatus('${config.modelName} \\u00b7 Generating...');
+  const start = performance.now();
+
+  const encoded = tokenizer.encode(prompt);
+  let inputIds = encoded.inputIds;
+  outputDiv.textContent = prompt;
+
+  for (let i = 0; i < MAX_NEW_TOKENS; i++) {
+    const inputBigInt = new BigInt64Array(inputIds.map((id${t ? ': number' : ''}) => BigInt(id)));
+    const output = await runInference(session, inputBigInt);
+
+    const vocabSize = tokenizer.getVocabSize();
+    const seqLen = inputIds.length;
+    const logits = postprocessGeneration(output, seqLen, vocabSize);
+    const nextToken = sampleNextToken(logits);
+
+    if (nextToken === EOS_TOKEN_ID) break;
+
+    inputIds = [...inputIds, nextToken];
+    const decoded = tokenizer.decode(inputIds);
+    outputDiv.textContent = decoded;
+  }
+
+  const elapsed = (performance.now() - start).toFixed(1);
+  updateStatus(\`${config.modelName} \\u00b7 \${elapsed}ms \\u00b7 \${getBackendLabel(session)}\`);
+  runBtn.disabled = false;
+});
+
+init();
+`;
+}
+
 // ---- Main dispatcher ----
 
 function emitMain(config: ResolvedConfig): string {
@@ -1292,6 +1587,11 @@ function emitMain(config: ResolvedConfig): string {
     if (config.input === 'mic') return emitMicSpeechToTextMain(config);
     return emitFileSpeechToTextMain(config);
   }
+
+  // Text tasks
+  if (config.task === 'text-classification') return emitTextClassificationMain(config);
+  if (config.task === 'zero-shot-classification') return emitZeroShotMain(config);
+  if (config.task === 'text-generation') return emitTextGenerationMain(config);
 
   // Visual tasks
   if (config.input === 'camera' || config.input === 'screen') return emitRealtimeMain(config);
