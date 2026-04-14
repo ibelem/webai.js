@@ -17,10 +17,13 @@
   },
   "dependencies": {
     "@webai/core": "*",
-    "commander": "^13.0.0"
+    "commander": "^14.0.3"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^25.6.0"
+  }
 }

@@ -21,7 +21,7 @@
     "dev": "tsup --watch"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
   "license": "MIT"
 }

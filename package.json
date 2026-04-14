@@ -17,7 +17,7 @@
     "typecheck": "tsc --build"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

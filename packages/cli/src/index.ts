@@ -6,6 +6,9 @@ export { VERSION } from '@webai/core';
 // Types
 export type { CodeBlock, GeneratedFile } from './types.js';
 
+// Assembler (config → L1 → L2)
+export { assemble } from './assembler.js';
+
 // Layer 1: Inference emitters
 export {
   emitLayer1,
@@ -20,3 +23,6 @@ export {
   emitHtml,
   emitReactVite,
 } from './frameworks/index.js';
+
+// Layer 3: Writer
+export { writeFiles, formatSummary, type WriteResult } from './writer.js';
