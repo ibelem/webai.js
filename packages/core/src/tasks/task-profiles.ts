@@ -1,0 +1,93 @@
+/**
+ * Per-task configuration profiles.
+ * ImageNet defaults used for preprocessing when model metadata doesn't specify.
+ */
+
+import type { TaskType, TaskProfile } from './types.js';
+
+const IMAGENET_PREPROCESS = {
+  imageSize: 224,
+  mean: [0.485, 0.456, 0.406] as const,
+  std: [0.229, 0.224, 0.225] as const,
+  layout: 'nchw' as const,
+};
+
+export const TASK_PROFILES: Record<TaskType, TaskProfile> = {
+  'image-classification': {
+    task: 'image-classification',
+    label: 'Image Classification',
+    defaultInput: 'file',
+    supportedInputs: ['file', 'camera', 'video', 'screen'],
+    preprocess: IMAGENET_PREPROCESS,
+    postprocess: ['softmax', 'topK'],
+  },
+  'object-detection': {
+    task: 'object-detection',
+    label: 'Object Detection',
+    defaultInput: 'camera',
+    supportedInputs: ['file', 'camera', 'video', 'screen'],
+    preprocess: {
+      imageSize: 640,
+      mean: [0, 0, 0],
+      std: [1, 1, 1],
+      layout: 'nchw',
+    },
+    postprocess: ['nms'],
+  },
+  'image-segmentation': {
+    task: 'image-segmentation',
+    label: 'Image Segmentation',
+    defaultInput: 'file',
+    supportedInputs: ['file', 'camera', 'video', 'screen'],
+    preprocess: IMAGENET_PREPROCESS,
+    postprocess: ['argmax'],
+  },
+  'feature-extraction': {
+    task: 'feature-extraction',
+    label: 'Feature Extraction',
+    defaultInput: 'file',
+    supportedInputs: ['file', 'camera', 'video'],
+    preprocess: IMAGENET_PREPROCESS,
+    postprocess: [],
+  },
+  'speech-to-text': {
+    task: 'speech-to-text',
+    label: 'Speech to Text',
+    defaultInput: 'mic',
+    supportedInputs: ['file', 'mic'],
+    preprocess: null,
+    postprocess: [],
+  },
+  'audio-classification': {
+    task: 'audio-classification',
+    label: 'Audio Classification',
+    defaultInput: 'mic',
+    supportedInputs: ['file', 'mic'],
+    preprocess: null,
+    postprocess: ['softmax', 'topK'],
+  },
+  'text-to-speech': {
+    task: 'text-to-speech',
+    label: 'Text to Speech',
+    defaultInput: 'file',
+    supportedInputs: ['file'],
+    preprocess: null,
+    postprocess: [],
+  },
+  'text-classification': {
+    task: 'text-classification',
+    label: 'Text Classification',
+    defaultInput: 'file',
+    supportedInputs: ['file'],
+    preprocess: null,
+    postprocess: ['softmax', 'topK'],
+  },
+  'text-generation': {
+    task: 'text-generation',
+    label: 'Text Generation',
+    defaultInput: 'file',
+    supportedInputs: ['file'],
+    preprocess: null,
+    postprocess: [],
+  },
+};

@@ -13,3 +13,28 @@ export { softmax } from './postprocess/index.js';
 export { topK, type TopKResult } from './postprocess/index.js';
 export { argmax } from './postprocess/index.js';
 export { nms, type BoundingBox } from './postprocess/index.js';
+
+// Model parsing
+export {
+  detectFormat,
+  parseOnnxMetadata,
+  parseTfliteMetadata,
+  parseModelMetadata,
+  type ModelMetadata,
+  type TensorInfo,
+  type DataType,
+  type ModelFormat,
+} from './model-parser/index.js';
+
+// Tasks
+export {
+  detectTask,
+  TASK_PROFILES,
+  type TaskType,
+  type Confidence,
+  type TaskCandidate,
+  type TaskDetectionResult,
+  type InputMode,
+  type PreprocessDefaults,
+  type TaskProfile,
+} from './tasks/index.js';
