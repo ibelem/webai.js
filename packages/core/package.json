@@ -1,0 +1,27 @@
+{
+  "name": "@webai/core",
+  "version": "0.1.0",
+  "description": "Core knowledge layer for webai.js — preprocessing, postprocessing, task profiles, model parsing",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT"
+}

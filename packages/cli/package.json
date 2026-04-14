@@ -1,0 +1,26 @@
+{
+  "name": "webai",
+  "version": "0.1.0",
+  "description": "CLI code generator for browser-based AI inference",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "webai": "./dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch"
+  },
+  "dependencies": {
+    "@webai/core": "*",
+    "commander": "^13.0.0"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT"
+}

@@ -7,6 +7,7 @@ yarn-error.log*
 lerna-debug.log*
 
 references/
+docs/
 CLAUDE.md
 .claude/
 
