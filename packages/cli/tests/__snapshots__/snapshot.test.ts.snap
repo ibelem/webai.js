@@ -1,0 +1,3400 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`T24: snapshot — html + JS + raw mode > matches snapshot 1`] = `
+"=== index.html ===
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>mobilenet — Image Classification</title>
+  <style>
+:root {
+  /* Colors — dark theme (default) */
+  --webai-bg: #0a0a0a;
+  --webai-surface: #1a1a1a;
+  --webai-text: #e5e5e5;
+  --webai-text-muted: #737373;
+  --webai-accent: #3b82f6;
+  --webai-success: #22c55e;
+  --webai-warning: #eab308;
+  --webai-error: #ef4444;
+  --webai-border: #262626;
+
+  /* Typography */
+  --webai-font-mono: ui-monospace, 'Cascadia Code', 'Source Code Pro', monospace;
+  --webai-font-sans: system-ui, -apple-system, sans-serif;
+  --webai-font-size-sm: 12px;
+  --webai-font-size-base: 14px;
+  --webai-font-size-lg: 16px;
+
+  /* Spacing (4px base unit) */
+  --webai-space-1: 4px;
+  --webai-space-2: 8px;
+  --webai-space-3: 12px;
+  --webai-space-4: 16px;
+  --webai-space-6: 24px;
+  --webai-space-8: 32px;
+
+  /* Layout */
+  --webai-status-height: 32px;
+  --webai-radius: 4px;
+}
+
+/* Light theme override */
+:root[data-theme="light"] {
+  --webai-bg: #fafafa;
+  --webai-surface: #ffffff;
+  --webai-text: #171717;
+  --webai-text-muted: #737373;
+  --webai-border: #e5e5e5;
+}
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--webai-bg);
+  color: var(--webai-text);
+  font-family: var(--webai-font-sans);
+  font-size: var(--webai-font-size-base);
+  min-height: 100vh;
+  padding-bottom: var(--webai-status-height);
+}
+
+main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: var(--webai-space-8) var(--webai-space-4);
+}
+
+h1 {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: var(--webai-space-6);
+}
+
+.container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--webai-space-6);
+  align-items: start;
+}
+
+@media (max-width: 640px) {
+  .container {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Drop zone */
+.drop-zone {
+  border: 2px dashed var(--webai-border);
+  border-radius: var(--webai-radius);
+  padding: var(--webai-space-8);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.drop-zone:hover,
+.drop-zone:focus-visible,
+.drop-zone.drag-over {
+  border-color: var(--webai-accent);
+}
+
+.drop-zone:focus-visible {
+  outline: 2px solid var(--webai-accent);
+  outline-offset: 2px;
+}
+
+.drop-zone .hint {
+  color: var(--webai-text-muted);
+  font-size: var(--webai-font-size-sm);
+  margin-top: var(--webai-space-2);
+}
+
+/* Preview */
+.preview img {
+  max-width: 100%;
+  border-radius: var(--webai-radius);
+  display: block;
+}
+
+.preview .change-btn {
+  margin-top: var(--webai-space-2);
+  background: none;
+  border: 1px solid var(--webai-border);
+  color: var(--webai-text-muted);
+  padding: var(--webai-space-1) var(--webai-space-3);
+  border-radius: var(--webai-radius);
+  cursor: pointer;
+  font-size: var(--webai-font-size-sm);
+}
+
+.preview .change-btn:hover {
+  border-color: var(--webai-text-muted);
+}
+
+/* Results */
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webai-space-1);
+}
+
+.result-row {
+  display: grid;
+  grid-template-columns: 120px 1fr 60px;
+  align-items: center;
+  gap: var(--webai-space-2);
+  height: 24px;
+  opacity: 0.7;
+}
+
+.result-row:focus-visible {
+  outline: 1px solid var(--webai-accent);
+  outline-offset: 1px;
+  border-radius: 2px;
+}
+
+.result-row.top-result {
+  opacity: 1;
+  font-weight: 600;
+}
+
+.result-label {
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.result-bar-container {
+  height: 16px;
+  background: var(--webai-surface);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.result-bar {
+  height: 100%;
+  background: var(--webai-accent);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.result-pct {
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  text-align: right;
+  color: var(--webai-text-muted);
+}
+
+.result-row.top-result .result-pct {
+  color: var(--webai-text);
+}
+
+/* Status bar */
+.status-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--webai-status-height);
+  background: var(--webai-surface);
+  border-top: 1px solid var(--webai-border);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--webai-space-4);
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  color: var(--webai-text-muted);
+}
+
+/* Footer */
+.footer {
+  position: fixed;
+  bottom: var(--webai-status-height);
+  right: var(--webai-space-4);
+  font-size: var(--webai-font-size-sm);
+  color: var(--webai-text-muted);
+  opacity: 0.5;
+  padding: var(--webai-space-1);
+}
+
+/* Skip link */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: var(--webai-space-2);
+  background: var(--webai-accent);
+  color: white;
+  padding: var(--webai-space-2) var(--webai-space-4);
+  border-radius: var(--webai-radius);
+  z-index: 100;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  left: var(--webai-space-2);
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .result-bar { transition: none; }
+}
+  </style>
+</head>
+<body>
+  <a href="#results" class="skip-link">Skip to results</a>
+
+  <main>
+    <h1>mobilenet — Image Classification</h1>
+
+    <div class="container">
+      <div>
+        <div class="drop-zone" id="dropZone" role="button" tabindex="0"
+             aria-label="Drop an image here or click to browse for image classification">
+          <p>Drop an image here or click to browse</p>
+          <p class="hint">Supports JPG, PNG, WebP</p>
+          <input type="file" id="fileInput" accept="image/*" hidden>
+        </div>
+
+        <div id="preview" class="preview" hidden>
+          <img id="previewImage" alt="Selected image for classification">
+          <button id="changeBtn" class="change-btn">Choose another image</button>
+        </div>
+      </div>
+
+      <div id="results" class="results" role="status" aria-live="polite" aria-atomic="true">
+      </div>
+    </div>
+  </main>
+
+  <aside class="status-bar">
+    <span id="status">mobilenet · Loading...</span>
+  </aside>
+
+  <div class="footer">Generated by webai.js · mobilenet · ORT Web</div>
+
+  <script type="module">
+import * as ort from 'https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/esm/ort.min.mjs';
+
+// --- Preprocessing ---
+/**
+ * Resize image using bilinear interpolation.
+ * No Canvas or DOM dependency — works in Workers and browsers.
+ */
+function resizeImage(
+  src,
+  srcWidth,
+  srcHeight,
+  dstWidth,
+  dstHeight,
+  channels = 4
+) {
+  const dst = new Uint8ClampedArray(dstWidth * dstHeight * channels);
+  const xRatio = srcWidth > 1 ? (srcWidth - 1) / (dstWidth - 1 || 1) : 0;
+  const yRatio = srcHeight > 1 ? (srcHeight - 1) / (dstHeight - 1 || 1) : 0;
+
+  for (let y = 0; y < dstHeight; y++) {
+    const srcY = yRatio * y;
+    const yFloor = Math.floor(srcY);
+    const yCeil = Math.min(yFloor + 1, srcHeight - 1);
+    const yLerp = srcY - yFloor;
+
+    for (let x = 0; x < dstWidth; x++) {
+      const srcX = xRatio * x;
+      const xFloor = Math.floor(srcX);
+      const xCeil = Math.min(xFloor + 1, srcWidth - 1);
+      const xLerp = srcX - xFloor;
+
+      const dstIdx = (y * dstWidth + x) * channels;
+      const tlIdx = (yFloor * srcWidth + xFloor) * channels;
+      const trIdx = (yFloor * srcWidth + xCeil) * channels;
+      const blIdx = (yCeil * srcWidth + xFloor) * channels;
+      const brIdx = (yCeil * srcWidth + xCeil) * channels;
+
+      for (let c = 0; c < channels; c++) {
+        const top = src[tlIdx + c] * (1 - xLerp) + src[trIdx + c] * xLerp;
+        const bottom = src[blIdx + c] * (1 - xLerp) + src[brIdx + c] * xLerp;
+        dst[dstIdx + c] = Math.round(top * (1 - yLerp) + bottom * yLerp);
+      }
+    }
+  }
+
+  return dst;
+}
+
+/**
+ * Normalize pixel values: (value/255 - mean) / std per channel.
+ */
+function normalize(
+  src,
+  pixelCount,
+  mean,
+  std,
+  channels = 3,
+  srcChannels = channels
+) {
+  const out = new Float32Array(pixelCount * channels);
+
+  for (let i = 0; i < pixelCount; i++) {
+    const srcBase = i * srcChannels;
+    const dstBase = i * channels;
+    for (let c = 0; c < channels; c++) {
+      out[dstBase + c] = (src[srcBase + c] / 255 - mean[c]) / std[c];
+    }
+  }
+
+  return out;
+}
+
+/**
+ * Transpose image data from HWC to NCHW layout (batch=1).
+ */
+function toNCHW(
+  src,
+  width,
+  height,
+  channels = 3
+) {
+  const out = new Float32Array(channels * height * width);
+  const hw = height * width;
+
+  for (let c = 0; c < channels; c++) {
+    const channelOffset = c * hw;
+    for (let h = 0; h < height; h++) {
+      const rowOffset = h * width;
+      for (let w = 0; w < width; w++) {
+        out[channelOffset + rowOffset + w] = src[(h * width + w) * channels + c];
+      }
+    }
+  }
+
+  return out;
+}
+
+
+// WARNING: Preprocessing uses task defaults (mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]).
+// If results look wrong, check these values against your model's training config.
+/**
+ * Full preprocessing pipeline: resize → normalize → NCHW layout.
+ * Input: RGBA pixel data from canvas getImageData().
+ * Output: Float32Array ready for model input tensor.
+ */
+function preprocessImage(
+  imageData,
+  srcWidth,
+  srcHeight
+) {
+  const resized = resizeImage(imageData, srcWidth, srcHeight, 224, 224, 4);
+
+  // Strip alpha channel (RGBA → RGB) during normalization
+  const normalized = normalize(resized, 224 * 224, [0.485, 0.456, 0.406], [0.229, 0.224, 0.225], 3, 4);
+
+  return toNCHW(normalized, 224, 224, 3);
+}
+
+// --- Inference ---
+/**
+ * Create an ORT Web inference session with backend selection.
+ * The execution provider list determines hardware acceleration priority.
+ */
+async function createSession(modelPath) {
+  // Backend auto-selection: try best available, fall through to WASM
+  const providers = [];
+  if ('ml' in navigator) {
+    providers.push({ name: 'webnn', deviceType: 'npu' });
+    providers.push({ name: 'webnn', deviceType: 'gpu' });
+  }
+  if (navigator.gpu) providers.push('webgpu');
+  providers.push('wasm');
+
+  const session = await ort.InferenceSession.create(modelPath, {
+    executionProviders: providers,
+  });
+
+  // Log which backend was selected
+  console.log('Inference session created');
+
+  return session;
+}
+
+/**
+ * Run inference on preprocessed input data.
+ * Input: Float32Array from preprocessImage()
+ * Output: Float32Array of raw model output (logits/scores)
+ */
+async function runInference(
+  session,
+  inputData
+) {
+  const tensor = new ort.Tensor('float32', inputData, [1, 3, 224, 224]);
+  const feeds = { 'input': tensor };
+
+  const results = await session.run(feeds);
+  const outputName = session.outputNames[0];
+  const output = results[outputName];
+
+  return output.data;
+}
+
+/**
+ * Get a display string for the active backend.
+ * Used by the status bar: "yolov8n · 8ms · WebNN (NPU)"
+ */
+function getBackendLabel(session) {
+  // ORT Web doesn't expose the selected EP directly in session.
+  // We infer from the handler metadata if available.
+  return 'ORT Web';
+}
+
+// --- Postprocessing ---
+/**
+ * Softmax: convert raw logits to probabilities.
+ * Uses max-subtraction for numerical stability.
+ */
+function softmax(logits) {
+  const len = logits.length;
+  const out = new Float32Array(len);
+
+  let max = -Infinity;
+  for (let i = 0; i < len; i++) {
+    if (logits[i] > max) max = logits[i];
+  }
+
+  let sum = 0;
+  for (let i = 0; i < len; i++) {
+    out[i] = Math.exp(logits[i] - max);
+    sum += out[i];
+  }
+
+  for (let i = 0; i < len; i++) {
+    out[i] /= sum;
+  }
+
+  return out;
+}
+
+/**
+ * Return the top K elements by value, descending.
+ * Ties are broken by lower index first.
+ */
+function topK(arr, k) {
+  const len = arr.length;
+  const n = Math.min(k, len);
+
+  const indices = Array.from({ length: len }, (_, i) => i);
+  indices.sort((a, b) => {
+    const diff = arr[b] - arr[a];
+    return diff !== 0 ? diff : a - b;
+  });
+
+  const topIndices = indices.slice(0, n);
+  const topValues = topIndices.map((i) => arr[i]);
+
+  return { indices: topIndices, values: topValues };
+}
+
+/**
+ * Postprocess model output: softmax → top-5 results.
+ */
+function postprocessResults(output) {
+  const probs = softmax(output);
+  return topK(probs, 5);
+}
+
+// --- Application ---
+const MODEL_PATH = './mobilenet.onnx';
+let session = null;
+
+async function init() {
+  updateStatus('Loading model...');
+  try {
+    session = await createSession(MODEL_PATH);
+    updateStatus('mobilenet \\u00b7 Ready');
+  } catch (e) {
+    updateStatus('Failed to load model');
+    console.error('Model load error:', e);
+  }
+}
+
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const preview = document.getElementById('preview');
+const previewImage = document.getElementById('previewImage');
+const resultsDiv = document.getElementById('results');
+const changeBtn = document.getElementById('changeBtn');
+
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    fileInput.click();
+  }
+});
+
+dropZone.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  dropZone.classList.add('drag-over');
+});
+dropZone.addEventListener('dragleave', () => {
+  dropZone.classList.remove('drag-over');
+});
+dropZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) handleFile(file);
+});
+
+fileInput.addEventListener('change', () => {
+  const file = fileInput.files[0];
+  if (file) handleFile(file);
+});
+
+changeBtn.addEventListener('click', () => {
+  preview.hidden = true;
+  dropZone.hidden = false;
+  resultsDiv.innerHTML = '';
+  fileInput.value = '';
+});
+
+async function handleFile(file) {
+  if (!file.type.startsWith('image/')) {
+    resultsDiv.textContent = 'Unsupported file type. Try JPG, PNG, or WebP.';
+    return;
+  }
+
+  const url = URL.createObjectURL(file);
+  previewImage.src = url;
+  preview.hidden = false;
+  dropZone.hidden = true;
+
+  await new Promise((resolve) => { previewImage.onload = resolve; });
+
+  const canvas = document.createElement('canvas');
+  canvas.width = previewImage.naturalWidth;
+  canvas.height = previewImage.naturalHeight;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(previewImage, 0, 0);
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+  if (!session) {
+    resultsDiv.textContent = 'Model not loaded yet. Please wait.';
+    return;
+  }
+
+  updateStatus('mobilenet \\u00b7 Processing...');
+  const start = performance.now();
+
+  const inputTensor = preprocessImage(imageData.data, canvas.width, canvas.height);
+  const output = await runInference(session, inputTensor);
+  const results = postprocessResults(output);
+
+  const elapsed = (performance.now() - start).toFixed(1);
+  updateStatus('mobilenet \\u00b7 ' + elapsed + 'ms \\u00b7 ' + getBackendLabel(session));
+
+  renderResults(results);
+  URL.revokeObjectURL(url);
+}
+
+function renderResults(results) {
+  resultsDiv.innerHTML = '';
+  const maxValue = results.values[0] || 1;
+
+  for (let i = 0; i < results.indices.length; i++) {
+    const pct = (results.values[i] * 100).toFixed(1);
+    if (results.values[i] < 0.01) continue;
+
+    const row = document.createElement('div');
+    row.className = 'result-row' + (i === 0 ? ' top-result' : '');
+    row.setAttribute('tabindex', '0');
+    row.setAttribute('aria-label', 'Class ' + results.indices[i] + ': ' + pct + ' percent');
+
+    row.innerHTML =
+      '<span class="result-label">Class ' + results.indices[i] + '</span>' +
+      '<div class="result-bar-container"><div class="result-bar" style="width:' +
+      ((results.values[i] / maxValue) * 100) + '%"></div></div>' +
+      '<span class="result-pct">' + pct + '%</span>';
+
+    resultsDiv.appendChild(row);
+  }
+}
+
+function updateStatus(text) {
+  document.getElementById('status').textContent = text;
+}
+
+init();
+  </script>
+</body>
+</html>
+
+=== README.md ===
+# mobilenet — Image Classification
+
+Generated by [webai.js](https://github.com/ibelem/webai.js)
+
+## Quick Start
+
+1. Copy your model file (\`mobilenet.onnx\`) into this directory
+2. Start a local server: \`npx serve .\` (or any static file server)
+3. Open \`index.html\` in your browser
+
+## How It Works
+
+1. **Preprocessing**: Image is resized to 224x224px, normalized with
+   mean=[0.485, 0.456, 0.406] and std=[0.229, 0.224, 0.225], then transposed to NCHW layout.
+2. **Inference**: Model runs via ORT Web with automatic backend selection (WebNN NPU > WebNN GPU > WebGPU > WASM).
+3. **Postprocessing**: Raw logits are converted to probabilities (softmax), then top-5 results are extracted.
+
+## Configuration
+
+| Setting | Value |
+|---------|-------|
+| Task | Image Classification |
+| Engine | ORT Web |
+| Backend | auto |
+| Framework | html |
+| Model | mobilenet |
+| Input | file |
+
+## Files
+
+- \`index.html\`
+- \`README.md\`
+"
+`;
+
+exports[`T25: snapshot — react-vite + JS + raw mode > matches snapshot 1`] = `
+"=== package.json ===
+{
+  "name": "mobilenet",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "onnxruntime-web": "^1.21.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.0",
+    "vite": "^6.0.0"
+  }
+}
+
+=== vite.config.js ===
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+
+export default defineConfig({
+  plugins: [react()],
+});
+
+
+=== index.html ===
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>mobilenet — Image Classification</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
+
+
+=== src/main.jsx ===
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import App from './App.jsx';
+import './App.css';
+
+createRoot(document.getElementById('root')).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+);
+
+
+=== src/App.jsx ===
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { createSession, runInference, getBackendLabel } from './lib/inference.js';
+import { preprocessImage } from './lib/preprocess.js';
+import { postprocessResults } from './lib/postprocess.js';
+
+const MODEL_PATH = '/mobilenet.onnx';
+
+export default function App() {
+  const [results, setResults] = useState(null);
+  const [status, setStatus] = useState('Loading model...');
+  const [imageUrl, setImageUrl] = useState(null);
+  const [dragOver, setDragOver] = useState(false);
+  const sessionRef = useRef(null);
+  const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    createSession(MODEL_PATH).then((s) => {
+      sessionRef.current = s;
+      setStatus('mobilenet \\u00b7 Ready');
+    }).catch((e) => {
+      setStatus('Failed to load model');
+      console.error('Model load error:', e);
+    });
+  }, []);
+
+  const processImage = useCallback(async (file) => {
+    if (!file.type.startsWith('image/')) {
+      setStatus('Unsupported file type. Try JPG, PNG, or WebP.');
+      return;
+    }
+
+    const url = URL.createObjectURL(file);
+    setImageUrl(url);
+    setResults(null);
+
+    const img = new Image();
+    img.src = url;
+    await new Promise((resolve) => { img.onload = resolve; });
+
+    const canvas = document.createElement('canvas');
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0);
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+    if (!sessionRef.current) {
+      setStatus('Model not loaded yet. Please wait.');
+      return;
+    }
+
+    setStatus('mobilenet \\u00b7 Processing...');
+    const start = performance.now();
+
+    const inputTensor = preprocessImage(imageData.data, canvas.width, canvas.height);
+    const output = await runInference(sessionRef.current, inputTensor);
+    const r = postprocessResults(output);
+
+    const elapsed = (performance.now() - start).toFixed(1);
+    setStatus(\`mobilenet \\u00b7 \${elapsed}ms \\u00b7 \${getBackendLabel(sessionRef.current)}\`);
+    setResults(r);
+    URL.revokeObjectURL(url);
+  }, []);
+
+  const handleDrop = useCallback((e) => {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files[0];
+    if (file) processImage(file);
+  }, [processImage]);
+
+  const handleFileChange = useCallback((e) => {
+    const file = e.target.files?.[0];
+    if (file) processImage(file);
+  }, [processImage]);
+
+  const reset = useCallback(() => {
+    setImageUrl(null);
+    setResults(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }, []);
+
+  return (
+    <>
+      <a href="#results" className="skip-link">Skip to results</a>
+      <main>
+        <h1>mobilenet — Image Classification</h1>
+        <div className="container">
+          <div>
+            {!imageUrl ? (
+              <div
+                className={\`drop-zone\${dragOver ? ' drag-over' : ''}\`}
+                role="button"
+                tabIndex={0}
+                aria-label="Drop an image here or click to browse for image classification"
+                onClick={() => fileInputRef.current?.click()}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputRef.current?.click(); } }}
+                onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={handleDrop}
+              >
+                <p>Drop an image here or click to browse</p>
+                <p className="hint">Supports JPG, PNG, WebP</p>
+                <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handleFileChange} />
+              </div>
+            ) : (
+              <div className="preview">
+                <img src={imageUrl} alt="Selected image for classification" />
+                <button className="change-btn" onClick={reset}>Choose another image</button>
+              </div>
+            )}
+          </div>
+          <div id="results" className="results" role="status" aria-live="polite" aria-atomic="true">
+            {results && results.indices.map((idx, i) => {
+              const pct = (results.values[i] * 100).toFixed(1);
+              if (results.values[i] < 0.01) return null;
+              const maxVal = results.values[0] || 1;
+              return (
+                <div key={idx} className={\`result-row\${i === 0 ? ' top-result' : ''}\`} tabIndex={0}
+                     aria-label={\`Class \${idx}: \${pct} percent\`}>
+                  <span className="result-label">Class {idx}</span>
+                  <div className="result-bar-container">
+                    <div className="result-bar" style={{ width: \`\${(results.values[i] / maxVal) * 100}%\` }} />
+                  </div>
+                  <span className="result-pct">{pct}%</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </main>
+      <aside className="status-bar">
+        <span>{status}</span>
+      </aside>
+      <div className="footer">Generated by webai.js · mobilenet · ORT Web</div>
+    </>
+  );
+}
+
+
+=== src/App.css ===
+:root {
+  /* Colors — dark theme (default) */
+  --webai-bg: #0a0a0a;
+  --webai-surface: #1a1a1a;
+  --webai-text: #e5e5e5;
+  --webai-text-muted: #737373;
+  --webai-accent: #3b82f6;
+  --webai-success: #22c55e;
+  --webai-warning: #eab308;
+  --webai-error: #ef4444;
+  --webai-border: #262626;
+
+  /* Typography */
+  --webai-font-mono: ui-monospace, 'Cascadia Code', 'Source Code Pro', monospace;
+  --webai-font-sans: system-ui, -apple-system, sans-serif;
+  --webai-font-size-sm: 12px;
+  --webai-font-size-base: 14px;
+  --webai-font-size-lg: 16px;
+
+  /* Spacing (4px base unit) */
+  --webai-space-1: 4px;
+  --webai-space-2: 8px;
+  --webai-space-3: 12px;
+  --webai-space-4: 16px;
+  --webai-space-6: 24px;
+  --webai-space-8: 32px;
+
+  /* Layout */
+  --webai-status-height: 32px;
+  --webai-radius: 4px;
+}
+
+/* Light theme override */
+:root[data-theme="light"] {
+  --webai-bg: #fafafa;
+  --webai-surface: #ffffff;
+  --webai-text: #171717;
+  --webai-text-muted: #737373;
+  --webai-border: #e5e5e5;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--webai-bg);
+  color: var(--webai-text);
+  font-family: var(--webai-font-sans);
+  font-size: var(--webai-font-size-base);
+  min-height: 100vh;
+  padding-bottom: var(--webai-status-height);
+}
+
+main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: var(--webai-space-8) var(--webai-space-4);
+}
+
+h1 {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: var(--webai-space-6);
+}
+
+.container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--webai-space-6);
+  align-items: start;
+}
+
+@media (max-width: 640px) {
+  .container {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Drop zone */
+.drop-zone {
+  border: 2px dashed var(--webai-border);
+  border-radius: var(--webai-radius);
+  padding: var(--webai-space-8);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.drop-zone:hover,
+.drop-zone:focus-visible,
+.drop-zone.drag-over {
+  border-color: var(--webai-accent);
+}
+
+.drop-zone:focus-visible {
+  outline: 2px solid var(--webai-accent);
+  outline-offset: 2px;
+}
+
+.drop-zone .hint {
+  color: var(--webai-text-muted);
+  font-size: var(--webai-font-size-sm);
+  margin-top: var(--webai-space-2);
+}
+
+/* Preview */
+.preview img {
+  max-width: 100%;
+  border-radius: var(--webai-radius);
+  display: block;
+}
+
+.preview .change-btn {
+  margin-top: var(--webai-space-2);
+  background: none;
+  border: 1px solid var(--webai-border);
+  color: var(--webai-text-muted);
+  padding: var(--webai-space-1) var(--webai-space-3);
+  border-radius: var(--webai-radius);
+  cursor: pointer;
+  font-size: var(--webai-font-size-sm);
+}
+
+.preview .change-btn:hover {
+  border-color: var(--webai-text-muted);
+}
+
+/* Results */
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webai-space-1);
+}
+
+.result-row {
+  display: grid;
+  grid-template-columns: 120px 1fr 60px;
+  align-items: center;
+  gap: var(--webai-space-2);
+  height: 24px;
+  opacity: 0.7;
+}
+
+.result-row:focus-visible {
+  outline: 1px solid var(--webai-accent);
+  outline-offset: 1px;
+  border-radius: 2px;
+}
+
+.result-row.top-result {
+  opacity: 1;
+  font-weight: 600;
+}
+
+.result-label {
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.result-bar-container {
+  height: 16px;
+  background: var(--webai-surface);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.result-bar {
+  height: 100%;
+  background: var(--webai-accent);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.result-pct {
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  text-align: right;
+  color: var(--webai-text-muted);
+}
+
+.result-row.top-result .result-pct {
+  color: var(--webai-text);
+}
+
+/* Status bar */
+.status-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--webai-status-height);
+  background: var(--webai-surface);
+  border-top: 1px solid var(--webai-border);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--webai-space-4);
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  color: var(--webai-text-muted);
+}
+
+/* Footer */
+.footer {
+  position: fixed;
+  bottom: var(--webai-status-height);
+  right: var(--webai-space-4);
+  font-size: var(--webai-font-size-sm);
+  color: var(--webai-text-muted);
+  opacity: 0.5;
+  padding: var(--webai-space-1);
+}
+
+/* Skip link */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: var(--webai-space-2);
+  background: var(--webai-accent);
+  color: white;
+  padding: var(--webai-space-2) var(--webai-space-4);
+  border-radius: var(--webai-radius);
+  z-index: 100;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  left: var(--webai-space-2);
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .result-bar { transition: none; }
+}
+
+=== src/lib/preprocess.js ===
+/**
+ * Resize image using bilinear interpolation.
+ * No Canvas or DOM dependency — works in Workers and browsers.
+ */
+export function resizeImage(
+  src,
+  srcWidth,
+  srcHeight,
+  dstWidth,
+  dstHeight,
+  channels = 4
+) {
+  const dst = new Uint8ClampedArray(dstWidth * dstHeight * channels);
+  const xRatio = srcWidth > 1 ? (srcWidth - 1) / (dstWidth - 1 || 1) : 0;
+  const yRatio = srcHeight > 1 ? (srcHeight - 1) / (dstHeight - 1 || 1) : 0;
+
+  for (let y = 0; y < dstHeight; y++) {
+    const srcY = yRatio * y;
+    const yFloor = Math.floor(srcY);
+    const yCeil = Math.min(yFloor + 1, srcHeight - 1);
+    const yLerp = srcY - yFloor;
+
+    for (let x = 0; x < dstWidth; x++) {
+      const srcX = xRatio * x;
+      const xFloor = Math.floor(srcX);
+      const xCeil = Math.min(xFloor + 1, srcWidth - 1);
+      const xLerp = srcX - xFloor;
+
+      const dstIdx = (y * dstWidth + x) * channels;
+      const tlIdx = (yFloor * srcWidth + xFloor) * channels;
+      const trIdx = (yFloor * srcWidth + xCeil) * channels;
+      const blIdx = (yCeil * srcWidth + xFloor) * channels;
+      const brIdx = (yCeil * srcWidth + xCeil) * channels;
+
+      for (let c = 0; c < channels; c++) {
+        const top = src[tlIdx + c] * (1 - xLerp) + src[trIdx + c] * xLerp;
+        const bottom = src[blIdx + c] * (1 - xLerp) + src[brIdx + c] * xLerp;
+        dst[dstIdx + c] = Math.round(top * (1 - yLerp) + bottom * yLerp);
+      }
+    }
+  }
+
+  return dst;
+}
+
+/**
+ * Normalize pixel values: (value/255 - mean) / std per channel.
+ */
+export function normalize(
+  src,
+  pixelCount,
+  mean,
+  std,
+  channels = 3,
+  srcChannels = channels
+) {
+  const out = new Float32Array(pixelCount * channels);
+
+  for (let i = 0; i < pixelCount; i++) {
+    const srcBase = i * srcChannels;
+    const dstBase = i * channels;
+    for (let c = 0; c < channels; c++) {
+      out[dstBase + c] = (src[srcBase + c] / 255 - mean[c]) / std[c];
+    }
+  }
+
+  return out;
+}
+
+/**
+ * Transpose image data from HWC to NCHW layout (batch=1).
+ */
+export function toNCHW(
+  src,
+  width,
+  height,
+  channels = 3
+) {
+  const out = new Float32Array(channels * height * width);
+  const hw = height * width;
+
+  for (let c = 0; c < channels; c++) {
+    const channelOffset = c * hw;
+    for (let h = 0; h < height; h++) {
+      const rowOffset = h * width;
+      for (let w = 0; w < width; w++) {
+        out[channelOffset + rowOffset + w] = src[(h * width + w) * channels + c];
+      }
+    }
+  }
+
+  return out;
+}
+
+
+// WARNING: Preprocessing uses task defaults (mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]).
+// If results look wrong, check these values against your model's training config.
+/**
+ * Full preprocessing pipeline: resize → normalize → NCHW layout.
+ * Input: RGBA pixel data from canvas getImageData().
+ * Output: Float32Array ready for model input tensor.
+ */
+export function preprocessImage(
+  imageData,
+  srcWidth,
+  srcHeight
+) {
+  const resized = resizeImage(imageData, srcWidth, srcHeight, 224, 224, 4);
+
+  // Strip alpha channel (RGBA → RGB) during normalization
+  const normalized = normalize(resized, 224 * 224, [0.485, 0.456, 0.406], [0.229, 0.224, 0.225], 3, 4);
+
+  return toNCHW(normalized, 224, 224, 3);
+}
+
+=== src/lib/inference.js ===
+import * as ort from 'onnxruntime-web';
+
+
+
+/**
+ * Create an ORT Web inference session with backend selection.
+ * The execution provider list determines hardware acceleration priority.
+ */
+export async function createSession(modelPath) {
+  // Backend auto-selection: try best available, fall through to WASM
+  const providers = [];
+  if ('ml' in navigator) {
+    providers.push({ name: 'webnn', deviceType: 'npu' });
+    providers.push({ name: 'webnn', deviceType: 'gpu' });
+  }
+  if (navigator.gpu) providers.push('webgpu');
+  providers.push('wasm');
+
+  const session = await ort.InferenceSession.create(modelPath, {
+    executionProviders: providers,
+  });
+
+  // Log which backend was selected
+  console.log('Inference session created');
+
+  return session;
+}
+
+/**
+ * Run inference on preprocessed input data.
+ * Input: Float32Array from preprocessImage()
+ * Output: Float32Array of raw model output (logits/scores)
+ */
+export async function runInference(
+  session,
+  inputData
+) {
+  const tensor = new ort.Tensor('float32', inputData, [1, 3, 224, 224]);
+  const feeds = { 'input': tensor };
+
+  const results = await session.run(feeds);
+  const outputName = session.outputNames[0];
+  const output = results[outputName];
+
+  return output.data;
+}
+
+/**
+ * Get a display string for the active backend.
+ * Used by the status bar: "yolov8n · 8ms · WebNN (NPU)"
+ */
+export function getBackendLabel(session) {
+  // ORT Web doesn't expose the selected EP directly in session.
+  // We infer from the handler metadata if available.
+  return 'ORT Web';
+}
+
+=== src/lib/postprocess.js ===
+/**
+ * Softmax: convert raw logits to probabilities.
+ * Uses max-subtraction for numerical stability.
+ */
+export function softmax(logits) {
+  const len = logits.length;
+  const out = new Float32Array(len);
+
+  let max = -Infinity;
+  for (let i = 0; i < len; i++) {
+    if (logits[i] > max) max = logits[i];
+  }
+
+  let sum = 0;
+  for (let i = 0; i < len; i++) {
+    out[i] = Math.exp(logits[i] - max);
+    sum += out[i];
+  }
+
+  for (let i = 0; i < len; i++) {
+    out[i] /= sum;
+  }
+
+  return out;
+}
+
+/**
+ * Return the top K elements by value, descending.
+ * Ties are broken by lower index first.
+ */
+export function topK(arr, k) {
+  const len = arr.length;
+  const n = Math.min(k, len);
+
+  const indices = Array.from({ length: len }, (_, i) => i);
+  indices.sort((a, b) => {
+    const diff = arr[b] - arr[a];
+    return diff !== 0 ? diff : a - b;
+  });
+
+  const topIndices = indices.slice(0, n);
+  const topValues = topIndices.map((i) => arr[i]);
+
+  return { indices: topIndices, values: topValues };
+}
+
+/**
+ * Postprocess model output: softmax → top-5 results.
+ */
+export function postprocessResults(output) {
+  const probs = softmax(output);
+  return topK(probs, 5);
+}
+
+=== README.md ===
+# mobilenet — Image Classification
+
+Generated by [webai.js](https://github.com/ibelem/webai.js)
+
+## Quick Start
+
+\`\`\`bash
+npm install
+# Copy your model file to public/
+cp /path/to/mobilenet.onnx public/
+npm run dev
+\`\`\`
+
+## How It Works
+
+1. **Preprocessing**: Image is resized to 224x224px, normalized with
+   mean=[0.485, 0.456, 0.406] and std=[0.229, 0.224, 0.225], then transposed to NCHW layout.
+2. **Inference**: Model runs via ORT Web with automatic backend selection (WebNN NPU > WebNN GPU > WebGPU > WASM).
+3. **Postprocessing**: Raw logits are converted to probabilities (softmax), then top-5 results are extracted.
+
+## Configuration
+
+| Setting | Value |
+|---------|-------|
+| Task | Image Classification |
+| Engine | ORT Web |
+| Backend | auto |
+| Framework | react-vite |
+| Model | mobilenet |
+| Input | file |
+
+## Files
+
+- \`package.json\`
+- \`vite.config.js\`
+- \`index.html\`
+- \`src/main.jsx\`
+- \`src/App.jsx\`
+- \`src/App.css\`
+- \`src/lib/preprocess.js\`
+- \`src/lib/inference.js\`
+- \`src/lib/postprocess.js\`
+- \`README.md\`
+"
+`;
+
+exports[`T26: snapshot — html + JS + compact mode > matches snapshot 1`] = `
+"=== index.html ===
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>mobilenet — Image Classification</title>
+  <style>
+:root {
+  /* Colors — dark theme (default) */
+  --webai-bg: #0a0a0a;
+  --webai-surface: #1a1a1a;
+  --webai-text: #e5e5e5;
+  --webai-text-muted: #737373;
+  --webai-accent: #3b82f6;
+  --webai-success: #22c55e;
+  --webai-warning: #eab308;
+  --webai-error: #ef4444;
+  --webai-border: #262626;
+
+  /* Typography */
+  --webai-font-mono: ui-monospace, 'Cascadia Code', 'Source Code Pro', monospace;
+  --webai-font-sans: system-ui, -apple-system, sans-serif;
+  --webai-font-size-sm: 12px;
+  --webai-font-size-base: 14px;
+  --webai-font-size-lg: 16px;
+
+  /* Spacing (4px base unit) */
+  --webai-space-1: 4px;
+  --webai-space-2: 8px;
+  --webai-space-3: 12px;
+  --webai-space-4: 16px;
+  --webai-space-6: 24px;
+  --webai-space-8: 32px;
+
+  /* Layout */
+  --webai-status-height: 32px;
+  --webai-radius: 4px;
+}
+
+/* Light theme override */
+:root[data-theme="light"] {
+  --webai-bg: #fafafa;
+  --webai-surface: #ffffff;
+  --webai-text: #171717;
+  --webai-text-muted: #737373;
+  --webai-border: #e5e5e5;
+}
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--webai-bg);
+  color: var(--webai-text);
+  font-family: var(--webai-font-sans);
+  font-size: var(--webai-font-size-base);
+  min-height: 100vh;
+  padding-bottom: var(--webai-status-height);
+}
+
+main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: var(--webai-space-8) var(--webai-space-4);
+}
+
+h1 {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: var(--webai-space-6);
+}
+
+.container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--webai-space-6);
+  align-items: start;
+}
+
+@media (max-width: 640px) {
+  .container {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Drop zone */
+.drop-zone {
+  border: 2px dashed var(--webai-border);
+  border-radius: var(--webai-radius);
+  padding: var(--webai-space-8);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.drop-zone:hover,
+.drop-zone:focus-visible,
+.drop-zone.drag-over {
+  border-color: var(--webai-accent);
+}
+
+.drop-zone:focus-visible {
+  outline: 2px solid var(--webai-accent);
+  outline-offset: 2px;
+}
+
+.drop-zone .hint {
+  color: var(--webai-text-muted);
+  font-size: var(--webai-font-size-sm);
+  margin-top: var(--webai-space-2);
+}
+
+/* Preview */
+.preview img {
+  max-width: 100%;
+  border-radius: var(--webai-radius);
+  display: block;
+}
+
+.preview .change-btn {
+  margin-top: var(--webai-space-2);
+  background: none;
+  border: 1px solid var(--webai-border);
+  color: var(--webai-text-muted);
+  padding: var(--webai-space-1) var(--webai-space-3);
+  border-radius: var(--webai-radius);
+  cursor: pointer;
+  font-size: var(--webai-font-size-sm);
+}
+
+.preview .change-btn:hover {
+  border-color: var(--webai-text-muted);
+}
+
+/* Results */
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webai-space-1);
+}
+
+.result-row {
+  display: grid;
+  grid-template-columns: 120px 1fr 60px;
+  align-items: center;
+  gap: var(--webai-space-2);
+  height: 24px;
+  opacity: 0.7;
+}
+
+.result-row:focus-visible {
+  outline: 1px solid var(--webai-accent);
+  outline-offset: 1px;
+  border-radius: 2px;
+}
+
+.result-row.top-result {
+  opacity: 1;
+  font-weight: 600;
+}
+
+.result-label {
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.result-bar-container {
+  height: 16px;
+  background: var(--webai-surface);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.result-bar {
+  height: 100%;
+  background: var(--webai-accent);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.result-pct {
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  text-align: right;
+  color: var(--webai-text-muted);
+}
+
+.result-row.top-result .result-pct {
+  color: var(--webai-text);
+}
+
+/* Status bar */
+.status-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--webai-status-height);
+  background: var(--webai-surface);
+  border-top: 1px solid var(--webai-border);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--webai-space-4);
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  color: var(--webai-text-muted);
+}
+
+/* Footer */
+.footer {
+  position: fixed;
+  bottom: var(--webai-status-height);
+  right: var(--webai-space-4);
+  font-size: var(--webai-font-size-sm);
+  color: var(--webai-text-muted);
+  opacity: 0.5;
+  padding: var(--webai-space-1);
+}
+
+/* Skip link */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: var(--webai-space-2);
+  background: var(--webai-accent);
+  color: white;
+  padding: var(--webai-space-2) var(--webai-space-4);
+  border-radius: var(--webai-radius);
+  z-index: 100;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  left: var(--webai-space-2);
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .result-bar { transition: none; }
+}
+  </style>
+</head>
+<body>
+  <a href="#results" class="skip-link">Skip to results</a>
+
+  <main>
+    <h1>mobilenet — Image Classification</h1>
+
+    <div class="container">
+      <div>
+        <div class="drop-zone" id="dropZone" role="button" tabindex="0"
+             aria-label="Drop an image here or click to browse for image classification">
+          <p>Drop an image here or click to browse</p>
+          <p class="hint">Supports JPG, PNG, WebP</p>
+          <input type="file" id="fileInput" accept="image/*" hidden>
+        </div>
+
+        <div id="preview" class="preview" hidden>
+          <img id="previewImage" alt="Selected image for classification">
+          <button id="changeBtn" class="change-btn">Choose another image</button>
+        </div>
+      </div>
+
+      <div id="results" class="results" role="status" aria-live="polite" aria-atomic="true">
+      </div>
+    </div>
+  </main>
+
+  <aside class="status-bar">
+    <span id="status">mobilenet · Loading...</span>
+  </aside>
+
+  <div class="footer">Generated by webai.js · mobilenet · ORT Web</div>
+
+  <script type="module">
+import * as ort from 'https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/esm/ort.min.mjs';
+
+// --- Preprocessing ---
+/**
+ * Resize image using bilinear interpolation.
+ * No Canvas or DOM dependency — works in Workers and browsers.
+ */
+function resizeImage(
+  src,
+  srcWidth,
+  srcHeight,
+  dstWidth,
+  dstHeight,
+  channels = 4
+) {
+  const dst = new Uint8ClampedArray(dstWidth * dstHeight * channels);
+  const xRatio = srcWidth > 1 ? (srcWidth - 1) / (dstWidth - 1 || 1) : 0;
+  const yRatio = srcHeight > 1 ? (srcHeight - 1) / (dstHeight - 1 || 1) : 0;
+
+  for (let y = 0; y < dstHeight; y++) {
+    const srcY = yRatio * y;
+    const yFloor = Math.floor(srcY);
+    const yCeil = Math.min(yFloor + 1, srcHeight - 1);
+    const yLerp = srcY - yFloor;
+
+    for (let x = 0; x < dstWidth; x++) {
+      const srcX = xRatio * x;
+      const xFloor = Math.floor(srcX);
+      const xCeil = Math.min(xFloor + 1, srcWidth - 1);
+      const xLerp = srcX - xFloor;
+
+      const dstIdx = (y * dstWidth + x) * channels;
+      const tlIdx = (yFloor * srcWidth + xFloor) * channels;
+      const trIdx = (yFloor * srcWidth + xCeil) * channels;
+      const blIdx = (yCeil * srcWidth + xFloor) * channels;
+      const brIdx = (yCeil * srcWidth + xCeil) * channels;
+
+      for (let c = 0; c < channels; c++) {
+        const top = src[tlIdx + c] * (1 - xLerp) + src[trIdx + c] * xLerp;
+        const bottom = src[blIdx + c] * (1 - xLerp) + src[brIdx + c] * xLerp;
+        dst[dstIdx + c] = Math.round(top * (1 - yLerp) + bottom * yLerp);
+      }
+    }
+  }
+
+  return dst;
+}
+
+/**
+ * Normalize pixel values: (value/255 - mean) / std per channel.
+ */
+function normalize(
+  src,
+  pixelCount,
+  mean,
+  std,
+  channels = 3,
+  srcChannels = channels
+) {
+  const out = new Float32Array(pixelCount * channels);
+
+  for (let i = 0; i < pixelCount; i++) {
+    const srcBase = i * srcChannels;
+    const dstBase = i * channels;
+    for (let c = 0; c < channels; c++) {
+      out[dstBase + c] = (src[srcBase + c] / 255 - mean[c]) / std[c];
+    }
+  }
+
+  return out;
+}
+
+/**
+ * Transpose image data from HWC to NCHW layout (batch=1).
+ */
+function toNCHW(
+  src,
+  width,
+  height,
+  channels = 3
+) {
+  const out = new Float32Array(channels * height * width);
+  const hw = height * width;
+
+  for (let c = 0; c < channels; c++) {
+    const channelOffset = c * hw;
+    for (let h = 0; h < height; h++) {
+      const rowOffset = h * width;
+      for (let w = 0; w < width; w++) {
+        out[channelOffset + rowOffset + w] = src[(h * width + w) * channels + c];
+      }
+    }
+  }
+
+  return out;
+}
+
+
+// WARNING: Preprocessing uses task defaults (mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]).
+// If results look wrong, check these values against your model's training config.
+/**
+ * Full preprocessing pipeline: resize → normalize → NCHW layout.
+ * Input: RGBA pixel data from canvas getImageData().
+ * Output: Float32Array ready for model input tensor.
+ */
+function preprocessImage(
+  imageData,
+  srcWidth,
+  srcHeight
+) {
+  const resized = resizeImage(imageData, srcWidth, srcHeight, 224, 224, 4);
+
+  // Strip alpha channel (RGBA → RGB) during normalization
+  const normalized = normalize(resized, 224 * 224, [0.485, 0.456, 0.406], [0.229, 0.224, 0.225], 3, 4);
+
+  return toNCHW(normalized, 224, 224, 3);
+}
+
+// --- Inference ---
+/**
+ * Create an ORT Web inference session with backend selection.
+ * The execution provider list determines hardware acceleration priority.
+ */
+async function createSession(modelPath) {
+  // Backend auto-selection: try best available, fall through to WASM
+  const providers = [];
+  if ('ml' in navigator) {
+    providers.push({ name: 'webnn', deviceType: 'npu' });
+    providers.push({ name: 'webnn', deviceType: 'gpu' });
+  }
+  if (navigator.gpu) providers.push('webgpu');
+  providers.push('wasm');
+
+  const session = await ort.InferenceSession.create(modelPath, {
+    executionProviders: providers,
+  });
+
+  // Log which backend was selected
+  console.log('Inference session created');
+
+  return session;
+}
+
+/**
+ * Run inference on preprocessed input data.
+ * Input: Float32Array from preprocessImage()
+ * Output: Float32Array of raw model output (logits/scores)
+ */
+async function runInference(
+  session,
+  inputData
+) {
+  const tensor = new ort.Tensor('float32', inputData, [1, 3, 224, 224]);
+  const feeds = { 'input': tensor };
+
+  const results = await session.run(feeds);
+  const outputName = session.outputNames[0];
+  const output = results[outputName];
+
+  return output.data;
+}
+
+/**
+ * Get a display string for the active backend.
+ * Used by the status bar: "yolov8n · 8ms · WebNN (NPU)"
+ */
+function getBackendLabel(session) {
+  // ORT Web doesn't expose the selected EP directly in session.
+  // We infer from the handler metadata if available.
+  return 'ORT Web';
+}
+
+// --- Postprocessing ---
+/**
+ * Softmax: convert raw logits to probabilities.
+ * Uses max-subtraction for numerical stability.
+ */
+function softmax(logits) {
+  const len = logits.length;
+  const out = new Float32Array(len);
+
+  let max = -Infinity;
+  for (let i = 0; i < len; i++) {
+    if (logits[i] > max) max = logits[i];
+  }
+
+  let sum = 0;
+  for (let i = 0; i < len; i++) {
+    out[i] = Math.exp(logits[i] - max);
+    sum += out[i];
+  }
+
+  for (let i = 0; i < len; i++) {
+    out[i] /= sum;
+  }
+
+  return out;
+}
+
+/**
+ * Return the top K elements by value, descending.
+ * Ties are broken by lower index first.
+ */
+function topK(arr, k) {
+  const len = arr.length;
+  const n = Math.min(k, len);
+
+  const indices = Array.from({ length: len }, (_, i) => i);
+  indices.sort((a, b) => {
+    const diff = arr[b] - arr[a];
+    return diff !== 0 ? diff : a - b;
+  });
+
+  const topIndices = indices.slice(0, n);
+  const topValues = topIndices.map((i) => arr[i]);
+
+  return { indices: topIndices, values: topValues };
+}
+
+/**
+ * Postprocess model output: softmax → top-5 results.
+ */
+function postprocessResults(output) {
+  const probs = softmax(output);
+  return topK(probs, 5);
+}
+
+// --- Application ---
+const MODEL_PATH = './mobilenet.onnx';
+let session = null;
+
+async function init() {
+  updateStatus('Loading model...');
+  try {
+    session = await createSession(MODEL_PATH);
+    updateStatus('mobilenet \\u00b7 Ready');
+  } catch (e) {
+    updateStatus('Failed to load model');
+    console.error('Model load error:', e);
+  }
+}
+
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const preview = document.getElementById('preview');
+const previewImage = document.getElementById('previewImage');
+const resultsDiv = document.getElementById('results');
+const changeBtn = document.getElementById('changeBtn');
+
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    fileInput.click();
+  }
+});
+
+dropZone.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  dropZone.classList.add('drag-over');
+});
+dropZone.addEventListener('dragleave', () => {
+  dropZone.classList.remove('drag-over');
+});
+dropZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) handleFile(file);
+});
+
+fileInput.addEventListener('change', () => {
+  const file = fileInput.files[0];
+  if (file) handleFile(file);
+});
+
+changeBtn.addEventListener('click', () => {
+  preview.hidden = true;
+  dropZone.hidden = false;
+  resultsDiv.innerHTML = '';
+  fileInput.value = '';
+});
+
+async function handleFile(file) {
+  if (!file.type.startsWith('image/')) {
+    resultsDiv.textContent = 'Unsupported file type. Try JPG, PNG, or WebP.';
+    return;
+  }
+
+  const url = URL.createObjectURL(file);
+  previewImage.src = url;
+  preview.hidden = false;
+  dropZone.hidden = true;
+
+  await new Promise((resolve) => { previewImage.onload = resolve; });
+
+  const canvas = document.createElement('canvas');
+  canvas.width = previewImage.naturalWidth;
+  canvas.height = previewImage.naturalHeight;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(previewImage, 0, 0);
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+  if (!session) {
+    resultsDiv.textContent = 'Model not loaded yet. Please wait.';
+    return;
+  }
+
+  updateStatus('mobilenet \\u00b7 Processing...');
+  const start = performance.now();
+
+  const inputTensor = preprocessImage(imageData.data, canvas.width, canvas.height);
+  const output = await runInference(session, inputTensor);
+  const results = postprocessResults(output);
+
+  const elapsed = (performance.now() - start).toFixed(1);
+  updateStatus('mobilenet \\u00b7 ' + elapsed + 'ms \\u00b7 ' + getBackendLabel(session));
+
+  renderResults(results);
+  URL.revokeObjectURL(url);
+}
+
+function renderResults(results) {
+  resultsDiv.innerHTML = '';
+  const maxValue = results.values[0] || 1;
+
+  for (let i = 0; i < results.indices.length; i++) {
+    const pct = (results.values[i] * 100).toFixed(1);
+    if (results.values[i] < 0.01) continue;
+
+    const row = document.createElement('div');
+    row.className = 'result-row' + (i === 0 ? ' top-result' : '');
+    row.setAttribute('tabindex', '0');
+    row.setAttribute('aria-label', 'Class ' + results.indices[i] + ': ' + pct + ' percent');
+
+    row.innerHTML =
+      '<span class="result-label">Class ' + results.indices[i] + '</span>' +
+      '<div class="result-bar-container"><div class="result-bar" style="width:' +
+      ((results.values[i] / maxValue) * 100) + '%"></div></div>' +
+      '<span class="result-pct">' + pct + '%</span>';
+
+    resultsDiv.appendChild(row);
+  }
+}
+
+function updateStatus(text) {
+  document.getElementById('status').textContent = text;
+}
+
+init();
+  </script>
+</body>
+</html>
+
+=== README.md ===
+# mobilenet — Image Classification
+
+Generated by [webai.js](https://github.com/ibelem/webai.js)
+
+## Quick Start
+
+1. Copy your model file (\`mobilenet.onnx\`) into this directory
+2. Start a local server: \`npx serve .\` (or any static file server)
+3. Open \`index.html\` in your browser
+
+## How It Works
+
+1. **Preprocessing**: Image is resized to 224x224px, normalized with
+   mean=[0.485, 0.456, 0.406] and std=[0.229, 0.224, 0.225], then transposed to NCHW layout.
+2. **Inference**: Model runs via ORT Web with automatic backend selection (WebNN NPU > WebNN GPU > WebGPU > WASM).
+3. **Postprocessing**: Raw logits are converted to probabilities (softmax), then top-5 results are extracted.
+
+## Configuration
+
+| Setting | Value |
+|---------|-------|
+| Task | Image Classification |
+| Engine | ORT Web |
+| Backend | auto |
+| Framework | html |
+| Model | mobilenet |
+| Input | file |
+
+## Files
+
+- \`index.html\`
+- \`README.md\`
+"
+`;
+
+exports[`T27: snapshot — html + TS + raw mode > matches snapshot 1`] = `
+"=== index.html ===
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>mobilenet — Image Classification</title>
+  <style>
+:root {
+  /* Colors — dark theme (default) */
+  --webai-bg: #0a0a0a;
+  --webai-surface: #1a1a1a;
+  --webai-text: #e5e5e5;
+  --webai-text-muted: #737373;
+  --webai-accent: #3b82f6;
+  --webai-success: #22c55e;
+  --webai-warning: #eab308;
+  --webai-error: #ef4444;
+  --webai-border: #262626;
+
+  /* Typography */
+  --webai-font-mono: ui-monospace, 'Cascadia Code', 'Source Code Pro', monospace;
+  --webai-font-sans: system-ui, -apple-system, sans-serif;
+  --webai-font-size-sm: 12px;
+  --webai-font-size-base: 14px;
+  --webai-font-size-lg: 16px;
+
+  /* Spacing (4px base unit) */
+  --webai-space-1: 4px;
+  --webai-space-2: 8px;
+  --webai-space-3: 12px;
+  --webai-space-4: 16px;
+  --webai-space-6: 24px;
+  --webai-space-8: 32px;
+
+  /* Layout */
+  --webai-status-height: 32px;
+  --webai-radius: 4px;
+}
+
+/* Light theme override */
+:root[data-theme="light"] {
+  --webai-bg: #fafafa;
+  --webai-surface: #ffffff;
+  --webai-text: #171717;
+  --webai-text-muted: #737373;
+  --webai-border: #e5e5e5;
+}
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--webai-bg);
+  color: var(--webai-text);
+  font-family: var(--webai-font-sans);
+  font-size: var(--webai-font-size-base);
+  min-height: 100vh;
+  padding-bottom: var(--webai-status-height);
+}
+
+main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: var(--webai-space-8) var(--webai-space-4);
+}
+
+h1 {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: var(--webai-space-6);
+}
+
+.container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--webai-space-6);
+  align-items: start;
+}
+
+@media (max-width: 640px) {
+  .container {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Drop zone */
+.drop-zone {
+  border: 2px dashed var(--webai-border);
+  border-radius: var(--webai-radius);
+  padding: var(--webai-space-8);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.drop-zone:hover,
+.drop-zone:focus-visible,
+.drop-zone.drag-over {
+  border-color: var(--webai-accent);
+}
+
+.drop-zone:focus-visible {
+  outline: 2px solid var(--webai-accent);
+  outline-offset: 2px;
+}
+
+.drop-zone .hint {
+  color: var(--webai-text-muted);
+  font-size: var(--webai-font-size-sm);
+  margin-top: var(--webai-space-2);
+}
+
+/* Preview */
+.preview img {
+  max-width: 100%;
+  border-radius: var(--webai-radius);
+  display: block;
+}
+
+.preview .change-btn {
+  margin-top: var(--webai-space-2);
+  background: none;
+  border: 1px solid var(--webai-border);
+  color: var(--webai-text-muted);
+  padding: var(--webai-space-1) var(--webai-space-3);
+  border-radius: var(--webai-radius);
+  cursor: pointer;
+  font-size: var(--webai-font-size-sm);
+}
+
+.preview .change-btn:hover {
+  border-color: var(--webai-text-muted);
+}
+
+/* Results */
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webai-space-1);
+}
+
+.result-row {
+  display: grid;
+  grid-template-columns: 120px 1fr 60px;
+  align-items: center;
+  gap: var(--webai-space-2);
+  height: 24px;
+  opacity: 0.7;
+}
+
+.result-row:focus-visible {
+  outline: 1px solid var(--webai-accent);
+  outline-offset: 1px;
+  border-radius: 2px;
+}
+
+.result-row.top-result {
+  opacity: 1;
+  font-weight: 600;
+}
+
+.result-label {
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.result-bar-container {
+  height: 16px;
+  background: var(--webai-surface);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.result-bar {
+  height: 100%;
+  background: var(--webai-accent);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.result-pct {
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  text-align: right;
+  color: var(--webai-text-muted);
+}
+
+.result-row.top-result .result-pct {
+  color: var(--webai-text);
+}
+
+/* Status bar */
+.status-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--webai-status-height);
+  background: var(--webai-surface);
+  border-top: 1px solid var(--webai-border);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--webai-space-4);
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  color: var(--webai-text-muted);
+}
+
+/* Footer */
+.footer {
+  position: fixed;
+  bottom: var(--webai-status-height);
+  right: var(--webai-space-4);
+  font-size: var(--webai-font-size-sm);
+  color: var(--webai-text-muted);
+  opacity: 0.5;
+  padding: var(--webai-space-1);
+}
+
+/* Skip link */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: var(--webai-space-2);
+  background: var(--webai-accent);
+  color: white;
+  padding: var(--webai-space-2) var(--webai-space-4);
+  border-radius: var(--webai-radius);
+  z-index: 100;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  left: var(--webai-space-2);
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .result-bar { transition: none; }
+}
+  </style>
+</head>
+<body>
+  <a href="#results" class="skip-link">Skip to results</a>
+
+  <main>
+    <h1>mobilenet — Image Classification</h1>
+
+    <div class="container">
+      <div>
+        <div class="drop-zone" id="dropZone" role="button" tabindex="0"
+             aria-label="Drop an image here or click to browse for image classification">
+          <p>Drop an image here or click to browse</p>
+          <p class="hint">Supports JPG, PNG, WebP</p>
+          <input type="file" id="fileInput" accept="image/*" hidden>
+        </div>
+
+        <div id="preview" class="preview" hidden>
+          <img id="previewImage" alt="Selected image for classification">
+          <button id="changeBtn" class="change-btn">Choose another image</button>
+        </div>
+      </div>
+
+      <div id="results" class="results" role="status" aria-live="polite" aria-atomic="true">
+      </div>
+    </div>
+  </main>
+
+  <aside class="status-bar">
+    <span id="status">mobilenet · Loading...</span>
+  </aside>
+
+  <div class="footer">Generated by webai.js · mobilenet · ORT Web</div>
+
+  <script type="module">
+import * as ort from 'https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/esm/ort.min.mjs';
+
+// --- Preprocessing ---
+/**
+ * Resize image using bilinear interpolation.
+ * No Canvas or DOM dependency — works in Workers and browsers.
+ */
+function resizeImage(
+  src: Uint8Array | Uint8ClampedArray,
+  srcWidth: number,
+  srcHeight: number,
+  dstWidth: number,
+  dstHeight: number,
+  channels: number = 4
+): Uint8ClampedArray {
+  const dst = new Uint8ClampedArray(dstWidth * dstHeight * channels);
+  const xRatio = srcWidth > 1 ? (srcWidth - 1) / (dstWidth - 1 || 1) : 0;
+  const yRatio = srcHeight > 1 ? (srcHeight - 1) / (dstHeight - 1 || 1) : 0;
+
+  for (let y = 0; y < dstHeight; y++) {
+    const srcY = yRatio * y;
+    const yFloor = Math.floor(srcY);
+    const yCeil = Math.min(yFloor + 1, srcHeight - 1);
+    const yLerp = srcY - yFloor;
+
+    for (let x = 0; x < dstWidth; x++) {
+      const srcX = xRatio * x;
+      const xFloor = Math.floor(srcX);
+      const xCeil = Math.min(xFloor + 1, srcWidth - 1);
+      const xLerp = srcX - xFloor;
+
+      const dstIdx = (y * dstWidth + x) * channels;
+      const tlIdx = (yFloor * srcWidth + xFloor) * channels;
+      const trIdx = (yFloor * srcWidth + xCeil) * channels;
+      const blIdx = (yCeil * srcWidth + xFloor) * channels;
+      const brIdx = (yCeil * srcWidth + xCeil) * channels;
+
+      for (let c = 0; c < channels; c++) {
+        const top = src[tlIdx + c] * (1 - xLerp) + src[trIdx + c] * xLerp;
+        const bottom = src[blIdx + c] * (1 - xLerp) + src[brIdx + c] * xLerp;
+        dst[dstIdx + c] = Math.round(top * (1 - yLerp) + bottom * yLerp);
+      }
+    }
+  }
+
+  return dst;
+}
+
+/**
+ * Normalize pixel values: (value/255 - mean) / std per channel.
+ */
+function normalize(
+  src: Uint8Array | Uint8ClampedArray,
+  pixelCount: number,
+  mean: readonly number[],
+  std: readonly number[],
+  channels: number = 3,
+  srcChannels: number = channels
+): Float32Array {
+  const out = new Float32Array(pixelCount * channels);
+
+  for (let i = 0; i < pixelCount; i++) {
+    const srcBase = i * srcChannels;
+    const dstBase = i * channels;
+    for (let c = 0; c < channels; c++) {
+      out[dstBase + c] = (src[srcBase + c] / 255 - mean[c]) / std[c];
+    }
+  }
+
+  return out;
+}
+
+/**
+ * Transpose image data from HWC to NCHW layout (batch=1).
+ */
+function toNCHW(
+  src: Float32Array,
+  width: number,
+  height: number,
+  channels: number = 3
+): Float32Array {
+  const out = new Float32Array(channels * height * width);
+  const hw = height * width;
+
+  for (let c = 0; c < channels; c++) {
+    const channelOffset = c * hw;
+    for (let h = 0; h < height; h++) {
+      const rowOffset = h * width;
+      for (let w = 0; w < width; w++) {
+        out[channelOffset + rowOffset + w] = src[(h * width + w) * channels + c];
+      }
+    }
+  }
+
+  return out;
+}
+
+
+// WARNING: Preprocessing uses task defaults (mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]).
+// If results look wrong, check these values against your model's training config.
+/**
+ * Full preprocessing pipeline: resize → normalize → NCHW layout.
+ * Input: RGBA pixel data from canvas getImageData().
+ * Output: Float32Array ready for model input tensor.
+ */
+function preprocessImage(
+  imageData: Uint8ClampedArray,
+  srcWidth: number,
+  srcHeight: number
+): Float32Array {
+  const resized = resizeImage(imageData, srcWidth, srcHeight, 224, 224, 4);
+
+  // Strip alpha channel (RGBA → RGB) during normalization
+  const normalized = normalize(resized, 224 * 224, [0.485, 0.456, 0.406], [0.229, 0.224, 0.225], 3, 4);
+
+  return toNCHW(normalized, 224, 224, 3);
+}
+
+// --- Inference ---
+/**
+ * Create an ORT Web inference session with backend selection.
+ * The execution provider list determines hardware acceleration priority.
+ */
+async function createSession(modelPath: string): Promise<ort.InferenceSession> {
+  // Backend auto-selection: try best available, fall through to WASM
+  const providers: (string | { name: string; deviceType?: string })[] = [];
+  if ('ml' in navigator) {
+    providers.push({ name: 'webnn', deviceType: 'npu' });
+    providers.push({ name: 'webnn', deviceType: 'gpu' });
+  }
+  if (navigator.gpu) providers.push('webgpu');
+  providers.push('wasm');
+
+  const session = await ort.InferenceSession.create(modelPath, {
+    executionProviders: providers,
+  });
+
+  // Log which backend was selected
+  console.log('Inference session created');
+
+  return session;
+}
+
+/**
+ * Run inference on preprocessed input data.
+ * Input: Float32Array from preprocessImage()
+ * Output: Float32Array of raw model output (logits/scores)
+ */
+async function runInference(
+  session: ort.InferenceSession,
+  inputData: Float32Array
+): Promise<Float32Array> {
+  const tensor = new ort.Tensor('float32', inputData, [1, 3, 224, 224]);
+  const feeds: Record<string, ort.Tensor> = { 'input': tensor };
+
+  const results = await session.run(feeds);
+  const outputName = session.outputNames[0];
+  const output = results[outputName];
+
+  return output.data as Float32Array;
+}
+
+/**
+ * Get a display string for the active backend.
+ * Used by the status bar: "yolov8n · 8ms · WebNN (NPU)"
+ */
+function getBackendLabel(session: ort.InferenceSession): string {
+  // ORT Web doesn't expose the selected EP directly in session.
+  // We infer from the handler metadata if available.
+  return 'ORT Web';
+}
+
+// --- Postprocessing ---
+/**
+ * Softmax: convert raw logits to probabilities.
+ * Uses max-subtraction for numerical stability.
+ */
+function softmax(logits: ArrayLike<number>): Float32Array {
+  const len = logits.length;
+  const out = new Float32Array(len);
+
+  let max = -Infinity;
+  for (let i = 0; i < len; i++) {
+    if (logits[i] > max) max = logits[i];
+  }
+
+  let sum = 0;
+  for (let i = 0; i < len; i++) {
+    out[i] = Math.exp(logits[i] - max);
+    sum += out[i];
+  }
+
+  for (let i = 0; i < len; i++) {
+    out[i] /= sum;
+  }
+
+  return out;
+}
+
+/**
+ * Return the top K elements by value, descending.
+ * Ties are broken by lower index first.
+ */
+function topK(arr: ArrayLike<number>, k: number): { indices: number[]; values: number[] } {
+  const len = arr.length;
+  const n = Math.min(k, len);
+
+  const indices = Array.from({ length: len }, (_, i) => i);
+  indices.sort((a, b) => {
+    const diff = arr[b] - arr[a];
+    return diff !== 0 ? diff : a - b;
+  });
+
+  const topIndices = indices.slice(0, n);
+  const topValues = topIndices.map((i) => arr[i]);
+
+  return { indices: topIndices, values: topValues };
+}
+
+/**
+ * Postprocess model output: softmax → top-5 results.
+ */
+function postprocessResults(output: ArrayLike<number>): { indices: number[]; values: number[] } {
+  const probs = softmax(output);
+  return topK(probs, 5);
+}
+
+// --- Application ---
+const MODEL_PATH = './mobilenet.onnx';
+let session = null;
+
+async function init() {
+  updateStatus('Loading model...');
+  try {
+    session = await createSession(MODEL_PATH);
+    updateStatus('mobilenet \\u00b7 Ready');
+  } catch (e) {
+    updateStatus('Failed to load model');
+    console.error('Model load error:', e);
+  }
+}
+
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const preview = document.getElementById('preview');
+const previewImage = document.getElementById('previewImage');
+const resultsDiv = document.getElementById('results');
+const changeBtn = document.getElementById('changeBtn');
+
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    fileInput.click();
+  }
+});
+
+dropZone.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  dropZone.classList.add('drag-over');
+});
+dropZone.addEventListener('dragleave', () => {
+  dropZone.classList.remove('drag-over');
+});
+dropZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) handleFile(file);
+});
+
+fileInput.addEventListener('change', () => {
+  const file = fileInput.files[0];
+  if (file) handleFile(file);
+});
+
+changeBtn.addEventListener('click', () => {
+  preview.hidden = true;
+  dropZone.hidden = false;
+  resultsDiv.innerHTML = '';
+  fileInput.value = '';
+});
+
+async function handleFile(file) {
+  if (!file.type.startsWith('image/')) {
+    resultsDiv.textContent = 'Unsupported file type. Try JPG, PNG, or WebP.';
+    return;
+  }
+
+  const url = URL.createObjectURL(file);
+  previewImage.src = url;
+  preview.hidden = false;
+  dropZone.hidden = true;
+
+  await new Promise((resolve) => { previewImage.onload = resolve; });
+
+  const canvas = document.createElement('canvas');
+  canvas.width = previewImage.naturalWidth;
+  canvas.height = previewImage.naturalHeight;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(previewImage, 0, 0);
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+  if (!session) {
+    resultsDiv.textContent = 'Model not loaded yet. Please wait.';
+    return;
+  }
+
+  updateStatus('mobilenet \\u00b7 Processing...');
+  const start = performance.now();
+
+  const inputTensor = preprocessImage(imageData.data, canvas.width, canvas.height);
+  const output = await runInference(session, inputTensor);
+  const results = postprocessResults(output);
+
+  const elapsed = (performance.now() - start).toFixed(1);
+  updateStatus('mobilenet \\u00b7 ' + elapsed + 'ms \\u00b7 ' + getBackendLabel(session));
+
+  renderResults(results);
+  URL.revokeObjectURL(url);
+}
+
+function renderResults(results) {
+  resultsDiv.innerHTML = '';
+  const maxValue = results.values[0] || 1;
+
+  for (let i = 0; i < results.indices.length; i++) {
+    const pct = (results.values[i] * 100).toFixed(1);
+    if (results.values[i] < 0.01) continue;
+
+    const row = document.createElement('div');
+    row.className = 'result-row' + (i === 0 ? ' top-result' : '');
+    row.setAttribute('tabindex', '0');
+    row.setAttribute('aria-label', 'Class ' + results.indices[i] + ': ' + pct + ' percent');
+
+    row.innerHTML =
+      '<span class="result-label">Class ' + results.indices[i] + '</span>' +
+      '<div class="result-bar-container"><div class="result-bar" style="width:' +
+      ((results.values[i] / maxValue) * 100) + '%"></div></div>' +
+      '<span class="result-pct">' + pct + '%</span>';
+
+    resultsDiv.appendChild(row);
+  }
+}
+
+function updateStatus(text) {
+  document.getElementById('status').textContent = text;
+}
+
+init();
+  </script>
+</body>
+</html>
+
+=== README.md ===
+# mobilenet — Image Classification
+
+Generated by [webai.js](https://github.com/ibelem/webai.js)
+
+## Quick Start
+
+1. Copy your model file (\`mobilenet.onnx\`) into this directory
+2. Start a local server: \`npx serve .\` (or any static file server)
+3. Open \`index.html\` in your browser
+
+## How It Works
+
+1. **Preprocessing**: Image is resized to 224x224px, normalized with
+   mean=[0.485, 0.456, 0.406] and std=[0.229, 0.224, 0.225], then transposed to NCHW layout.
+2. **Inference**: Model runs via ORT Web with automatic backend selection (WebNN NPU > WebNN GPU > WebGPU > WASM).
+3. **Postprocessing**: Raw logits are converted to probabilities (softmax), then top-5 results are extracted.
+
+## Configuration
+
+| Setting | Value |
+|---------|-------|
+| Task | Image Classification |
+| Engine | ORT Web |
+| Backend | auto |
+| Framework | html |
+| Model | mobilenet |
+| Input | file |
+
+## Files
+
+- \`index.html\`
+- \`README.md\`
+"
+`;
+
+exports[`T28: snapshot — html + forced webnn-npu backend > matches snapshot 1`] = `
+"=== index.html ===
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>mobilenet — Image Classification</title>
+  <style>
+:root {
+  /* Colors — dark theme (default) */
+  --webai-bg: #0a0a0a;
+  --webai-surface: #1a1a1a;
+  --webai-text: #e5e5e5;
+  --webai-text-muted: #737373;
+  --webai-accent: #3b82f6;
+  --webai-success: #22c55e;
+  --webai-warning: #eab308;
+  --webai-error: #ef4444;
+  --webai-border: #262626;
+
+  /* Typography */
+  --webai-font-mono: ui-monospace, 'Cascadia Code', 'Source Code Pro', monospace;
+  --webai-font-sans: system-ui, -apple-system, sans-serif;
+  --webai-font-size-sm: 12px;
+  --webai-font-size-base: 14px;
+  --webai-font-size-lg: 16px;
+
+  /* Spacing (4px base unit) */
+  --webai-space-1: 4px;
+  --webai-space-2: 8px;
+  --webai-space-3: 12px;
+  --webai-space-4: 16px;
+  --webai-space-6: 24px;
+  --webai-space-8: 32px;
+
+  /* Layout */
+  --webai-status-height: 32px;
+  --webai-radius: 4px;
+}
+
+/* Light theme override */
+:root[data-theme="light"] {
+  --webai-bg: #fafafa;
+  --webai-surface: #ffffff;
+  --webai-text: #171717;
+  --webai-text-muted: #737373;
+  --webai-border: #e5e5e5;
+}
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--webai-bg);
+  color: var(--webai-text);
+  font-family: var(--webai-font-sans);
+  font-size: var(--webai-font-size-base);
+  min-height: 100vh;
+  padding-bottom: var(--webai-status-height);
+}
+
+main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: var(--webai-space-8) var(--webai-space-4);
+}
+
+h1 {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: var(--webai-space-6);
+}
+
+.container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--webai-space-6);
+  align-items: start;
+}
+
+@media (max-width: 640px) {
+  .container {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Drop zone */
+.drop-zone {
+  border: 2px dashed var(--webai-border);
+  border-radius: var(--webai-radius);
+  padding: var(--webai-space-8);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.drop-zone:hover,
+.drop-zone:focus-visible,
+.drop-zone.drag-over {
+  border-color: var(--webai-accent);
+}
+
+.drop-zone:focus-visible {
+  outline: 2px solid var(--webai-accent);
+  outline-offset: 2px;
+}
+
+.drop-zone .hint {
+  color: var(--webai-text-muted);
+  font-size: var(--webai-font-size-sm);
+  margin-top: var(--webai-space-2);
+}
+
+/* Preview */
+.preview img {
+  max-width: 100%;
+  border-radius: var(--webai-radius);
+  display: block;
+}
+
+.preview .change-btn {
+  margin-top: var(--webai-space-2);
+  background: none;
+  border: 1px solid var(--webai-border);
+  color: var(--webai-text-muted);
+  padding: var(--webai-space-1) var(--webai-space-3);
+  border-radius: var(--webai-radius);
+  cursor: pointer;
+  font-size: var(--webai-font-size-sm);
+}
+
+.preview .change-btn:hover {
+  border-color: var(--webai-text-muted);
+}
+
+/* Results */
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webai-space-1);
+}
+
+.result-row {
+  display: grid;
+  grid-template-columns: 120px 1fr 60px;
+  align-items: center;
+  gap: var(--webai-space-2);
+  height: 24px;
+  opacity: 0.7;
+}
+
+.result-row:focus-visible {
+  outline: 1px solid var(--webai-accent);
+  outline-offset: 1px;
+  border-radius: 2px;
+}
+
+.result-row.top-result {
+  opacity: 1;
+  font-weight: 600;
+}
+
+.result-label {
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.result-bar-container {
+  height: 16px;
+  background: var(--webai-surface);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.result-bar {
+  height: 100%;
+  background: var(--webai-accent);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.result-pct {
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  text-align: right;
+  color: var(--webai-text-muted);
+}
+
+.result-row.top-result .result-pct {
+  color: var(--webai-text);
+}
+
+/* Status bar */
+.status-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--webai-status-height);
+  background: var(--webai-surface);
+  border-top: 1px solid var(--webai-border);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--webai-space-4);
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  color: var(--webai-text-muted);
+}
+
+/* Footer */
+.footer {
+  position: fixed;
+  bottom: var(--webai-status-height);
+  right: var(--webai-space-4);
+  font-size: var(--webai-font-size-sm);
+  color: var(--webai-text-muted);
+  opacity: 0.5;
+  padding: var(--webai-space-1);
+}
+
+/* Skip link */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: var(--webai-space-2);
+  background: var(--webai-accent);
+  color: white;
+  padding: var(--webai-space-2) var(--webai-space-4);
+  border-radius: var(--webai-radius);
+  z-index: 100;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  left: var(--webai-space-2);
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .result-bar { transition: none; }
+}
+  </style>
+</head>
+<body>
+  <a href="#results" class="skip-link">Skip to results</a>
+
+  <main>
+    <h1>mobilenet — Image Classification</h1>
+
+    <div class="container">
+      <div>
+        <div class="drop-zone" id="dropZone" role="button" tabindex="0"
+             aria-label="Drop an image here or click to browse for image classification">
+          <p>Drop an image here or click to browse</p>
+          <p class="hint">Supports JPG, PNG, WebP</p>
+          <input type="file" id="fileInput" accept="image/*" hidden>
+        </div>
+
+        <div id="preview" class="preview" hidden>
+          <img id="previewImage" alt="Selected image for classification">
+          <button id="changeBtn" class="change-btn">Choose another image</button>
+        </div>
+      </div>
+
+      <div id="results" class="results" role="status" aria-live="polite" aria-atomic="true">
+      </div>
+    </div>
+  </main>
+
+  <aside class="status-bar">
+    <span id="status">mobilenet · Loading...</span>
+  </aside>
+
+  <div class="footer">Generated by webai.js · mobilenet · ORT Web</div>
+
+  <script type="module">
+import * as ort from 'https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/esm/ort.min.mjs';
+
+// --- Preprocessing ---
+/**
+ * Resize image using bilinear interpolation.
+ * No Canvas or DOM dependency — works in Workers and browsers.
+ */
+function resizeImage(
+  src,
+  srcWidth,
+  srcHeight,
+  dstWidth,
+  dstHeight,
+  channels = 4
+) {
+  const dst = new Uint8ClampedArray(dstWidth * dstHeight * channels);
+  const xRatio = srcWidth > 1 ? (srcWidth - 1) / (dstWidth - 1 || 1) : 0;
+  const yRatio = srcHeight > 1 ? (srcHeight - 1) / (dstHeight - 1 || 1) : 0;
+
+  for (let y = 0; y < dstHeight; y++) {
+    const srcY = yRatio * y;
+    const yFloor = Math.floor(srcY);
+    const yCeil = Math.min(yFloor + 1, srcHeight - 1);
+    const yLerp = srcY - yFloor;
+
+    for (let x = 0; x < dstWidth; x++) {
+      const srcX = xRatio * x;
+      const xFloor = Math.floor(srcX);
+      const xCeil = Math.min(xFloor + 1, srcWidth - 1);
+      const xLerp = srcX - xFloor;
+
+      const dstIdx = (y * dstWidth + x) * channels;
+      const tlIdx = (yFloor * srcWidth + xFloor) * channels;
+      const trIdx = (yFloor * srcWidth + xCeil) * channels;
+      const blIdx = (yCeil * srcWidth + xFloor) * channels;
+      const brIdx = (yCeil * srcWidth + xCeil) * channels;
+
+      for (let c = 0; c < channels; c++) {
+        const top = src[tlIdx + c] * (1 - xLerp) + src[trIdx + c] * xLerp;
+        const bottom = src[blIdx + c] * (1 - xLerp) + src[brIdx + c] * xLerp;
+        dst[dstIdx + c] = Math.round(top * (1 - yLerp) + bottom * yLerp);
+      }
+    }
+  }
+
+  return dst;
+}
+
+/**
+ * Normalize pixel values: (value/255 - mean) / std per channel.
+ */
+function normalize(
+  src,
+  pixelCount,
+  mean,
+  std,
+  channels = 3,
+  srcChannels = channels
+) {
+  const out = new Float32Array(pixelCount * channels);
+
+  for (let i = 0; i < pixelCount; i++) {
+    const srcBase = i * srcChannels;
+    const dstBase = i * channels;
+    for (let c = 0; c < channels; c++) {
+      out[dstBase + c] = (src[srcBase + c] / 255 - mean[c]) / std[c];
+    }
+  }
+
+  return out;
+}
+
+/**
+ * Transpose image data from HWC to NCHW layout (batch=1).
+ */
+function toNCHW(
+  src,
+  width,
+  height,
+  channels = 3
+) {
+  const out = new Float32Array(channels * height * width);
+  const hw = height * width;
+
+  for (let c = 0; c < channels; c++) {
+    const channelOffset = c * hw;
+    for (let h = 0; h < height; h++) {
+      const rowOffset = h * width;
+      for (let w = 0; w < width; w++) {
+        out[channelOffset + rowOffset + w] = src[(h * width + w) * channels + c];
+      }
+    }
+  }
+
+  return out;
+}
+
+
+// WARNING: Preprocessing uses task defaults (mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]).
+// If results look wrong, check these values against your model's training config.
+/**
+ * Full preprocessing pipeline: resize → normalize → NCHW layout.
+ * Input: RGBA pixel data from canvas getImageData().
+ * Output: Float32Array ready for model input tensor.
+ */
+function preprocessImage(
+  imageData,
+  srcWidth,
+  srcHeight
+) {
+  const resized = resizeImage(imageData, srcWidth, srcHeight, 224, 224, 4);
+
+  // Strip alpha channel (RGBA → RGB) during normalization
+  const normalized = normalize(resized, 224 * 224, [0.485, 0.456, 0.406], [0.229, 0.224, 0.225], 3, 4);
+
+  return toNCHW(normalized, 224, 224, 3);
+}
+
+// --- Inference ---
+/**
+ * Create an ORT Web inference session with backend selection.
+ * The execution provider list determines hardware acceleration priority.
+ */
+async function createSession(modelPath) {
+  const providers = [{ name: 'webnn', deviceType: 'npu' }];
+
+  const session = await ort.InferenceSession.create(modelPath, {
+    executionProviders: providers,
+  });
+
+  // Log which backend was selected
+  console.log('Inference session created');
+
+  return session;
+}
+
+/**
+ * Run inference on preprocessed input data.
+ * Input: Float32Array from preprocessImage()
+ * Output: Float32Array of raw model output (logits/scores)
+ */
+async function runInference(
+  session,
+  inputData
+) {
+  const tensor = new ort.Tensor('float32', inputData, [1, 3, 224, 224]);
+  const feeds = { 'input': tensor };
+
+  const results = await session.run(feeds);
+  const outputName = session.outputNames[0];
+  const output = results[outputName];
+
+  return output.data;
+}
+
+/**
+ * Get a display string for the active backend.
+ * Used by the status bar: "yolov8n · 8ms · WebNN (NPU)"
+ */
+function getBackendLabel(session) {
+  // ORT Web doesn't expose the selected EP directly in session.
+  // We infer from the handler metadata if available.
+  return 'ORT Web';
+}
+
+// --- Postprocessing ---
+/**
+ * Softmax: convert raw logits to probabilities.
+ * Uses max-subtraction for numerical stability.
+ */
+function softmax(logits) {
+  const len = logits.length;
+  const out = new Float32Array(len);
+
+  let max = -Infinity;
+  for (let i = 0; i < len; i++) {
+    if (logits[i] > max) max = logits[i];
+  }
+
+  let sum = 0;
+  for (let i = 0; i < len; i++) {
+    out[i] = Math.exp(logits[i] - max);
+    sum += out[i];
+  }
+
+  for (let i = 0; i < len; i++) {
+    out[i] /= sum;
+  }
+
+  return out;
+}
+
+/**
+ * Return the top K elements by value, descending.
+ * Ties are broken by lower index first.
+ */
+function topK(arr, k) {
+  const len = arr.length;
+  const n = Math.min(k, len);
+
+  const indices = Array.from({ length: len }, (_, i) => i);
+  indices.sort((a, b) => {
+    const diff = arr[b] - arr[a];
+    return diff !== 0 ? diff : a - b;
+  });
+
+  const topIndices = indices.slice(0, n);
+  const topValues = topIndices.map((i) => arr[i]);
+
+  return { indices: topIndices, values: topValues };
+}
+
+/**
+ * Postprocess model output: softmax → top-5 results.
+ */
+function postprocessResults(output) {
+  const probs = softmax(output);
+  return topK(probs, 5);
+}
+
+// --- Application ---
+const MODEL_PATH = './mobilenet.onnx';
+let session = null;
+
+async function init() {
+  updateStatus('Loading model...');
+  try {
+    session = await createSession(MODEL_PATH);
+    updateStatus('mobilenet \\u00b7 Ready');
+  } catch (e) {
+    updateStatus('Failed to load model');
+    console.error('Model load error:', e);
+  }
+}
+
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const preview = document.getElementById('preview');
+const previewImage = document.getElementById('previewImage');
+const resultsDiv = document.getElementById('results');
+const changeBtn = document.getElementById('changeBtn');
+
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    fileInput.click();
+  }
+});
+
+dropZone.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  dropZone.classList.add('drag-over');
+});
+dropZone.addEventListener('dragleave', () => {
+  dropZone.classList.remove('drag-over');
+});
+dropZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) handleFile(file);
+});
+
+fileInput.addEventListener('change', () => {
+  const file = fileInput.files[0];
+  if (file) handleFile(file);
+});
+
+changeBtn.addEventListener('click', () => {
+  preview.hidden = true;
+  dropZone.hidden = false;
+  resultsDiv.innerHTML = '';
+  fileInput.value = '';
+});
+
+async function handleFile(file) {
+  if (!file.type.startsWith('image/')) {
+    resultsDiv.textContent = 'Unsupported file type. Try JPG, PNG, or WebP.';
+    return;
+  }
+
+  const url = URL.createObjectURL(file);
+  previewImage.src = url;
+  preview.hidden = false;
+  dropZone.hidden = true;
+
+  await new Promise((resolve) => { previewImage.onload = resolve; });
+
+  const canvas = document.createElement('canvas');
+  canvas.width = previewImage.naturalWidth;
+  canvas.height = previewImage.naturalHeight;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(previewImage, 0, 0);
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+  if (!session) {
+    resultsDiv.textContent = 'Model not loaded yet. Please wait.';
+    return;
+  }
+
+  updateStatus('mobilenet \\u00b7 Processing...');
+  const start = performance.now();
+
+  const inputTensor = preprocessImage(imageData.data, canvas.width, canvas.height);
+  const output = await runInference(session, inputTensor);
+  const results = postprocessResults(output);
+
+  const elapsed = (performance.now() - start).toFixed(1);
+  updateStatus('mobilenet \\u00b7 ' + elapsed + 'ms \\u00b7 ' + getBackendLabel(session));
+
+  renderResults(results);
+  URL.revokeObjectURL(url);
+}
+
+function renderResults(results) {
+  resultsDiv.innerHTML = '';
+  const maxValue = results.values[0] || 1;
+
+  for (let i = 0; i < results.indices.length; i++) {
+    const pct = (results.values[i] * 100).toFixed(1);
+    if (results.values[i] < 0.01) continue;
+
+    const row = document.createElement('div');
+    row.className = 'result-row' + (i === 0 ? ' top-result' : '');
+    row.setAttribute('tabindex', '0');
+    row.setAttribute('aria-label', 'Class ' + results.indices[i] + ': ' + pct + ' percent');
+
+    row.innerHTML =
+      '<span class="result-label">Class ' + results.indices[i] + '</span>' +
+      '<div class="result-bar-container"><div class="result-bar" style="width:' +
+      ((results.values[i] / maxValue) * 100) + '%"></div></div>' +
+      '<span class="result-pct">' + pct + '%</span>';
+
+    resultsDiv.appendChild(row);
+  }
+}
+
+function updateStatus(text) {
+  document.getElementById('status').textContent = text;
+}
+
+init();
+  </script>
+</body>
+</html>
+
+=== README.md ===
+# mobilenet — Image Classification
+
+Generated by [webai.js](https://github.com/ibelem/webai.js)
+
+## Quick Start
+
+1. Copy your model file (\`mobilenet.onnx\`) into this directory
+2. Start a local server: \`npx serve .\` (or any static file server)
+3. Open \`index.html\` in your browser
+
+## How It Works
+
+1. **Preprocessing**: Image is resized to 224x224px, normalized with
+   mean=[0.485, 0.456, 0.406] and std=[0.229, 0.224, 0.225], then transposed to NCHW layout.
+2. **Inference**: Model runs via ORT Web with webnn-npu backend.
+3. **Postprocessing**: Raw logits are converted to probabilities (softmax), then top-5 results are extracted.
+
+## Configuration
+
+| Setting | Value |
+|---------|-------|
+| Task | Image Classification |
+| Engine | ORT Web |
+| Backend | webnn-npu |
+| Framework | html |
+| Model | mobilenet |
+| Input | file |
+
+## Files
+
+- \`index.html\`
+- \`README.md\`
+"
+`;
