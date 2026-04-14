@@ -124,3 +124,8 @@ export function updateCodePreview(
 export function getGeneratedFiles(): GeneratedFile[] {
   return currentFiles;
 }
+
+export function getActiveFileContent(): string | null {
+  if (!currentFiles[activeTabIndex]) return null;
+  return currentFiles[activeTabIndex].content;
+}

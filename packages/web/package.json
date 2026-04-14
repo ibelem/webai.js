@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@webai/core": "*",
+    "fflate": "^0.8.2",
     "webai": "*"
   },
   "devDependencies": {

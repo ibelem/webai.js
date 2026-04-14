@@ -9,8 +9,16 @@
 <body>
   <div id="app">
     <header>
-      <h1>webai.js</h1>
-      <p class="subtitle">Generate browser-based AI inference code</p>
+      <div class="header-row">
+        <div>
+          <h1>webai.js</h1>
+          <p class="subtitle">Generate browser-based AI inference code</p>
+        </div>
+        <button id="themeToggle" class="theme-toggle" title="Toggle light/dark theme" aria-label="Toggle theme">
+          <span class="theme-icon-dark">&#9789;</span>
+          <span class="theme-icon-light">&#9788;</span>
+        </button>
+      </div>
     </header>
 
     <div class="layout">
@@ -21,8 +29,14 @@
 
       <!-- Center: Code Preview -->
       <section class="code-section">
-        <div id="fileTabs" class="file-tabs" role="tablist">
-          <!-- Populated by code-preview.ts -->
+        <div class="code-toolbar">
+          <div id="fileTabs" class="file-tabs" role="tablist">
+            <!-- Populated by code-preview.ts -->
+          </div>
+          <div class="toolbar-actions">
+            <button id="copyBtn" class="toolbar-btn" title="Copy current file to clipboard">Copy</button>
+            <button id="downloadZipBtn" class="toolbar-btn" title="Download all files as ZIP">Download ZIP</button>
+          </div>
         </div>
         <div id="editor" class="editor-container"></div>
       </section>

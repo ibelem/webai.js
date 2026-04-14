@@ -8,6 +8,7 @@
 
 import { TASK_PROFILES, type TaskType, type InputMode } from '@webai/core';
 import type { Engine, Backend, Framework, OutputLang, Theme } from '@webai/core';
+import { setupHfPicker, type HfPickerResult } from './hf-picker.js';
 
 export interface ConfigValues {
   task: TaskType;
@@ -19,6 +20,8 @@ export interface ConfigValues {
   theme: Theme;
   modelName: string;
   offline: boolean;
+  modelUrl?: string;
+  modelSource: 'local-path' | 'hf-model-id' | 'url';
 }
 
 interface SelectOption {
@@ -149,7 +152,14 @@ export function setupConfigPanel(
 ): void {
   const defaultTask: TaskType = 'image-classification';
 
-  container.appendChild(createTextInput('modelName', 'Model Name', 'mobilenet'));
+  container.appendChild(createTextInput('modelName', 'Model Name or HuggingFace ID', 'mobilenet'));
+
+  // HF picker container (rendered below model name input)
+  const hfPickerContainer = document.createElement('div');
+  hfPickerContainer.id = 'hfPicker';
+  hfPickerContainer.hidden = true;
+  container.appendChild(hfPickerContainer);
+
   container.appendChild(createSelect('task', 'Task', TASKS, defaultTask));
   container.appendChild(createSelect('engine', 'Engine', ENGINES, 'ort'));
   container.appendChild(createSelect('backend', 'Backend', BACKENDS, 'auto'));
@@ -159,9 +169,12 @@ export function setupConfigPanel(
   container.appendChild(createSelect('theme', 'Generated UI Theme', THEMES, 'dark'));
   container.appendChild(createCheckbox('offline', 'Offline (OPFS cache)', false));
 
-  // Update input options when task changes
+  // Track HF picker state
+  let hfResult: HfPickerResult | null = null;
+
   const taskSelect = container.querySelector('#task') as HTMLSelectElement;
   const inputSelect = container.querySelector('#input') as HTMLSelectElement;
+  const modelInput = container.querySelector('#modelName') as HTMLInputElement;
 
   function updateInputOptions(): void {
     const task = taskSelect.value as TaskType;
@@ -176,18 +189,54 @@ export function setupConfigPanel(
   }
 
   function getValues(): ConfigValues {
-    return {
-      task: (container.querySelector('#task') as HTMLSelectElement).value as TaskType,
+    const values: ConfigValues = {
+      task: taskSelect.value as TaskType,
       engine: (container.querySelector('#engine') as HTMLSelectElement).value as Engine,
       backend: (container.querySelector('#backend') as HTMLSelectElement).value as Backend,
       framework: (container.querySelector('#framework') as HTMLSelectElement).value as Framework,
-      input: (container.querySelector('#input') as HTMLSelectElement).value as InputMode,
+      input: inputSelect.value as InputMode,
       lang: (container.querySelector('#lang') as HTMLSelectElement).value as OutputLang,
       theme: (container.querySelector('#theme') as HTMLSelectElement).value as Theme,
-      modelName: (container.querySelector('#modelName') as HTMLInputElement).value || 'model',
+      modelName: modelInput.value || 'model',
       offline: (container.querySelector('#offline') as HTMLInputElement).checked,
+      modelSource: hfResult ? hfResult.modelSource : 'local-path',
     };
+    if (hfResult) {
+      values.modelUrl = hfResult.url;
+    }
+    return values;
   }
+
+  // Wire up HF picker
+  setupHfPicker(
+    modelInput,
+    hfPickerContainer,
+    () => (container.querySelector('#engine') as HTMLSelectElement).value === 'litert',
+    (result) => {
+      hfResult = result;
+      // Auto-set task from HF pipeline_tag if available
+      if (result?.pipelineTag) {
+        const hfTaskMap: Record<string, string> = {
+          'image-classification': 'image-classification',
+          'object-detection': 'object-detection',
+          'image-segmentation': 'image-segmentation',
+          'feature-extraction': 'feature-extraction',
+          'automatic-speech-recognition': 'speech-to-text',
+          'audio-classification': 'audio-classification',
+          'text-to-speech': 'text-to-speech',
+          'text-classification': 'text-classification',
+          'text-generation': 'text-generation',
+          'zero-shot-classification': 'zero-shot-classification',
+        };
+        const mapped = hfTaskMap[result.pipelineTag];
+        if (mapped && taskSelect.value !== mapped) {
+          taskSelect.value = mapped;
+          updateInputOptions();
+        }
+      }
+      onChange(getValues());
+    },
+  );
 
   // Listen for changes on all inputs
   container.addEventListener('change', () => {
