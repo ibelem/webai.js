@@ -35,6 +35,24 @@ export function getEngineLabel(engine: string): string {
   return ENGINE_LABELS[engine] ?? engine;
 }
 
+/**
+ * Get the MODEL_PATH value for generated code.
+ *
+ * When the model came from a URL or HuggingFace model ID, the generated code
+ * references the URL directly (works with fetch() and ORT's InferenceSession.create()).
+ * When the model is local, it uses a relative path.
+ *
+ * @param config - Resolved config
+ * @param prefix - Path prefix for local models ('.' for html, '' for vite/next/svelte)
+ * @returns The MODEL_PATH string value (without quotes)
+ */
+export function getModelPath(config: ResolvedConfig, prefix = '.'): string {
+  if (config.modelSource !== 'local-path' && config.modelUrl) {
+    return config.modelUrl;
+  }
+  return `${prefix}/${config.modelName}.onnx`;
+}
+
 /** Generate CSS custom properties (design system) */
 export function emitDesignSystemCSS(_config: ResolvedConfig): string {
   return `:root {
@@ -327,11 +345,26 @@ export function emitReadme(config: ResolvedConfig, files: string[]): string {
   const engineLabel = getEngineLabel(config.engine);
   const { imageSize, mean, std } = config.preprocess;
 
+  const isRemote = config.modelSource !== 'local-path' && !!config.modelUrl;
+
   let quickStart: string;
   if (config.framework === 'html') {
-    quickStart = `1. Copy your model file (\`${config.modelName}.onnx\`) into this directory
+    if (isRemote) {
+      quickStart = `1. Start a local server: \`npx serve .\` (or any static file server)
+2. Open \`index.html\` in your browser
+3. The model loads automatically from the URL on first run`;
+    } else {
+      quickStart = `1. Copy your model file (\`${config.modelName}.onnx\`) into this directory
 2. Start a local server: \`npx serve .\` (or any static file server)
 3. Open \`index.html\` in your browser`;
+    }
+  } else if (isRemote) {
+    quickStart = `\`\`\`bash
+npm install
+npm run dev
+\`\`\`
+
+The model loads automatically from the URL on first run. No manual file copy needed.`;
   } else if (config.framework === 'react-vite') {
     quickStart = `\`\`\`bash
 npm install

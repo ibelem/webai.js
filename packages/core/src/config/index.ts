@@ -9,5 +9,5 @@ export type {
   ResolvedConfig,
   ResolverStep,
 } from './types.js';
-export { resolveConfig, ConfigValidationError, type ResolveResult } from './resolver.js';
+export { resolveConfig, extractModelName, ConfigValidationError, type ResolveResult } from './resolver.js';
 export { validateTaskInput, validateTaskEngine, getSupportedInputs } from './compatibility.js';

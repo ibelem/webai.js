@@ -217,6 +217,50 @@ describe('resolveConfig', () => {
     });
   });
 
+  describe('model source fields', () => {
+    it('defaults modelSource to local-path', () => {
+      const { config } = resolveConfig({ model: './model.onnx' }, classificationMeta);
+      expect(config.modelSource).toBe('local-path');
+    });
+
+    it('passes through modelSource from flags', () => {
+      const { config } = resolveConfig(
+        { model: 'user/repo', modelSource: 'hf-model-id' },
+        classificationMeta,
+      );
+      expect(config.modelSource).toBe('hf-model-id');
+    });
+
+    it('passes through modelUrl from flags', () => {
+      const { config } = resolveConfig(
+        {
+          model: 'https://hf.co/user/repo/resolve/main/model.onnx',
+          modelSource: 'url',
+          modelUrl: 'https://hf.co/user/repo/resolve/main/model.onnx',
+        },
+        classificationMeta,
+      );
+      expect(config.modelUrl).toBe('https://hf.co/user/repo/resolve/main/model.onnx');
+    });
+
+    it('modelUrl is undefined when not provided', () => {
+      const { config } = resolveConfig({ model: './model.onnx' }, classificationMeta);
+      expect(config.modelUrl).toBeUndefined();
+    });
+
+    it('extracts model name from URL with query params', () => {
+      const { config } = resolveConfig(
+        {
+          model: 'https://hf.co/user/repo/resolve/main/mobilenet.onnx?download=true',
+          modelSource: 'url',
+          task: 'image-classification',
+        },
+        classificationMeta,
+      );
+      expect(config.modelName).toBe('mobilenet');
+    });
+  });
+
   describe('auto-detection failures', () => {
     it('throws when task cannot be detected and no --task flag', () => {
       const emptyMeta: ModelMetadata = {

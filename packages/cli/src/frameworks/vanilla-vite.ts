@@ -22,6 +22,7 @@ import {
   emitReadme,
   getTaskLabel,
   getEngineLabel,
+  getModelPath,
 } from './shared.js';
 
 const libExt = (config: ResolvedConfig) => (config.lang === 'ts' ? 'ts' : 'js');
@@ -117,7 +118,7 @@ import { preprocessImage } from './lib/preprocess.${le}';
 import { postprocessResults } from './lib/postprocess.${le}';
 import './style.css';
 
-const MODEL_PATH = '/${config.modelName}.onnx';
+const MODEL_PATH = '${getModelPath(config, '')}';
 let session${t ? ': Awaited<ReturnType<typeof createSession>> | null' : ''} = null;
 
 function updateStatus(text${t ? ': string' : ''}) {

@@ -62,11 +62,21 @@ function normalizeBackend(backend: string, engine: Engine): string {
   return backend;
 }
 
-/** Extract model name from path: "/path/to/yolov8n.onnx" → "yolov8n" */
-function extractModelName(modelPath: string): string {
-  // Handle both Unix and Windows separators without node:path
-  const lastSlash = Math.max(modelPath.lastIndexOf('/'), modelPath.lastIndexOf('\\'));
-  const base = lastSlash >= 0 ? modelPath.slice(lastSlash + 1) : modelPath;
+/**
+ * Extract model name from a path or URL.
+ *
+ * "/path/to/yolov8n.onnx" → "yolov8n"
+ * "https://huggingface.co/user/repo/resolve/main/model.onnx" → "model"
+ * "https://hf.co/user/repo/resolve/main/onnx/model_q4.onnx?download=true" → "model_q4"
+ * "user/repo" → "repo" (HuggingFace model ID)
+ */
+export function extractModelName(modelPath: string): string {
+  // Strip query params and hash
+  let cleaned = modelPath.split('?')[0].split('#')[0];
+
+  // Handle both Unix and Windows separators
+  const lastSlash = Math.max(cleaned.lastIndexOf('/'), cleaned.lastIndexOf('\\'));
+  const base = lastSlash >= 0 ? cleaned.slice(lastSlash + 1) : cleaned;
   const dotIdx = base.lastIndexOf('.');
   return dotIdx > 0 ? base.slice(0, dotIdx) : base;
 }
@@ -173,6 +183,8 @@ export function resolveConfig(flags: CliFlags, metadata: ModelMetadata): Resolve
   validateTaskEngine(task, engine);
 
   const modelName = extractModelName(flags.model);
+  const modelSource = flags.modelSource ?? 'local-path';
+  const modelUrl = flags.modelUrl;
 
   return {
     config: {
@@ -193,6 +205,8 @@ export function resolveConfig(flags: CliFlags, metadata: ModelMetadata): Resolve
       modelMeta: metadata,
       modelPath: flags.model,
       modelName,
+      modelSource,
+      modelUrl,
     },
     steps,
   };

@@ -43,6 +43,7 @@ function makeConfig(overrides: Partial<ResolvedConfig> = {}): ResolvedConfig {
     modelMeta: classificationMeta,
     modelPath: './mobilenet.onnx',
     modelName: 'mobilenet',
+    modelSource: 'local-path',
     ...overrides,
   };
 }

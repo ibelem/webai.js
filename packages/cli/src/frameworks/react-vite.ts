@@ -17,6 +17,7 @@ import {
   emitReadme,
   getTaskLabel,
   getEngineLabel,
+  getModelPath,
 } from './shared.js';
 
 const ext = (config: ResolvedConfig) => (config.lang === 'ts' ? 'tsx' : 'jsx');
@@ -120,7 +121,7 @@ import { createSession, runInference, getBackendLabel } from './lib/inference.${
 import { preprocessImage } from './lib/preprocess.${le}';
 import { postprocessResults } from './lib/postprocess.${le}';
 
-const MODEL_PATH = '/${config.modelName}.onnx';
+const MODEL_PATH = '${getModelPath(config, '')}';
 
 export default function App() {
   const [results, setResults] = useState${stateType}(null);

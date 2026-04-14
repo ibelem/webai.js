@@ -70,6 +70,7 @@ const baseConfig: ResolvedConfig = {
   modelMeta: classificationMeta,
   modelPath: './mobilenet.onnx',
   modelName: 'mobilenet',
+  modelSource: 'local-path',
 };
 
 describe('T20: emitted resizeImage matches real resizeImage', () => {

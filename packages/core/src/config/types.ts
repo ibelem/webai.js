@@ -9,6 +9,7 @@
 
 import type { TaskType, InputMode, PreprocessDefaults } from '../tasks/types.js';
 import type { ModelMetadata } from '../model-parser/types.js';
+import type { ModelSourceType } from '../model-source/types.js';
 
 /** Inference engine (which JS library) */
 export type Engine = 'ort' | 'litert' | 'webnn';
@@ -46,6 +47,10 @@ export interface CliFlags {
   theme?: string;
   verbose?: boolean;
   force?: boolean;
+  /** Set by CLI after classifying model input (not a CLI flag) */
+  modelSource?: ModelSourceType;
+  /** Set by CLI after resolving model URL (not a CLI flag) */
+  modelUrl?: string;
 }
 
 /**
@@ -89,6 +94,10 @@ export interface ResolvedConfig {
   modelPath: string;
   /** Model file name without extension */
   modelName: string;
+  /** How the model was provided: local file, URL, or HuggingFace model ID */
+  modelSource: ModelSourceType;
+  /** Direct download URL (when modelSource is 'url' or 'hf-model-id') */
+  modelUrl?: string;
 }
 
 /** A single step in the resolver trace (for --verbose output) */

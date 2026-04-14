@@ -23,6 +23,7 @@ import {
   emitReadme,
   getTaskLabel,
   getEngineLabel,
+  getModelPath,
 } from './shared.js';
 
 const libExt = (config: ResolvedConfig) => (config.lang === 'ts' ? 'ts' : 'js');
@@ -138,7 +139,7 @@ function emitPageSvelte(config: ResolvedConfig): string {
   import { preprocessImage } from '$lib/preprocess.${le}';
   import { postprocessResults } from '$lib/postprocess.${le}';
 
-  const MODEL_PATH = '/${config.modelName}.onnx';
+  const MODEL_PATH = '${getModelPath(config, '')}';
 
   let session${typeAnnotations.session} = $state(null);
   let results${typeAnnotations.results} = $state(null);

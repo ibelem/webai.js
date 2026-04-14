@@ -25,6 +25,7 @@ import {
   emitReadme,
   getTaskLabel,
   getEngineLabel,
+  getModelPath,
 } from './shared.js';
 
 const ORT_CDN = 'https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/esm/ort.min.mjs';
@@ -96,7 +97,7 @@ ${inferenceCode}
 ${postprocessCode}
 
 // --- Application ---
-const MODEL_PATH = './${config.modelName}.onnx';
+const MODEL_PATH = '${getModelPath(config, '.')}';
 let session = null;
 
 async function init() {
@@ -232,7 +233,7 @@ function emitFileDetectionScript(config: ResolvedConfig, blocks: CodeBlock[]): s
 // --- Application ---
 ${emitColorPalette()}
 
-const MODEL_PATH = './${config.modelName}.onnx';
+const MODEL_PATH = '${getModelPath(config, '.')}';
 const NUM_ATTRIBUTES = ${numAttributes};
 const NUM_ANCHORS = ${numAnchors};
 let session = null;
@@ -378,7 +379,7 @@ function emitFileSegmentationScript(config: ResolvedConfig, blocks: CodeBlock[])
 // --- Application ---
 ${emitColorPalette()}
 
-const MODEL_PATH = './${config.modelName}.onnx';
+const MODEL_PATH = '${getModelPath(config, '.')}';
 const NUM_CLASSES = ${numClasses};
 const MASK_H = ${maskH};
 const MASK_W = ${maskW};
@@ -510,7 +511,7 @@ function emitFileFeatureExtractionScript(config: ResolvedConfig, blocks: CodeBlo
   return `${emitBlockCode(config, blocks)}
 
 // --- Application ---
-const MODEL_PATH = './${config.modelName}.onnx';
+const MODEL_PATH = '${getModelPath(config, '.')}';
 let session = null;
 
 function updateStatus(text) {
@@ -705,7 +706,7 @@ function renderMask(ctx, mask, displayW, displayH) {
 // --- Application ---
 ${extraCode}
 
-const MODEL_PATH = './${config.modelName}.onnx';
+const MODEL_PATH = '${getModelPath(config, '.')}';
 let session = null;
 let currentStream = null;
 

@@ -39,9 +39,23 @@ export {
   type TaskProfile,
 } from './tasks/index.js';
 
+// Model source
+export {
+  classifyModelInput,
+  transformHuggingFaceUrl,
+  getHuggingFaceMirrorUrl,
+  isHuggingFaceUrl,
+  buildHfApiUrl,
+  buildHfFileUrl,
+  pickBestModelFile,
+  type ModelSourceType,
+  type ModelSourceInfo,
+} from './model-source/index.js';
+
 // Config
 export {
   resolveConfig,
+  extractModelName,
   ConfigValidationError,
   validateTaskInput,
   validateTaskEngine,

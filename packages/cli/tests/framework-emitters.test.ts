@@ -53,6 +53,7 @@ function makeConfig(overrides: Partial<ResolvedConfig> = {}): ResolvedConfig {
     modelMeta: classificationMeta,
     modelPath: './mobilenet.onnx',
     modelName: 'mobilenet',
+    modelSource: 'local-path',
     ...overrides,
   };
 }
@@ -706,6 +707,108 @@ describe('emitSvelteKit', () => {
       const code = getFile(files, 'src/lib/inference.js');
       expect(code).toContain("import * as ort from 'onnxruntime-web'");
       expect(code).toContain('export async function createSession');
+    });
+  });
+});
+
+// ---- Online model support (MODEL_PATH = URL) ----
+
+describe('online model support', () => {
+  const urlOverrides = {
+    modelSource: 'url' as const,
+    modelUrl: 'https://huggingface.co/user/repo/resolve/main/mobilenet.onnx',
+    modelName: 'mobilenet',
+  };
+
+  describe('html framework uses URL as MODEL_PATH', () => {
+    it('sets MODEL_PATH to URL instead of local path', () => {
+      const { files } = generateHtml(urlOverrides);
+      const html = getFile(files, 'index.html');
+      expect(html).toContain("const MODEL_PATH = 'https://huggingface.co/user/repo/resolve/main/mobilenet.onnx'");
+    });
+
+    it('does NOT contain local .onnx path reference', () => {
+      const { files } = generateHtml(urlOverrides);
+      const html = getFile(files, 'index.html');
+      expect(html).not.toContain("'./mobilenet.onnx'");
+    });
+  });
+
+  describe('react-vite framework uses URL as MODEL_PATH', () => {
+    it('sets MODEL_PATH to URL in App component', () => {
+      const { files } = generateReactVite(urlOverrides);
+      const app = getFile(files, 'src/App.jsx');
+      expect(app).toContain("const MODEL_PATH = 'https://huggingface.co/user/repo/resolve/main/mobilenet.onnx'");
+    });
+  });
+
+  describe('vanilla-vite framework uses URL as MODEL_PATH', () => {
+    it('sets MODEL_PATH to URL in main module', () => {
+      const { files } = generateVanillaVite(urlOverrides);
+      const main = getFile(files, 'src/main.js');
+      expect(main).toContain("const MODEL_PATH = 'https://huggingface.co/user/repo/resolve/main/mobilenet.onnx'");
+    });
+  });
+
+  describe('nextjs framework uses URL as MODEL_PATH', () => {
+    it('sets MODEL_PATH to URL in page component', () => {
+      const { files } = generateNextjs(urlOverrides);
+      const page = getFile(files, 'app/page.jsx');
+      expect(page).toContain("const MODEL_PATH = 'https://huggingface.co/user/repo/resolve/main/mobilenet.onnx'");
+    });
+  });
+
+  describe('sveltekit framework uses URL as MODEL_PATH', () => {
+    it('sets MODEL_PATH to URL in page.svelte', () => {
+      const { files } = generateSvelteKit(urlOverrides);
+      const page = getFile(files, 'src/routes/+page.svelte');
+      expect(page).toContain("const MODEL_PATH = 'https://huggingface.co/user/repo/resolve/main/mobilenet.onnx'");
+    });
+  });
+
+  describe('local model still uses relative path', () => {
+    it('html uses relative path for local model', () => {
+      const { files } = generateHtml({ modelSource: 'local-path' });
+      const html = getFile(files, 'index.html');
+      expect(html).toContain("const MODEL_PATH = './mobilenet.onnx'");
+    });
+
+    it('react-vite uses relative path for local model', () => {
+      const { files } = generateReactVite({ modelSource: 'local-path' });
+      const app = getFile(files, 'src/App.jsx');
+      expect(app).toContain("const MODEL_PATH = '/mobilenet.onnx'");
+    });
+  });
+
+  describe('README adapts to online model', () => {
+    it('README mentions URL loads automatically for url source', () => {
+      const { files } = generateHtml(urlOverrides);
+      const readme = getFile(files, 'README.md');
+      expect(readme).toContain('loads automatically from the URL');
+    });
+
+    it('README does NOT say "copy your model" for url source', () => {
+      const { files } = generateHtml(urlOverrides);
+      const readme = getFile(files, 'README.md');
+      expect(readme).not.toContain('Copy your model file');
+    });
+
+    it('README says "copy your model" for local source', () => {
+      const { files } = generateHtml({ modelSource: 'local-path' });
+      const readme = getFile(files, 'README.md');
+      expect(readme).toContain('Copy your model file');
+    });
+  });
+
+  describe('hf-model-id source also uses URL', () => {
+    it('hf-model-id with modelUrl uses URL as MODEL_PATH', () => {
+      const { files } = generateHtml({
+        modelSource: 'hf-model-id',
+        modelUrl: 'https://huggingface.co/microsoft/resnet-50/resolve/main/model.onnx',
+        modelName: 'model',
+      });
+      const html = getFile(files, 'index.html');
+      expect(html).toContain("const MODEL_PATH = 'https://huggingface.co/microsoft/resnet-50/resolve/main/model.onnx'");
     });
   });
 });
