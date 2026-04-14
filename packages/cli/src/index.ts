@@ -13,3 +13,10 @@ export {
   emitPostprocessBlock,
   emitOrtInferenceBlock,
 } from './emitters/index.js';
+
+// Layer 2: Framework IO emitters
+export {
+  emitLayer2,
+  emitHtml,
+  emitReactVite,
+} from './frameworks/index.js';
