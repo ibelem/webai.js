@@ -89,6 +89,7 @@ Expansion additions:
 - Model zoo integration
 - One-click deployment (Vercel/Netlify/Cloudflare)
 - Hot-reload inference (watch model file for changes)
+- Curated model recommendations per task: "fast/balanced/accurate" tiers with `--tier` flag, making `--model` optional. Each tier = a tested model per engine (ONNX, TFLite). Requires manual benchmarking across device types (PC, mobile, CPU, GPU, NPU) so cannot be automated easily. Related: `webai models` subcommand to browse recommendations.
 
 ## Compatibility Matrix (Approved)
 
