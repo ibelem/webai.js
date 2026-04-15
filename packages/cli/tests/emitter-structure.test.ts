@@ -626,20 +626,20 @@ describe('emitOrtInferenceBlock', () => {
     expect(block.code).not.toContain("'ml' in navigator");
   });
 
-  it('uses model input name and shape from metadata', () => {
+  it('uses dynamic input name from session and shape from metadata', () => {
     const block = emitOrtInferenceBlock(makeConfig());
-    expect(block.code).toContain("'input'");
+    expect(block.code).toContain('session.inputNames[0]');
     expect(block.code).toContain('[1, 3, 224, 224]');
   });
 
-  it('uses custom input name from metadata', () => {
+  it('uses custom input shape from metadata', () => {
     const customMeta: ModelMetadata = {
       format: 'onnx',
       inputs: [{ name: 'images', dataType: 'float32', shape: [1, 3, 640, 640] }],
       outputs: [{ name: 'output0', dataType: 'float32', shape: [1, 84, 8400] }],
     };
     const block = emitOrtInferenceBlock(makeConfig({ modelMeta: customMeta }));
-    expect(block.code).toContain("'images'");
+    expect(block.code).toContain('session.inputNames[0]');
     expect(block.code).toContain('[1, 3, 640, 640]');
   });
 

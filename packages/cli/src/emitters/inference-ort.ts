@@ -83,7 +83,6 @@ function emitRunInference(config: ResolvedConfig, ts: boolean): string {
   const t = ts;
   const inputShape = config.modelMeta.inputs[0]?.shape ?? [1, 3, 224, 224];
   const shapeStr = `[${inputShape.map((d) => (typeof d === 'string' ? d : String(d))).join(', ')}]`;
-  const inputName = config.modelMeta.inputs[0]?.name ?? 'input';
 
   return `/**
  * Run inference on preprocessed input data.
@@ -95,7 +94,8 @@ async function runInference(
   inputData${t ? ': Float32Array' : ''}
 )${t ? ': Promise<Float32Array>' : ''} {
   const tensor = new ort.Tensor('float32', inputData, ${shapeStr});
-  const feeds${t ? ': Record<string, ort.Tensor>' : ''} = { '${inputName}': tensor };
+  const inputName = session.inputNames[0];
+  const feeds${t ? ': Record<string, ort.Tensor>' : ''} = { [inputName]: tensor };
 
   const results = await session.run(feeds);
   const outputName = session.outputNames[0];

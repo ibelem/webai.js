@@ -717,7 +717,8 @@ async function runInference(
   inputData
 ) {
   const tensor = new ort.Tensor('float32', inputData, [1, 3, 224, 224]);
-  const feeds = { 'input': tensor };
+  const inputName = session.inputNames[0];
+  const feeds = { [inputName]: tensor };
 
   const results = await session.run(feeds);
   const outputName = session.outputNames[0];
@@ -1833,7 +1834,8 @@ export async function runInference(
   inputData
 ) {
   const tensor = new ort.Tensor('float32', inputData, [1, 3, 224, 224]);
-  const feeds = { 'input': tensor };
+  const inputName = session.inputNames[0];
+  const feeds = { [inputName]: tensor };
 
   const results = await session.run(feeds);
   const outputName = session.outputNames[0];
@@ -2671,7 +2673,8 @@ async function runInference(
   inputData
 ) {
   const tensor = new ort.Tensor('float32', inputData, [1, 3, 224, 224]);
-  const feeds = { 'input': tensor };
+  const inputName = session.inputNames[0];
+  const feeds = { [inputName]: tensor };
 
   const results = await session.run(feeds);
   const outputName = session.outputNames[0];
@@ -3625,7 +3628,8 @@ async function runInference(
   inputData: Float32Array
 ): Promise<Float32Array> {
   const tensor = new ort.Tensor('float32', inputData, [1, 3, 224, 224]);
-  const feeds: Record<string, ort.Tensor> = { 'input': tensor };
+  const inputName = session.inputNames[0];
+  const feeds: Record<string, ort.Tensor> = { [inputName]: tensor };
 
   const results = await session.run(feeds);
   const outputName = session.outputNames[0];
@@ -4572,7 +4576,8 @@ async function runInference(
   inputData
 ) {
   const tensor = new ort.Tensor('float32', inputData, [1, 3, 224, 224]);
-  const feeds = { 'input': tensor };
+  const inputName = session.inputNames[0];
+  const feeds = { [inputName]: tensor };
 
   const results = await session.run(feeds);
   const outputName = session.outputNames[0];
@@ -5727,7 +5732,8 @@ async function runInference(
   inputData
 ) {
   const tensor = new ort.Tensor('float32', inputData, [1, 13, 100]);
-  const feeds = { 'input': tensor };
+  const inputName = session.inputNames[0];
+  const feeds = { [inputName]: tensor };
 
   const results = await session.run(feeds);
   const outputName = session.outputNames[0];
@@ -6771,7 +6777,8 @@ async function runInference(
   inputData
 ) {
   const tensor = new ort.Tensor('float32', inputData, [1, 13, 100]);
-  const feeds = { 'input': tensor };
+  const inputName = session.inputNames[0];
+  const feeds = { [inputName]: tensor };
 
   const results = await session.run(feeds);
   const outputName = session.outputNames[0];
@@ -7918,7 +7925,8 @@ async function runInference(
   inputData
 ) {
   const tensor = new ort.Tensor('float32', inputData, [1, 13, 100]);
-  const feeds = { 'input': tensor };
+  const inputName = session.inputNames[0];
+  const feeds = { [inputName]: tensor };
 
   const results = await session.run(feeds);
   const outputName = session.outputNames[0];
@@ -9048,7 +9056,8 @@ export async function runInference(
   inputData
 ) {
   const tensor = new ort.Tensor('float32', inputData, [1, 13, 100]);
-  const feeds = { 'input': tensor };
+  const inputName = session.inputNames[0];
+  const feeds = { [inputName]: tensor };
 
   const results = await session.run(feeds);
   const outputName = session.outputNames[0];
@@ -9984,7 +9993,8 @@ async function runInference(
   inputData
 ) {
   const tensor = new ort.Tensor('float32', inputData, [1, 80, 100]);
-  const feeds = { 'input': tensor };
+  const inputName = session.inputNames[0];
+  const feeds = { [inputName]: tensor };
 
   const results = await session.run(feeds);
   const outputName = session.outputNames[0];
@@ -11084,7 +11094,8 @@ async function runInference(
   inputData
 ) {
   const tensor = new ort.Tensor('float32', inputData, [1, 80, 100]);
-  const feeds = { 'input': tensor };
+  const inputName = session.inputNames[0];
+  const feeds = { [inputName]: tensor };
 
   const results = await session.run(feeds);
   const outputName = session.outputNames[0];
@@ -12260,7 +12271,8 @@ export async function runInference(
   inputData: Float32Array
 ): Promise<Float32Array> {
   const tensor = new ort.Tensor('float32', inputData, [1, 80, 100]);
-  const feeds: Record<string, ort.Tensor> = { 'input': tensor };
+  const inputName = session.inputNames[0];
+  const feeds: Record<string, ort.Tensor> = { [inputName]: tensor };
 
   const results = await session.run(feeds);
   const outputName = session.outputNames[0];
@@ -13038,7 +13050,8 @@ async function runInference(
   inputData
 ) {
   const tensor = new ort.Tensor('float32', inputData, [1, 100]);
-  const feeds = { 'input': tensor };
+  const inputName = session.inputNames[0];
+  const feeds = { [inputName]: tensor };
 
   const results = await session.run(feeds);
   const outputName = session.outputNames[0];
@@ -13910,7 +13923,8 @@ export async function runInference(
   inputData: Float32Array
 ): Promise<Float32Array> {
   const tensor = new ort.Tensor('float32', inputData, [1, 100]);
-  const feeds: Record<string, ort.Tensor> = { 'input': tensor };
+  const inputName = session.inputNames[0];
+  const feeds: Record<string, ort.Tensor> = { [inputName]: tensor };
 
   const results = await session.run(feeds);
   const outputName = session.outputNames[0];
@@ -14878,7 +14892,8 @@ export async function runInference(
   inputData
 ) {
   const tensor = new ort.Tensor('float32', inputData, [1, 3, 224, 224]);
-  const feeds = { 'input': tensor };
+  const inputName = session.inputNames[0];
+  const feeds = { [inputName]: tensor };
 
   const results = await session.run(feeds);
   const outputName = session.outputNames[0];
@@ -15799,7 +15814,8 @@ export async function runInference(
   inputData: Float32Array
 ): Promise<Float32Array> {
   const tensor = new ort.Tensor('float32', inputData, [1, 128]);
-  const feeds: Record<string, ort.Tensor> = { 'input_ids': tensor };
+  const inputName = session.inputNames[0];
+  const feeds: Record<string, ort.Tensor> = { [inputName]: tensor };
 
   const results = await session.run(feeds);
   const outputName = session.outputNames[0];
@@ -18634,7 +18650,8 @@ async function runInference(
   inputData
 ) {
   const tensor = new ort.Tensor('float32', inputData, [1, 3, 224, 224]);
-  const feeds = { 'input': tensor };
+  const inputName = session.inputNames[0];
+  const feeds = { [inputName]: tensor };
 
   const results = await session.run(feeds);
   const outputName = session.outputNames[0];
@@ -19821,7 +19838,8 @@ export async function runInference(
   inputData
 ) {
   const tensor = new ort.Tensor('float32', inputData, [1, 3, 224, 224]);
-  const feeds = { 'input': tensor };
+  const inputName = session.inputNames[0];
+  const feeds = { [inputName]: tensor };
 
   const results = await session.run(feeds);
   const outputName = session.outputNames[0];
@@ -21730,7 +21748,8 @@ async function runInference(
   inputData
 ) {
   const tensor = new ort.Tensor('float32', inputData, [1, 3, 224, 224]);
-  const feeds = { 'input': tensor };
+  const inputName = session.inputNames[0];
+  const feeds = { [inputName]: tensor };
 
   const results = await session.run(feeds);
   const outputName = session.outputNames[0];
@@ -22696,7 +22715,8 @@ async function runInference(
   inputData
 ) {
   const tensor = new ort.Tensor('float32', inputData, [1, 3, 512, 512]);
-  const feeds = { 'input': tensor };
+  const inputName = session.inputNames[0];
+  const feeds = { [inputName]: tensor };
 
   const results = await session.run(feeds);
   const outputName = session.outputNames[0];
@@ -23756,7 +23776,8 @@ export async function runInference(
   inputData
 ) {
   const tensor = new ort.Tensor('float32', inputData, [1, 3, 224, 224]);
-  const feeds = { 'input': tensor };
+  const inputName = session.inputNames[0];
+  const feeds = { [inputName]: tensor };
 
   const results = await session.run(feeds);
   const outputName = session.outputNames[0];
@@ -24645,7 +24666,8 @@ export async function runInference(
   inputData: Float32Array
 ): Promise<Float32Array> {
   const tensor = new ort.Tensor('float32', inputData, [1, 128]);
-  const feeds: Record<string, ort.Tensor> = { 'input_ids': tensor };
+  const inputName = session.inputNames[0];
+  const feeds: Record<string, ort.Tensor> = { [inputName]: tensor };
 
   const results = await session.run(feeds);
   const outputName = session.outputNames[0];
@@ -25563,7 +25585,8 @@ async function runInference(
   inputData
 ) {
   const tensor = new ort.Tensor('float32', inputData, [1, 3, 640, 640]);
-  const feeds = { 'images': tensor };
+  const inputName = session.inputNames[0];
+  const feeds = { [inputName]: tensor };
 
   const results = await session.run(feeds);
   const outputName = session.outputNames[0];
@@ -26713,7 +26736,8 @@ export async function runInference(
   inputData
 ) {
   const tensor = new ort.Tensor('float32', inputData, [1, 3, 224, 224]);
-  const feeds = { 'input': tensor };
+  const inputName = session.inputNames[0];
+  const feeds = { [inputName]: tensor };
 
   const results = await session.run(feeds);
   const outputName = session.outputNames[0];
@@ -27622,7 +27646,8 @@ export async function runInference(
   inputData: Float32Array
 ): Promise<Float32Array> {
   const tensor = new ort.Tensor('float32', inputData, [1, 128]);
-  const feeds: Record<string, ort.Tensor> = { 'input_ids': tensor };
+  const inputName = session.inputNames[0];
+  const feeds: Record<string, ort.Tensor> = { [inputName]: tensor };
 
   const results = await session.run(feeds);
   const outputName = session.outputNames[0];
@@ -28611,7 +28636,8 @@ export async function runInference(
   inputData
 ) {
   const tensor = new ort.Tensor('float32', inputData, [1, 3, 224, 224]);
-  const feeds = { 'input': tensor };
+  const inputName = session.inputNames[0];
+  const feeds = { [inputName]: tensor };
 
   const results = await session.run(feeds);
   const outputName = session.outputNames[0];
@@ -29528,7 +29554,8 @@ export async function runInference(
   inputData: Float32Array
 ): Promise<Float32Array> {
   const tensor = new ort.Tensor('float32', inputData, [1, 128]);
-  const feeds: Record<string, ort.Tensor> = { 'input_ids': tensor };
+  const inputName = session.inputNames[0];
+  const feeds: Record<string, ort.Tensor> = { [inputName]: tensor };
 
   const results = await session.run(feeds);
   const outputName = session.outputNames[0];
@@ -30341,7 +30368,8 @@ async function runInference(
   inputData
 ) {
   const tensor = new ort.Tensor('float32', inputData, [1, 128]);
-  const feeds = { 'input_ids': tensor };
+  const inputName = session.inputNames[0];
+  const feeds = { [inputName]: tensor };
 
   const results = await session.run(feeds);
   const outputName = session.outputNames[0];
@@ -31330,7 +31358,8 @@ export async function runInference(
   inputData
 ) {
   const tensor = new ort.Tensor('float32', inputData, [1, 128]);
-  const feeds = { 'input_ids': tensor };
+  const inputName = session.inputNames[0];
+  const feeds = { [inputName]: tensor };
 
   const results = await session.run(feeds);
   const outputName = session.outputNames[0];
@@ -32259,7 +32288,8 @@ export async function runInference(
   inputData: Float32Array
 ): Promise<Float32Array> {
   const tensor = new ort.Tensor('float32', inputData, [1, 128]);
-  const feeds: Record<string, ort.Tensor> = { 'input_ids': tensor };
+  const inputName = session.inputNames[0];
+  const feeds: Record<string, ort.Tensor> = { [inputName]: tensor };
 
   const results = await session.run(feeds);
   const outputName = session.outputNames[0];
@@ -33071,7 +33101,8 @@ async function runInference(
   inputData
 ) {
   const tensor = new ort.Tensor('float32', inputData, [1, 128]);
-  const feeds = { 'input_ids': tensor };
+  const inputName = session.inputNames[0];
+  const feeds = { [inputName]: tensor };
 
   const results = await session.run(feeds);
   const outputName = session.outputNames[0];
@@ -34208,7 +34239,8 @@ export async function runInference(
   inputData: Float32Array
 ): Promise<Float32Array> {
   const tensor = new ort.Tensor('float32', inputData, [1, 128]);
-  const feeds: Record<string, ort.Tensor> = { 'input_ids': tensor };
+  const inputName = session.inputNames[0];
+  const feeds: Record<string, ort.Tensor> = { [inputName]: tensor };
 
   const results = await session.run(feeds);
   const outputName = session.outputNames[0];
@@ -35003,7 +35035,8 @@ async function runInference(
   inputData
 ) {
   const tensor = new ort.Tensor('float32', inputData, [1, 128]);
-  const feeds = { 'input_ids': tensor };
+  const inputName = session.inputNames[0];
+  const feeds = { [inputName]: tensor };
 
   const results = await session.run(feeds);
   const outputName = session.outputNames[0];
@@ -35980,7 +36013,8 @@ export async function runInference(
   inputData: Float32Array
 ): Promise<Float32Array> {
   const tensor = new ort.Tensor('float32', inputData, [1, 128]);
-  const feeds: Record<string, ort.Tensor> = { 'input_ids': tensor };
+  const inputName = session.inputNames[0];
+  const feeds: Record<string, ort.Tensor> = { [inputName]: tensor };
 
   const results = await session.run(feeds);
   const outputName = session.outputNames[0];
