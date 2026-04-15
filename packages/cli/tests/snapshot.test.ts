@@ -594,3 +594,87 @@ describe('text task snapshots', () => {
     expect(serializeFiles(config)).toMatchSnapshot();
   });
 });
+
+// ---- Vue + Vite snapshots ----
+
+describe('snapshot — vue-vite', () => {
+  it('image-classification + vue-vite + file + ort + js', () => {
+    const output = serializeFiles(makeConfig({
+      framework: 'vue-vite',
+      lang: 'js',
+      mode: 'raw',
+    }));
+    expect(output).toMatchSnapshot();
+  });
+
+  it('text-classification + vue-vite + file + ort + ts', () => {
+    const config = makeConfig({
+      task: 'text-classification',
+      input: 'file',
+      engine: 'ort',
+      framework: 'vue-vite',
+      lang: 'ts',
+      modelMeta: textClassMeta,
+      modelPath: './bert-sentiment.onnx',
+      modelName: 'bert-sentiment',
+      preprocess: textPreprocess,
+    });
+    expect(serializeFiles(config)).toMatchSnapshot();
+  });
+});
+
+// ---- Nuxt snapshots ----
+
+describe('snapshot — nuxt', () => {
+  it('image-classification + nuxt + file + ort + js', () => {
+    const output = serializeFiles(makeConfig({
+      framework: 'nuxt',
+      lang: 'js',
+      mode: 'raw',
+    }));
+    expect(output).toMatchSnapshot();
+  });
+
+  it('text-classification + nuxt + file + ort + ts', () => {
+    const config = makeConfig({
+      task: 'text-classification',
+      input: 'file',
+      engine: 'ort',
+      framework: 'nuxt',
+      lang: 'ts',
+      modelMeta: textClassMeta,
+      modelPath: './bert-sentiment.onnx',
+      modelName: 'bert-sentiment',
+      preprocess: textPreprocess,
+    });
+    expect(serializeFiles(config)).toMatchSnapshot();
+  });
+});
+
+// ---- Astro snapshots ----
+
+describe('snapshot — astro', () => {
+  it('image-classification + astro + file + ort + js', () => {
+    const output = serializeFiles(makeConfig({
+      framework: 'astro',
+      lang: 'js',
+      mode: 'raw',
+    }));
+    expect(output).toMatchSnapshot();
+  });
+
+  it('text-classification + astro + file + ort + ts', () => {
+    const config = makeConfig({
+      task: 'text-classification',
+      input: 'file',
+      engine: 'ort',
+      framework: 'astro',
+      lang: 'ts',
+      modelMeta: textClassMeta,
+      modelPath: './bert-sentiment.onnx',
+      modelName: 'bert-sentiment',
+      preprocess: textPreprocess,
+    });
+    expect(serializeFiles(config)).toMatchSnapshot();
+  });
+});

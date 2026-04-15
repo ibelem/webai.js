@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host",
     "build": "vite build",
     "preview": "vite preview"
   },
@@ -14,6 +14,6 @@
     "webai": "*"
   },
   "devDependencies": {
-    "vite": "^6.3.4"
+    "vite": "^8.0.8"
   }
 }

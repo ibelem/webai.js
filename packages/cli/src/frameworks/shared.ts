@@ -688,7 +688,7 @@ npm run dev
 \`\`\`
 
 The model loads automatically from the URL on first run. No manual file copy needed.`;
-  } else if (config.framework === 'react-vite') {
+  } else if (config.framework === 'react-vite' || config.framework === 'vue-vite' || config.framework === 'nuxt' || config.framework === 'astro') {
     quickStart = `\`\`\`bash
 npm install
 # Copy your model file to public/

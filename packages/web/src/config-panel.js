@@ -30,6 +30,9 @@ const FRAMEWORKS = [
     { value: 'react-vite', label: 'React + Vite' },
     { value: 'nextjs', label: 'Next.js' },
     { value: 'sveltekit', label: 'SvelteKit' },
+    { value: 'vue-vite', label: 'Vue + Vite' },
+    { value: 'nuxt', label: 'Nuxt' },
+    { value: 'astro', label: 'Astro' },
 ];
 const LANGS = [
     { value: 'js', label: 'JavaScript' },

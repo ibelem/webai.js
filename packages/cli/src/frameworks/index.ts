@@ -15,6 +15,9 @@ import { emitVanillaVite } from './vanilla-vite.js';
 import { emitReactVite } from './react-vite.js';
 import { emitNextjs } from './nextjs.js';
 import { emitSvelteKit } from './sveltekit.js';
+import { emitVueVite } from './vue-vite.js';
+import { emitNuxt } from './nuxt.js';
+import { emitAstro } from './astro.js';
 
 /**
  * Emit all Layer 2 files for the given config and code blocks.
@@ -35,6 +38,12 @@ export function emitLayer2(config: ResolvedConfig, blocks: CodeBlock[]): Generat
       return emitNextjs(config, blocks);
     case 'sveltekit':
       return emitSvelteKit(config, blocks);
+    case 'vue-vite':
+      return emitVueVite(config, blocks);
+    case 'nuxt':
+      return emitNuxt(config, blocks);
+    case 'astro':
+      return emitAstro(config, blocks);
     default:
       throw new Error(`Unsupported framework: ${config.framework}`);
   }
@@ -45,3 +54,6 @@ export { emitVanillaVite } from './vanilla-vite.js';
 export { emitReactVite } from './react-vite.js';
 export { emitNextjs } from './nextjs.js';
 export { emitSvelteKit } from './sveltekit.js';
+export { emitVueVite } from './vue-vite.js';
+export { emitNuxt } from './nuxt.js';
+export { emitAstro } from './astro.js';
