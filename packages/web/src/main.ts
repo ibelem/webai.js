@@ -155,10 +155,10 @@ async function init(): Promise<void> {
     window.history.replaceState(null, '', url);
   }
 
-  const configPanel = document.getElementById('configPanel')!;
-  const editorContainer = document.getElementById('editor')!;
-  const tabContainer = document.getElementById('fileTabs')!;
-  const tryItSection = document.getElementById('tryItSection')!;
+  const configPanel = document.getElementById('configPanel') as HTMLElement;
+  const editorContainer = document.getElementById('editor') as HTMLElement;
+  const tabContainer = document.getElementById('fileTabs') as HTMLElement;
+  const tryItSection = document.getElementById('tryItSection') as HTMLElement;
   const tryItBtn = document.getElementById('tryItBtn') as HTMLButtonElement;
   const closeTryIt = document.getElementById('closeTryIt') as HTMLButtonElement;
   const tryItFrame = document.getElementById('tryItFrame') as HTMLIFrameElement;

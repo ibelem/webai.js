@@ -212,7 +212,7 @@ export function setupHfPicker(
 
       // Fire initial selection
       const fireSelect = (): void => {
-        const selectedFile = data.files!.find((f) => f.filename === select.value);
+        const selectedFile = data.files?.find((f) => f.filename === select.value);
         if (selectedFile && data.modelId) {
           onSelect({
             modelId: data.modelId,

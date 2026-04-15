@@ -71,7 +71,7 @@ async function fetchModelFromUrl(url: string, verbose: boolean): Promise<{ buffe
       try {
         const response = await fetchWithTimeout(mirrorUrl, 30_000);
         if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
+          throw new Error(`HTTP ${response.status}`, { cause: primaryError });
         }
         const arrayBuffer = await response.arrayBuffer();
         // Return the original (non-mirror) URL for generated code
@@ -81,7 +81,7 @@ async function fetchModelFromUrl(url: string, verbose: boolean): Promise<{ buffe
       }
     }
     const msg = primaryError instanceof Error ? primaryError.message : String(primaryError);
-    throw new Error(`Could not fetch model from ${normalizedUrl}\n  ${msg}`);
+    throw new Error(`Could not fetch model from ${normalizedUrl}\n  ${msg}`, { cause: primaryError });
   }
 }
 

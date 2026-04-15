@@ -67,8 +67,9 @@ function initMonaco(container: HTMLElement): Promise<void> {
 
   monacoReady = loadMonacoScript().then(() => {
     return new Promise<void>((resolve) => {
-      window.require!.config({ paths: { vs: `${MONACO_CDN}/vs` } });
-      window.require!(['vs/editor/editor.main'], () => {
+      const req = window.require as MonacoRequire;
+      req.config({ paths: { vs: `${MONACO_CDN}/vs` } });
+      req(['vs/editor/editor.main'], () => {
         editor = window.monaco.editor.create(container, {
           value: '// Select options to generate code',
           language: 'javascript',

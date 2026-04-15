@@ -79,7 +79,7 @@ function normalizeBackend(backend: string, engine: Engine): string {
  */
 export function extractModelName(modelPath: string): string {
   // Strip query params and hash
-  let cleaned = modelPath.split('?')[0].split('#')[0];
+  const cleaned = modelPath.split('?')[0].split('#')[0];
 
   // Handle both Unix and Windows separators
   const lastSlash = Math.max(cleaned.lastIndexOf('/'), cleaned.lastIndexOf('\\'));
