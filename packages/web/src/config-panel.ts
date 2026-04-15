@@ -271,6 +271,23 @@ export function getInputOptions(task: TaskType): SelectOption[] {
 
 // ---- Defaults ----
 
+/** Detect model format from filename/path */
+function detectModelFormat(filename: string): 'onnx' | 'tflite' | null {
+  const lower = filename.toLowerCase();
+  if (lower.endsWith('.onnx')) return 'onnx';
+  if (lower.endsWith('.tflite')) return 'tflite';
+  // Check path segments like "onnx/model.onnx" or "tflite/model.tflite"
+  if (lower.includes('.onnx')) return 'onnx';
+  if (lower.includes('.tflite')) return 'tflite';
+  return null;
+}
+
+/** Engines compatible with each model format */
+const FORMAT_ENGINES: Record<string, string[]> = {
+  onnx: ['ort', 'webnn'],
+  tflite: ['litert', 'webnn'],
+};
+
 const DEFAULTS: Record<string, string> = {
   model: 'webnn/mobilenet-v2',
   task: 'image-classification',
@@ -291,6 +308,17 @@ export function setupConfigPanel(
   // Read URL params and merge with defaults
   const urlParams = readUrlParams();
   const initial = { ...DEFAULTS, ...urlParams };
+
+  // Auto-correct engine if it conflicts with the selected model file format
+  if (initial.file) {
+    const format = detectModelFormat(initial.file);
+    if (format) {
+      const allowed = FORMAT_ENGINES[format];
+      if (!allowed.includes(initial.engine)) {
+        initial.engine = allowed[0];
+      }
+    }
+  }
 
   const defaultTask = initial.task as TaskType;
   const defaultFramework = initial.framework;
@@ -319,6 +347,38 @@ export function setupConfigPanel(
   const taskSelect = container.querySelector('#task') as HTMLSelectElement;
   const inputSelect = container.querySelector('#input') as HTMLSelectElement;
   const modelInput = container.querySelector('#modelName') as HTMLInputElement;
+  const engineSelect = container.querySelector('#engine') as HTMLSelectElement;
+
+  /** Disable/enable engine options based on model file format */
+  function updateEngineConstraints(filename: string | undefined): void {
+    if (!filename) {
+      // No file selected — enable all engines
+      for (const opt of Array.from(engineSelect.options)) {
+        opt.disabled = false;
+      }
+      return;
+    }
+    const format = detectModelFormat(filename);
+    if (!format) {
+      for (const opt of Array.from(engineSelect.options)) {
+        opt.disabled = false;
+      }
+      return;
+    }
+    const allowed = FORMAT_ENGINES[format];
+    for (const opt of Array.from(engineSelect.options)) {
+      opt.disabled = !allowed.includes(opt.value);
+    }
+    // Auto-correct if current selection is incompatible
+    if (!allowed.includes(engineSelect.value)) {
+      engineSelect.value = allowed[0];
+      // Update icon if present
+      const iconSpan = engineSelect.parentElement?.querySelector('.select-icon');
+      if (iconSpan) {
+        iconSpan.innerHTML = ENGINE_ICONS[engineSelect.value] ?? '';
+      }
+    }
+  }
 
   function updateInputOptions(): void {
     const task = taskSelect.value as TaskType;
@@ -360,6 +420,8 @@ export function setupConfigPanel(
     () => (container.querySelector('#engine') as HTMLSelectElement).value === 'litert',
     (result) => {
       hfResult = result;
+      // Constrain engine options based on model file format
+      updateEngineConstraints(result?.filename);
       // Auto-set task from HF pipeline_tag if available
       if (result?.pipelineTag) {
         const hfTaskMap: Record<string, string> = {
@@ -415,6 +477,11 @@ export function setupConfigPanel(
       onChange(getValues());
     }
   });
+
+  // Apply engine constraints from URL file param on initial load
+  if (initialHfFile) {
+    updateEngineConstraints(initialHfFile);
+  }
 
   // Fire initial
   onChange(getValues());
