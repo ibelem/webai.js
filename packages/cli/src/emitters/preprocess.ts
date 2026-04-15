@@ -160,7 +160,7 @@ export function emitPreprocessBlock(config: ResolvedConfig): CodeBlock {
     return emitAudioPreprocessBlock(config);
   }
 
-  const textTasks: string[] = ['text-classification', 'text-generation', 'zero-shot-classification'];
+  const textTasks: string[] = ['text-classification', 'text-generation', 'zero-shot-classification', 'fill-mask', 'sentence-similarity', 'token-classification', 'question-answering', 'summarization', 'translation'];
   if (textTasks.includes(config.task)) {
     return emitTextPreprocessBlock(config);
   }

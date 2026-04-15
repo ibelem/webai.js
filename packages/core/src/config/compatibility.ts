@@ -22,6 +22,13 @@ const TASK_INPUT_MATRIX: Record<TaskType, Set<InputMode>> = {
   'text-classification': new Set(['file']),
   'text-generation': new Set(['file']),
   'zero-shot-classification': new Set(['file']),
+  'fill-mask': new Set(['file']),
+  'sentence-similarity': new Set(['file']),
+  'depth-estimation': new Set(['file', 'camera', 'video', 'screen']),
+  'token-classification': new Set(['file']),
+  'question-answering': new Set(['file']),
+  'summarization': new Set(['file']),
+  'translation': new Set(['file']),
 };
 
 /**
@@ -38,6 +45,13 @@ const TASK_ENGINE_MATRIX: Record<TaskType, Set<Engine>> = {
   'text-classification': new Set(['ort', 'litert', 'webnn']),
   'text-generation': new Set(['ort', 'litert', 'webnn']),
   'zero-shot-classification': new Set(['ort', 'litert', 'webnn']),
+  'fill-mask': new Set(['ort', 'litert', 'webnn']),
+  'sentence-similarity': new Set(['ort', 'litert', 'webnn']),
+  'depth-estimation': new Set(['ort', 'litert', 'webnn']),
+  'token-classification': new Set(['ort', 'litert', 'webnn']),
+  'question-answering': new Set(['ort', 'litert', 'webnn']),
+  'summarization': new Set(['ort', 'litert', 'webnn']),
+  'translation': new Set(['ort', 'litert', 'webnn']),
 };
 
 export class ConfigValidationError extends Error {

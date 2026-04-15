@@ -106,6 +106,43 @@ describe('emitPreprocessBlock', () => {
     expect(block.code).not.toContain('): Uint8ClampedArray');
     expect(block.code).not.toMatch(/\w+: number/);
   });
+
+  it('routes fill-mask to text preprocessing', () => {
+    const block = emitPreprocessBlock(makeConfig({ task: 'fill-mask' }));
+    expect(block.id).toBe('preprocess');
+    expect(block.exports).toContain('tokenizeText');
+  });
+
+  it('routes sentence-similarity to text preprocessing', () => {
+    const block = emitPreprocessBlock(makeConfig({ task: 'sentence-similarity' }));
+    expect(block.id).toBe('preprocess');
+    expect(block.exports).toContain('tokenizeText');
+  });
+
+  it('uses image preprocessing for depth-estimation', () => {
+    const block = emitPreprocessBlock(makeConfig({ task: 'depth-estimation' }));
+    expect(block.exports).toEqual(['resizeImage', 'normalize', 'toNCHW', 'preprocessImage']);
+  });
+
+  it('routes token-classification to text preprocessing', () => {
+    const block = emitPreprocessBlock(makeConfig({ task: 'token-classification' }));
+    expect(block.exports).toContain('tokenizeText');
+  });
+
+  it('routes question-answering to text preprocessing', () => {
+    const block = emitPreprocessBlock(makeConfig({ task: 'question-answering' }));
+    expect(block.exports).toContain('tokenizeText');
+  });
+
+  it('routes summarization to text preprocessing', () => {
+    const block = emitPreprocessBlock(makeConfig({ task: 'summarization' }));
+    expect(block.exports).toContain('tokenizeText');
+  });
+
+  it('routes translation to text preprocessing', () => {
+    const block = emitPreprocessBlock(makeConfig({ task: 'translation' }));
+    expect(block.exports).toContain('tokenizeText');
+  });
 });
 
 describe('emitPostprocessBlock', () => {
@@ -198,6 +235,112 @@ describe('emitPostprocessBlock', () => {
   it('uses same exports for text-classification as image-classification', () => {
     const block = emitPostprocessBlock(makeConfig({ task: 'text-classification' }));
     expect(block.exports).toEqual(['softmax', 'topK', 'postprocessResults']);
+  });
+
+  it('exports softmax, topK, postprocessFillMask for fill-mask', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'fill-mask' }));
+    expect(block.exports).toEqual(['softmax', 'topK', 'postprocessFillMask']);
+  });
+
+  it('fill-mask code contains postprocessFillMask function', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'fill-mask' }));
+    expect(block.code).toContain('function postprocessFillMask(');
+    expect(block.code).toContain('function softmax(');
+    expect(block.code).toContain('function topK(');
+  });
+
+  it('exports cosineSimilarity, postprocessSimilarity for sentence-similarity', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'sentence-similarity' }));
+    expect(block.exports).toEqual(['cosineSimilarity', 'postprocessSimilarity']);
+  });
+
+  it('sentence-similarity code contains cosine similarity computation', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'sentence-similarity' }));
+    expect(block.code).toContain('function cosineSimilarity(');
+    expect(block.code).toContain('function postprocessSimilarity(');
+    expect(block.code).toContain('Math.sqrt');
+  });
+
+  it('exports depthNormalize, depthToColormap, postprocessDepth for depth-estimation', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'depth-estimation' }));
+    expect(block.exports).toEqual(['depthNormalize', 'depthToColormap', 'postprocessDepth']);
+  });
+
+  it('depth-estimation code contains normalize and colormap functions', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'depth-estimation' }));
+    expect(block.code).toContain('function depthNormalize(');
+    expect(block.code).toContain('function depthToColormap(');
+    expect(block.code).toContain('function postprocessDepth(');
+    expect(block.code).toContain('Uint8ClampedArray');
+  });
+
+  it('depth-estimation emits TypeScript annotations when lang=ts', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'depth-estimation', lang: 'ts' }));
+    expect(block.code).toContain(': Float32Array');
+    expect(block.code).toContain(': Uint8ClampedArray');
+  });
+
+  it('exports tokenArgmax, extractSpans, postprocessTokenClassification for token-classification', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'token-classification' }));
+    expect(block.exports).toEqual(['tokenArgmax', 'extractSpans', 'postprocessTokenClassification']);
+  });
+
+  it('token-classification code contains argmax and span extraction', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'token-classification' }));
+    expect(block.code).toContain('function tokenArgmax(');
+    expect(block.code).toContain('function extractSpans(');
+    expect(block.code).toContain('function postprocessTokenClassification(');
+  });
+
+  it('token-classification emits TypeScript annotations when lang=ts', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'token-classification', lang: 'ts' }));
+    expect(block.code).toContain(': number[]');
+    expect(block.code).toContain('label: number');
+  });
+
+  it('exports postprocessQA for question-answering', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'question-answering' }));
+    expect(block.exports).toEqual(['postprocessQA']);
+  });
+
+  it('question-answering code contains span extraction from start/end logits', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'question-answering' }));
+    expect(block.code).toContain('function postprocessQA(');
+    expect(block.code).toContain('startLogits');
+    expect(block.code).toContain('endLogits');
+    expect(block.code).toContain('startIndex');
+    expect(block.code).toContain('endIndex');
+  });
+
+  it('exports seq2seqGreedyDecode, postprocessSummarization for summarization', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'summarization' }));
+    expect(block.exports).toEqual(['seq2seqGreedyDecode', 'postprocessSummarization']);
+  });
+
+  it('summarization code contains seq2seq decode with EOS handling', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'summarization' }));
+    expect(block.code).toContain('function seq2seqGreedyDecode(');
+    expect(block.code).toContain('function postprocessSummarization(');
+    expect(block.code).toContain('eosTokenId');
+  });
+
+  it('exports seq2seqGreedyDecode, postprocessTranslation for translation', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'translation' }));
+    expect(block.exports).toEqual(['seq2seqGreedyDecode', 'postprocessTranslation']);
+  });
+
+  it('translation code contains seq2seq decode', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'translation' }));
+    expect(block.code).toContain('function seq2seqGreedyDecode(');
+    expect(block.code).toContain('function postprocessTranslation(');
+  });
+
+  it('summarization and translation share seq2seqGreedyDecode', () => {
+    const sumBlock = emitPostprocessBlock(makeConfig({ task: 'summarization' }));
+    const transBlock = emitPostprocessBlock(makeConfig({ task: 'translation' }));
+    // Both should contain the same shared decode function
+    expect(sumBlock.code).toContain('function seq2seqGreedyDecode(');
+    expect(transBlock.code).toContain('function seq2seqGreedyDecode(');
   });
 });
 

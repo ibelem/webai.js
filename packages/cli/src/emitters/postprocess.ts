@@ -9,6 +9,13 @@
  *   object-detection      → iou + nms + decodeDetections
  *   image-segmentation    → argmaxMask
  *   feature-extraction    → postprocessEmbeddings (passthrough)
+ *   fill-mask             → softmax + topK + postprocessFillMask
+ *   sentence-similarity   → cosineSimilarity + postprocessSimilarity
+ *   depth-estimation      → depthNormalize + depthToColormap + postprocessDepth
+ *   token-classification  → tokenArgmax + extractSpans
+ *   question-answering    → postprocessQA (start/end span extraction)
+ *   summarization         → seq2seqGreedyDecode + postprocessSummarization
+ *   translation           → seq2seqGreedyDecode + postprocessTranslation
  */
 
 import type { ResolvedConfig } from '@webai/core';
@@ -492,6 +499,356 @@ function postprocessGeneration(
 }`;
 }
 
+// ---- Fill-Mask: softmax + topK over masked position ----
+
+function emitPostprocessFillMask(ts: boolean): string {
+  const t = ts;
+  return `/**
+ * Postprocess fill-mask output: get top predictions for the masked position.
+ * Applies softmax over the logits at the masked token index, then returns
+ * the top-k token indices with their probabilities.
+ *
+ * @param logits - Model output logits for the masked position (Float32Array)
+ * @param k - Number of top predictions to return (default: 5)
+ * @returns Top-k token indices and their probabilities
+ */
+function postprocessFillMask(
+  logits${t ? ': Float32Array' : ''},
+  k${t ? ': number' : ''} = 5
+)${t ? ': { indices: number[]; values: number[] }' : ''} {
+  const probs = softmax(logits);
+  return topK(probs, k);
+}`;
+}
+
+// ---- Sentence Similarity: cosine similarity ----
+
+function emitCosineSimilarity(ts: boolean): string {
+  const t = ts;
+  return `/**
+ * Compute cosine similarity between two embedding vectors.
+ * Returns a value in [-1, 1] where 1 = identical direction.
+ */
+function cosineSimilarity(
+  a${t ? ': Float32Array' : ''},
+  b${t ? ': Float32Array' : ''}
+)${t ? ': number' : ''} {
+  let dot = 0;
+  let normA = 0;
+  let normB = 0;
+  for (let i = 0; i < a.length; i++) {
+    dot += a[i] * b[i];
+    normA += a[i] * a[i];
+    normB += b[i] * b[i];
+  }
+  const denom = Math.sqrt(normA) * Math.sqrt(normB);
+  return denom > 0 ? dot / denom : 0;
+}`;
+}
+
+function emitPostprocessSimilarity(ts: boolean): string {
+  const t = ts;
+  return `/**
+ * Postprocess sentence-similarity: compute similarity between two embeddings.
+ * Returns cosine similarity in [-1, 1].
+ *
+ * @param embeddingA - First sentence embedding (Float32Array)
+ * @param embeddingB - Second sentence embedding (Float32Array)
+ * @returns Cosine similarity score
+ */
+function postprocessSimilarity(
+  embeddingA${t ? ': Float32Array' : ''},
+  embeddingB${t ? ': Float32Array' : ''}
+)${t ? ': number' : ''} {
+  return cosineSimilarity(embeddingA, embeddingB);
+}`;
+}
+
+// ---- Depth Estimation: normalize + colormap visualization ----
+
+function emitDepthNormalize(ts: boolean): string {
+  const t = ts;
+  return `/**
+ * Normalize raw depth map to [0, 1] using min-max scaling.
+ *
+ * @param depthMap - Raw depth predictions (Float32Array)
+ * @returns Normalized depth values in [0, 1]
+ */
+function depthNormalize(depthMap${t ? ': Float32Array' : ''})${t ? ': Float32Array' : ''} {
+  let min = Infinity;
+  let max = -Infinity;
+  for (let i = 0; i < depthMap.length; i++) {
+    if (depthMap[i] < min) min = depthMap[i];
+    if (depthMap[i] > max) max = depthMap[i];
+  }
+
+  const range = max - min;
+  const out = new Float32Array(depthMap.length);
+  for (let i = 0; i < depthMap.length; i++) {
+    out[i] = range > 0 ? (depthMap[i] - min) / range : 0;
+  }
+  return out;
+}`;
+}
+
+function emitDepthToColormap(ts: boolean): string {
+  const t = ts;
+  return `/**
+ * Convert normalized depth map [0,1] to RGBA colormap for visualization.
+ * Uses a jet-like colormap: blue (near) → green → red (far).
+ *
+ * @param depth - Normalized depth values in [0, 1]
+ * @param width - Image width
+ * @param height - Image height
+ * @returns RGBA pixel data (Uint8ClampedArray) for canvas rendering
+ */
+function depthToColormap(
+  depth${t ? ': Float32Array' : ''},
+  width${t ? ': number' : ''},
+  height${t ? ': number' : ''}
+)${t ? ': Uint8ClampedArray' : ''} {
+  const rgba = new Uint8ClampedArray(width * height * 4);
+  for (let i = 0; i < depth.length; i++) {
+    const d = depth[i];
+    const idx = i * 4;
+    let r, g, b;
+    if (d < 0.25) {
+      r = 0; g = Math.round(d * 4 * 255); b = 255;
+    } else if (d < 0.5) {
+      r = 0; g = 255; b = Math.round((1 - (d - 0.25) * 4) * 255);
+    } else if (d < 0.75) {
+      r = Math.round((d - 0.5) * 4 * 255); g = 255; b = 0;
+    } else {
+      r = 255; g = Math.round((1 - (d - 0.75) * 4) * 255); b = 0;
+    }
+    rgba[idx] = r;
+    rgba[idx + 1] = g;
+    rgba[idx + 2] = b;
+    rgba[idx + 3] = 255;
+  }
+  return rgba;
+}`;
+}
+
+function emitPostprocessDepth(ts: boolean): string {
+  const t = ts;
+  return `/**
+ * Postprocess depth estimation model output.
+ * Normalizes the raw depth map for use and visualization.
+ *
+ * @param output - Raw model output (Float32Array)
+ * @returns Normalized depth map in [0, 1]
+ */
+function postprocessDepth(output${t ? ': Float32Array' : ''})${t ? ': Float32Array' : ''} {
+  return depthNormalize(output);
+}`;
+}
+
+// ---- Token Classification (NER): per-token argmax + IOB span extraction ----
+
+function emitTokenArgmax(ts: boolean): string {
+  const t = ts;
+  return `/**
+ * Argmax over per-token logits to get predicted label index per token.
+ *
+ * @param logits - Model output (Float32Array), shape [1, seqLen, numLabels]
+ * @param seqLen - Number of tokens
+ * @param numLabels - Number of label classes
+ * @returns Array of label indices, one per token
+ */
+function tokenArgmax(
+  logits${t ? ': Float32Array' : ''},
+  seqLen${t ? ': number' : ''},
+  numLabels${t ? ': number' : ''}
+)${t ? ': number[]' : ''} {
+  const labels${t ? ': number[]' : ''} = [];
+  for (let t = 0; t < seqLen; t++) {
+    let bestIdx = 0;
+    let bestVal = logits[t * numLabels];
+    for (let l = 1; l < numLabels; l++) {
+      const val = logits[t * numLabels + l];
+      if (val > bestVal) {
+        bestVal = val;
+        bestIdx = l;
+      }
+    }
+    labels.push(bestIdx);
+  }
+  return labels;
+}`;
+}
+
+function emitExtractSpans(ts: boolean): string {
+  const t = ts;
+  const spanType = t ? ': Array<{ label: number; start: number; end: number }>' : '';
+  return `/**
+ * Extract contiguous entity spans from IOB-style label indices.
+ * Groups consecutive tokens with the same non-O label into spans.
+ * Label index 0 is treated as "O" (outside any entity).
+ *
+ * @param labels - Per-token label indices
+ * @returns Array of spans with label index, start token, end token (exclusive)
+ */
+function extractSpans(labels${t ? ': number[]' : ''})${spanType} {
+  const spans${t ? ': Array<{ label: number; start: number; end: number }>' : ''} = [];
+  let current${t ? ': { label: number; start: number; end: number } | null' : ''} = null;
+
+  for (let i = 0; i < labels.length; i++) {
+    const label = labels[i];
+    if (label === 0) {
+      if (current) { spans.push(current); current = null; }
+    } else if (current && current.label === label) {
+      current.end = i + 1;
+    } else {
+      if (current) spans.push(current);
+      current = { label, start: i, end: i + 1 };
+    }
+  }
+  if (current) spans.push(current);
+  return spans;
+}`;
+}
+
+function emitPostprocessTokenClassification(ts: boolean): string {
+  const t = ts;
+  return `/**
+ * Postprocess token classification (NER) output.
+ * Performs argmax per token, then extracts entity spans.
+ *
+ * @param logits - Raw model output (Float32Array), shape [1, seqLen, numLabels]
+ * @param seqLen - Number of tokens
+ * @param numLabels - Number of label classes
+ * @returns Entity spans with label index and token positions
+ */
+function postprocessTokenClassification(
+  logits${t ? ': Float32Array' : ''},
+  seqLen${t ? ': number' : ''},
+  numLabels${t ? ': number' : ''}
+)${t ? ': Array<{ label: number; start: number; end: number }>' : ''} {
+  const labels = tokenArgmax(logits, seqLen, numLabels);
+  return extractSpans(labels);
+}`;
+}
+
+// ---- Question Answering: start/end logit span extraction ----
+
+function emitPostprocessQA(ts: boolean): string {
+  const t = ts;
+  return `/**
+ * Postprocess extractive question answering output.
+ * Finds the best answer span from start and end logits.
+ *
+ * @param startLogits - Start position logits (Float32Array), one per token
+ * @param endLogits - End position logits (Float32Array), one per token
+ * @param maxAnswerLen - Maximum answer length in tokens (default: 15)
+ * @returns Best span: { startIndex, endIndex, score }
+ */
+function postprocessQA(
+  startLogits${t ? ': Float32Array' : ''},
+  endLogits${t ? ': Float32Array' : ''},
+  maxAnswerLen${t ? ': number' : ''} = 15
+)${t ? ': { startIndex: number; endIndex: number; score: number }' : ''} {
+  const len = startLogits.length;
+  let bestScore = -Infinity;
+  let bestStart = 0;
+  let bestEnd = 0;
+
+  for (let s = 0; s < len; s++) {
+    for (let e = s; e < Math.min(s + maxAnswerLen, len); e++) {
+      const score = startLogits[s] + endLogits[e];
+      if (score > bestScore) {
+        bestScore = score;
+        bestStart = s;
+        bestEnd = e;
+      }
+    }
+  }
+
+  return { startIndex: bestStart, endIndex: bestEnd, score: bestScore };
+}`;
+}
+
+// ---- Summarization / Translation: shared seq2seq greedy decode ----
+
+function emitSeq2SeqGreedyDecode(ts: boolean): string {
+  const t = ts;
+  return `/**
+ * Greedy decode for seq2seq models (summarization, translation).
+ * Extracts the most likely token at each output position via argmax.
+ *
+ * @param logits - Decoder output logits (Float32Array), shape [1, seqLen, vocabSize]
+ * @param seqLen - Output sequence length
+ * @param vocabSize - Vocabulary size
+ * @param eosTokenId - End-of-sequence token ID (stops decoding, default: 1)
+ * @returns Array of decoded token IDs
+ */
+function seq2seqGreedyDecode(
+  logits${t ? ': Float32Array' : ''},
+  seqLen${t ? ': number' : ''},
+  vocabSize${t ? ': number' : ''},
+  eosTokenId${t ? ': number' : ''} = 1
+)${t ? ': number[]' : ''} {
+  const tokens${t ? ': number[]' : ''} = [];
+
+  for (let t = 0; t < seqLen; t++) {
+    const offset = t * vocabSize;
+    let bestIdx = 0;
+    let bestVal = logits[offset];
+    for (let v = 1; v < vocabSize; v++) {
+      const val = logits[offset + v];
+      if (val > bestVal) {
+        bestVal = val;
+        bestIdx = v;
+      }
+    }
+    if (bestIdx === eosTokenId) break;
+    tokens.push(bestIdx);
+  }
+
+  return tokens;
+}`;
+}
+
+function emitPostprocessSummarization(ts: boolean): string {
+  const t = ts;
+  return `/**
+ * Postprocess summarization model output.
+ * Greedy-decodes the output sequence from decoder logits.
+ *
+ * @param logits - Decoder output logits (Float32Array), shape [1, seqLen, vocabSize]
+ * @param seqLen - Output sequence length
+ * @param vocabSize - Vocabulary size
+ * @returns Decoded token IDs for the summary
+ */
+function postprocessSummarization(
+  logits${t ? ': Float32Array' : ''},
+  seqLen${t ? ': number' : ''},
+  vocabSize${t ? ': number' : ''}
+)${t ? ': number[]' : ''} {
+  return seq2seqGreedyDecode(logits, seqLen, vocabSize);
+}`;
+}
+
+function emitPostprocessTranslation(ts: boolean): string {
+  const t = ts;
+  return `/**
+ * Postprocess translation model output.
+ * Greedy-decodes the output sequence from decoder logits.
+ *
+ * @param logits - Decoder output logits (Float32Array), shape [1, seqLen, vocabSize]
+ * @param seqLen - Output sequence length
+ * @param vocabSize - Vocabulary size
+ * @returns Decoded token IDs for the translation
+ */
+function postprocessTranslation(
+  logits${t ? ': Float32Array' : ''},
+  seqLen${t ? ': number' : ''},
+  vocabSize${t ? ': number' : ''}
+)${t ? ': number[]' : ''} {
+  return seq2seqGreedyDecode(logits, seqLen, vocabSize);
+}`;
+}
+
 // ---- Block emitter dispatch ----
 
 /**
@@ -506,6 +863,13 @@ function postprocessGeneration(
  *   text-to-speech           → playAudio + postprocessAudio
  *   zero-shot-classification → postprocessZeroShot
  *   text-generation          → sampleNextToken + postprocessGeneration
+ *   fill-mask                → softmax + topK + postprocessFillMask
+ *   sentence-similarity      → cosineSimilarity + postprocessSimilarity
+ *   depth-estimation         → depthNormalize + depthToColormap + postprocessDepth
+ *   token-classification     → tokenArgmax + extractSpans + postprocessTokenClassification
+ *   question-answering       → postprocessQA
+ *   summarization            → seq2seqGreedyDecode + postprocessSummarization
+ *   translation              → seq2seqGreedyDecode + postprocessTranslation
  */
 export function emitPostprocessBlock(config: ResolvedConfig): CodeBlock {
   const ts = config.lang === 'ts';
@@ -566,6 +930,50 @@ export function emitPostprocessBlock(config: ResolvedConfig): CodeBlock {
       parts.push(emitSampleNextToken(ts));
       parts.push(emitPostprocessGeneration(ts));
       exports.push('sampleNextToken', 'postprocessGeneration');
+      break;
+
+    case 'fill-mask':
+      parts.push(emitSoftmax(ts));
+      parts.push(emitTopK(ts));
+      parts.push(emitPostprocessFillMask(ts));
+      exports.push('softmax', 'topK', 'postprocessFillMask');
+      break;
+
+    case 'sentence-similarity':
+      parts.push(emitCosineSimilarity(ts));
+      parts.push(emitPostprocessSimilarity(ts));
+      exports.push('cosineSimilarity', 'postprocessSimilarity');
+      break;
+
+    case 'depth-estimation':
+      parts.push(emitDepthNormalize(ts));
+      parts.push(emitDepthToColormap(ts));
+      parts.push(emitPostprocessDepth(ts));
+      exports.push('depthNormalize', 'depthToColormap', 'postprocessDepth');
+      break;
+
+    case 'token-classification':
+      parts.push(emitTokenArgmax(ts));
+      parts.push(emitExtractSpans(ts));
+      parts.push(emitPostprocessTokenClassification(ts));
+      exports.push('tokenArgmax', 'extractSpans', 'postprocessTokenClassification');
+      break;
+
+    case 'question-answering':
+      parts.push(emitPostprocessQA(ts));
+      exports.push('postprocessQA');
+      break;
+
+    case 'summarization':
+      parts.push(emitSeq2SeqGreedyDecode(ts));
+      parts.push(emitPostprocessSummarization(ts));
+      exports.push('seq2seqGreedyDecode', 'postprocessSummarization');
+      break;
+
+    case 'translation':
+      parts.push(emitSeq2SeqGreedyDecode(ts));
+      parts.push(emitPostprocessTranslation(ts));
+      exports.push('seq2seqGreedyDecode', 'postprocessTranslation');
       break;
 
     default:

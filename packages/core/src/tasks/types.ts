@@ -12,7 +12,14 @@ export type TaskType =
   | 'text-to-speech'
   | 'text-classification'
   | 'text-generation'
-  | 'zero-shot-classification';
+  | 'zero-shot-classification'
+  | 'fill-mask'
+  | 'sentence-similarity'
+  | 'depth-estimation'
+  | 'token-classification'
+  | 'question-answering'
+  | 'summarization'
+  | 'translation';
 
 export type Confidence = 'high' | 'medium' | 'low';
 
