@@ -30,7 +30,7 @@ import { ConfigValidationError, validateTaskInput, validateTaskEngine } from './
 
 const VALID_ENGINES = new Set<Engine>(['ort', 'litert', 'webnn']);
 const VALID_BACKENDS = new Set<Backend>(['auto', 'wasm', 'webgpu', 'webnn-cpu', 'webnn-gpu', 'webnn-npu']);
-const VALID_FRAMEWORKS = new Set<Framework>(['html', 'vanilla-vite', 'react-vite', 'nextjs', 'sveltekit', 'vue-vite', 'nuxt', 'astro']);
+const VALID_FRAMEWORKS = new Set<Framework>(['html', 'vanilla-vite', 'react-vite', 'nextjs', 'svelte-vite', 'sveltekit', 'vue-vite', 'nuxt', 'astro']);
 const VALID_MODES = new Set<CodeMode>(['raw', 'compact']);
 const VALID_LANGS = new Set<OutputLang>(['js', 'ts']);
 const VALID_THEMES = new Set<Theme>(['dark', 'light']);

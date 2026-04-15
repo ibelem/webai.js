@@ -54,6 +54,7 @@ const FRAMEWORKS: SelectOption[] = [
   { value: 'vanilla-vite', label: 'Vanilla + Vite' },
   { value: 'react-vite', label: 'React + Vite' },
   { value: 'nextjs', label: 'Next.js' },
+  { value: 'svelte-vite', label: 'Svelte + Vite' },
   { value: 'sveltekit', label: 'SvelteKit' },
   { value: 'vue-vite', label: 'Vue + Vite' },
   { value: 'nuxt', label: 'Nuxt' },

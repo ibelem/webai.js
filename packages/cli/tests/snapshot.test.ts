@@ -595,6 +595,34 @@ describe('text task snapshots', () => {
   });
 });
 
+// ---- Svelte + Vite snapshots ----
+
+describe('snapshot — svelte-vite', () => {
+  it('image-classification + svelte-vite + file + ort + js', () => {
+    const output = serializeFiles(makeConfig({
+      framework: 'svelte-vite',
+      lang: 'js',
+      mode: 'raw',
+    }));
+    expect(output).toMatchSnapshot();
+  });
+
+  it('text-classification + svelte-vite + file + ort + ts', () => {
+    const config = makeConfig({
+      task: 'text-classification',
+      input: 'file',
+      engine: 'ort',
+      framework: 'svelte-vite',
+      lang: 'ts',
+      modelMeta: textClassMeta,
+      modelPath: './bert-sentiment.onnx',
+      modelName: 'bert-sentiment',
+      preprocess: textPreprocess,
+    });
+    expect(serializeFiles(config)).toMatchSnapshot();
+  });
+});
+
 // ---- Vue + Vite snapshots ----
 
 describe('snapshot — vue-vite', () => {

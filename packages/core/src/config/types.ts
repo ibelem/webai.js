@@ -18,7 +18,7 @@ export type Engine = 'ort' | 'litert' | 'webnn';
 export type Backend = 'auto' | 'wasm' | 'webgpu' | 'webnn-cpu' | 'webnn-gpu' | 'webnn-npu';
 
 /** Output framework template */
-export type Framework = 'html' | 'vanilla-vite' | 'react-vite' | 'nextjs' | 'sveltekit' | 'vue-vite' | 'nuxt' | 'astro';
+export type Framework = 'html' | 'vanilla-vite' | 'react-vite' | 'nextjs' | 'svelte-vite' | 'sveltekit' | 'vue-vite' | 'nuxt' | 'astro';
 
 /** Code style */
 export type CodeMode = 'raw' | 'compact';

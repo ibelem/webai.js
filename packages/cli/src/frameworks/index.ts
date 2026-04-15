@@ -14,6 +14,7 @@ import { emitHtml } from './html.js';
 import { emitVanillaVite } from './vanilla-vite.js';
 import { emitReactVite } from './react-vite.js';
 import { emitNextjs } from './nextjs.js';
+import { emitSvelteVite } from './svelte-vite.js';
 import { emitSvelteKit } from './sveltekit.js';
 import { emitVueVite } from './vue-vite.js';
 import { emitNuxt } from './nuxt.js';
@@ -36,6 +37,8 @@ export function emitLayer2(config: ResolvedConfig, blocks: CodeBlock[]): Generat
       return emitReactVite(config, blocks);
     case 'nextjs':
       return emitNextjs(config, blocks);
+    case 'svelte-vite':
+      return emitSvelteVite(config, blocks);
     case 'sveltekit':
       return emitSvelteKit(config, blocks);
     case 'vue-vite':
@@ -53,6 +56,7 @@ export { emitHtml } from './html.js';
 export { emitVanillaVite } from './vanilla-vite.js';
 export { emitReactVite } from './react-vite.js';
 export { emitNextjs } from './nextjs.js';
+export { emitSvelteVite } from './svelte-vite.js';
 export { emitSvelteKit } from './sveltekit.js';
 export { emitVueVite } from './vue-vite.js';
 export { emitNuxt } from './nuxt.js';
