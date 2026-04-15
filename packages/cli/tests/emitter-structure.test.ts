@@ -155,6 +155,46 @@ describe('emitPreprocessBlock', () => {
     // Audio preprocessing exports mel spectrogram functions
     expect(block.code).toContain('melSpectrogram');
   });
+
+  it('routes speaker-diarization to audio preprocessing', () => {
+    const block = emitPreprocessBlock(makeConfig({ task: 'speaker-diarization' }));
+    expect(block.code).toContain('melSpectrogram');
+  });
+
+  it('routes voice-activity-detection to audio preprocessing', () => {
+    const block = emitPreprocessBlock(makeConfig({ task: 'voice-activity-detection' }));
+    expect(block.code).toContain('melSpectrogram');
+  });
+
+  it('routes text2text-generation to text preprocessing', () => {
+    const block = emitPreprocessBlock(makeConfig({ task: 'text2text-generation' }));
+    expect(block.exports).toContain('tokenizeText');
+  });
+
+  it('routes conversational to text preprocessing', () => {
+    const block = emitPreprocessBlock(makeConfig({ task: 'conversational' }));
+    expect(block.exports).toContain('tokenizeText');
+  });
+
+  it('routes table-question-answering to text preprocessing', () => {
+    const block = emitPreprocessBlock(makeConfig({ task: 'table-question-answering' }));
+    expect(block.exports).toContain('tokenizeText');
+  });
+
+  it('uses image preprocessing for visual-question-answering', () => {
+    const block = emitPreprocessBlock(makeConfig({ task: 'visual-question-answering' }));
+    expect(block.exports).toEqual(['resizeImage', 'normalize', 'toNCHW', 'preprocessImage']);
+  });
+
+  it('uses image preprocessing for document-question-answering', () => {
+    const block = emitPreprocessBlock(makeConfig({ task: 'document-question-answering' }));
+    expect(block.exports).toEqual(['resizeImage', 'normalize', 'toNCHW', 'preprocessImage']);
+  });
+
+  it('uses image preprocessing for image-text-to-text', () => {
+    const block = emitPreprocessBlock(makeConfig({ task: 'image-text-to-text' }));
+    expect(block.exports).toEqual(['resizeImage', 'normalize', 'toNCHW', 'preprocessImage']);
+  });
 });
 
 describe('emitPostprocessBlock', () => {
@@ -391,6 +431,161 @@ describe('emitPostprocessBlock', () => {
     const block = emitPostprocessBlock(makeConfig({ task: 'audio-to-audio', lang: 'ts' }));
     expect(block.code).toContain(': Float32Array');
     expect(block.code).toContain(': Promise<void>');
+  });
+
+  // ---- Speaker Diarization ----
+
+  it('exports postprocessDiarization for speaker-diarization', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'speaker-diarization' }));
+    expect(block.exports).toEqual(['postprocessDiarization']);
+  });
+
+  it('speaker-diarization code contains segment extraction', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'speaker-diarization' }));
+    expect(block.code).toContain('function postprocessDiarization(');
+    expect(block.code).toContain('currentSpeaker');
+    expect(block.code).toContain('frameDuration');
+  });
+
+  it('speaker-diarization emits TypeScript annotations when lang=ts', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'speaker-diarization', lang: 'ts' }));
+    expect(block.code).toContain(': Float32Array');
+    expect(block.code).toContain(': number');
+  });
+
+  // ---- Voice Activity Detection ----
+
+  it('exports postprocessVAD for voice-activity-detection', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'voice-activity-detection' }));
+    expect(block.exports).toEqual(['postprocessVAD']);
+  });
+
+  it('voice-activity-detection code contains threshold logic', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'voice-activity-detection' }));
+    expect(block.code).toContain('function postprocessVAD(');
+    expect(block.code).toContain('threshold');
+    expect(block.code).toContain('inSpeech');
+  });
+
+  it('voice-activity-detection emits TypeScript annotations when lang=ts', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'voice-activity-detection', lang: 'ts' }));
+    expect(block.code).toContain(': Float32Array');
+    expect(block.code).toContain(': number');
+  });
+
+  // ---- Text2Text Generation ----
+
+  it('exports seq2seqGreedyDecode, postprocessText2Text for text2text-generation', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'text2text-generation' }));
+    expect(block.exports).toEqual(['seq2seqGreedyDecode', 'postprocessText2Text']);
+  });
+
+  it('text2text-generation code contains seq2seq decode', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'text2text-generation' }));
+    expect(block.code).toContain('function seq2seqGreedyDecode(');
+    expect(block.code).toContain('function postprocessText2Text(');
+  });
+
+  it('text2text-generation emits TypeScript annotations when lang=ts', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'text2text-generation', lang: 'ts' }));
+    expect(block.code).toContain(': Float32Array');
+    expect(block.code).toContain(': number[]');
+  });
+
+  // ---- Conversational ----
+
+  it('exports sampleNextToken, postprocessConversational for conversational', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'conversational' }));
+    expect(block.exports).toEqual(['sampleNextToken', 'postprocessConversational']);
+  });
+
+  it('conversational code contains token sampling', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'conversational' }));
+    expect(block.code).toContain('function sampleNextToken(');
+    expect(block.code).toContain('function postprocessConversational(');
+  });
+
+  it('conversational emits TypeScript annotations when lang=ts', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'conversational', lang: 'ts' }));
+    expect(block.code).toContain(': Float32Array');
+    expect(block.code).toContain(': number');
+  });
+
+  // ---- Table Question Answering ----
+
+  it('exports postprocessTableQA for table-question-answering', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'table-question-answering' }));
+    expect(block.exports).toEqual(['postprocessTableQA']);
+  });
+
+  it('table-question-answering code contains span extraction', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'table-question-answering' }));
+    expect(block.code).toContain('function postprocessTableQA(');
+    expect(block.code).toContain('bestScore');
+    expect(block.code).toContain('startIndex');
+  });
+
+  it('table-question-answering emits TypeScript annotations when lang=ts', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'table-question-answering', lang: 'ts' }));
+    expect(block.code).toContain(': Float32Array');
+    expect(block.code).toContain(': number');
+  });
+
+  // ---- Visual Question Answering ----
+
+  it('exports seq2seqGreedyDecode, postprocessVQA for visual-question-answering', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'visual-question-answering' }));
+    expect(block.exports).toEqual(['seq2seqGreedyDecode', 'postprocessVQA']);
+  });
+
+  it('visual-question-answering code contains seq2seq decode', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'visual-question-answering' }));
+    expect(block.code).toContain('function seq2seqGreedyDecode(');
+    expect(block.code).toContain('function postprocessVQA(');
+  });
+
+  it('visual-question-answering emits TypeScript annotations when lang=ts', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'visual-question-answering', lang: 'ts' }));
+    expect(block.code).toContain(': Float32Array');
+    expect(block.code).toContain(': number[]');
+  });
+
+  // ---- Document Question Answering ----
+
+  it('exports seq2seqGreedyDecode, postprocessDocQA for document-question-answering', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'document-question-answering' }));
+    expect(block.exports).toEqual(['seq2seqGreedyDecode', 'postprocessDocQA']);
+  });
+
+  it('document-question-answering code contains seq2seq decode', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'document-question-answering' }));
+    expect(block.code).toContain('function seq2seqGreedyDecode(');
+    expect(block.code).toContain('function postprocessDocQA(');
+  });
+
+  it('document-question-answering emits TypeScript annotations when lang=ts', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'document-question-answering', lang: 'ts' }));
+    expect(block.code).toContain(': Float32Array');
+    expect(block.code).toContain(': number[]');
+  });
+
+  // ---- Image-Text to Text ----
+
+  it('exports seq2seqGreedyDecode, postprocessImageTextToText for image-text-to-text', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'image-text-to-text' }));
+    expect(block.exports).toEqual(['seq2seqGreedyDecode', 'postprocessImageTextToText']);
+  });
+
+  it('image-text-to-text code contains seq2seq decode', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'image-text-to-text' }));
+    expect(block.code).toContain('function seq2seqGreedyDecode(');
+    expect(block.code).toContain('function postprocessImageTextToText(');
+  });
+
+  it('image-text-to-text emits TypeScript annotations when lang=ts', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'image-text-to-text', lang: 'ts' }));
+    expect(block.code).toContain(': Float32Array');
+    expect(block.code).toContain(': number[]');
   });
 });
 

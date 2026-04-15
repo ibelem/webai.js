@@ -236,6 +236,14 @@ export function setupConfigPanel(
           'translation': 'translation',
           'image-to-text': 'image-to-text',
           'audio-to-audio': 'audio-to-audio',
+          'speaker-diarization': 'speaker-diarization',
+          'voice-activity-detection': 'voice-activity-detection',
+          'text2text-generation': 'text2text-generation',
+          'conversational': 'conversational',
+          'table-question-answering': 'table-question-answering',
+          'visual-question-answering': 'visual-question-answering',
+          'document-question-answering': 'document-question-answering',
+          'image-text-to-text': 'image-text-to-text',
         };
         const mapped = hfTaskMap[result.pipelineTag];
         if (mapped && taskSelect.value !== mapped) {

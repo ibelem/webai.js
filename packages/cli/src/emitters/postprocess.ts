@@ -18,6 +18,14 @@
  *   translation           → seq2seqGreedyDecode + postprocessTranslation
  *   image-to-text         → seq2seqGreedyDecode + postprocessImageToText
  *   audio-to-audio        → normalizeWaveform + playAudio + postprocessAudioToAudio
+ *   speaker-diarization   → postprocessDiarization
+ *   voice-activity-detection → postprocessVAD
+ *   text2text-generation  → seq2seqGreedyDecode + postprocessText2Text
+ *   conversational        → sampleNextToken + postprocessConversational
+ *   table-question-answering → postprocessTableQA
+ *   visual-question-answering → seq2seqGreedyDecode + postprocessVQA
+ *   document-question-answering → seq2seqGreedyDecode + postprocessDocQA
+ *   image-text-to-text    → seq2seqGreedyDecode + postprocessImageTextToText
  */
 
 import type { ResolvedConfig } from '@webai/core';
@@ -915,6 +923,257 @@ function postprocessAudioToAudio(output${t ? ': Float32Array' : ''})${t ? ': Flo
 }`;
 }
 
+// ---- Speaker Diarization: segment timestamps + speaker IDs ----
+
+function emitPostprocessDiarization(ts: boolean): string {
+  const t = ts;
+  const segType = t ? ': Array<{ speaker: number; start: number; end: number }>' : '';
+  return `/**
+ * Postprocess speaker diarization output.
+ * Extracts speaker segments with timestamps from per-frame speaker predictions.
+ *
+ * @param predictions - Per-frame speaker predictions (Float32Array), shape [numFrames, numSpeakers]
+ * @param numFrames - Number of time frames
+ * @param numSpeakers - Number of speakers
+ * @param frameDuration - Duration of each frame in seconds (default: 0.02)
+ * @returns Array of speaker segments with speaker ID and time range
+ */
+function postprocessDiarization(
+  predictions${t ? ': Float32Array' : ''},
+  numFrames${t ? ': number' : ''},
+  numSpeakers${t ? ': number' : ''},
+  frameDuration${t ? ': number' : ''} = 0.02
+)${segType} {
+  const segments${segType} = [];
+  let currentSpeaker = -1;
+  let segStart = 0;
+
+  for (let f = 0; f < numFrames; f++) {
+    let bestSpeaker = 0;
+    let bestVal = predictions[f * numSpeakers];
+    for (let s = 1; s < numSpeakers; s++) {
+      const val = predictions[f * numSpeakers + s];
+      if (val > bestVal) {
+        bestVal = val;
+        bestSpeaker = s;
+      }
+    }
+
+    if (bestSpeaker !== currentSpeaker) {
+      if (currentSpeaker >= 0) {
+        segments.push({ speaker: currentSpeaker, start: segStart, end: f * frameDuration });
+      }
+      currentSpeaker = bestSpeaker;
+      segStart = f * frameDuration;
+    }
+  }
+  if (currentSpeaker >= 0) {
+    segments.push({ speaker: currentSpeaker, start: segStart, end: numFrames * frameDuration });
+  }
+
+  return segments;
+}`;
+}
+
+// ---- Voice Activity Detection: binary speech/silence thresholding ----
+
+function emitPostprocessVAD(ts: boolean): string {
+  const t = ts;
+  const segType = t ? ': Array<{ start: number; end: number; confidence: number }>' : '';
+  return `/**
+ * Postprocess voice activity detection output.
+ * Thresholds per-frame speech probabilities into speech segments.
+ *
+ * @param probabilities - Per-frame speech probabilities (Float32Array)
+ * @param numFrames - Number of time frames
+ * @param frameDuration - Duration of each frame in seconds (default: 0.02)
+ * @param threshold - Speech probability threshold (default: 0.5)
+ * @returns Array of speech segments with time range and average confidence
+ */
+function postprocessVAD(
+  probabilities${t ? ': Float32Array' : ''},
+  numFrames${t ? ': number' : ''},
+  frameDuration${t ? ': number' : ''} = 0.02,
+  threshold${t ? ': number' : ''} = 0.5
+)${segType} {
+  const segments${segType} = [];
+  let inSpeech = false;
+  let segStart = 0;
+  let sumConf = 0;
+  let count = 0;
+
+  for (let f = 0; f < numFrames; f++) {
+    const prob = probabilities[f];
+    if (prob >= threshold && !inSpeech) {
+      inSpeech = true;
+      segStart = f * frameDuration;
+      sumConf = prob;
+      count = 1;
+    } else if (prob >= threshold && inSpeech) {
+      sumConf += prob;
+      count++;
+    } else if (prob < threshold && inSpeech) {
+      segments.push({ start: segStart, end: f * frameDuration, confidence: sumConf / count });
+      inSpeech = false;
+    }
+  }
+  if (inSpeech) {
+    segments.push({ start: segStart, end: numFrames * frameDuration, confidence: sumConf / count });
+  }
+
+  return segments;
+}`;
+}
+
+// ---- Text2Text Generation: seq2seq greedy decode (reuses seq2seqGreedyDecode) ----
+
+function emitPostprocessText2Text(ts: boolean): string {
+  const t = ts;
+  return `/**
+ * Postprocess text-to-text generation model output.
+ * Greedy-decodes the output sequence from decoder logits.
+ *
+ * @param logits - Decoder output logits (Float32Array), shape [1, seqLen, vocabSize]
+ * @param seqLen - Output sequence length
+ * @param vocabSize - Vocabulary size
+ * @returns Decoded token IDs
+ */
+function postprocessText2Text(
+  logits${t ? ': Float32Array' : ''},
+  seqLen${t ? ': number' : ''},
+  vocabSize${t ? ': number' : ''}
+)${t ? ': number[]' : ''} {
+  return seq2seqGreedyDecode(logits, seqLen, vocabSize);
+}`;
+}
+
+// ---- Conversational: autoregressive generation (reuses sampleNextToken) ----
+
+function emitPostprocessConversational(ts: boolean): string {
+  const t = ts;
+  return `/**
+ * Postprocess conversational model output.
+ * Extracts next-token logits for autoregressive response generation.
+ *
+ * @param output - Raw model output (Float32Array), shape [1, seqLen, vocabSize]
+ * @param seqLen - Sequence length
+ * @param vocabSize - Vocabulary size
+ * @returns Logits for the last position (Float32Array of size vocabSize)
+ */
+function postprocessConversational(
+  output${t ? ': Float32Array' : ''},
+  seqLen${t ? ': number' : ''},
+  vocabSize${t ? ': number' : ''}
+)${t ? ': Float32Array' : ''} {
+  const lastOffset = (seqLen - 1) * vocabSize;
+  return output.slice(lastOffset, lastOffset + vocabSize);
+}`;
+}
+
+// ---- Table Question Answering: span extraction from table context ----
+
+function emitPostprocessTableQA(ts: boolean): string {
+  const t = ts;
+  return `/**
+ * Postprocess table question answering output.
+ * Extracts the answer span from start and end logits over a flattened table.
+ *
+ * @param startLogits - Start position logits (Float32Array)
+ * @param endLogits - End position logits (Float32Array)
+ * @param maxAnswerLen - Maximum answer length in tokens (default: 15)
+ * @returns Best span: { startIndex, endIndex, score }
+ */
+function postprocessTableQA(
+  startLogits${t ? ': Float32Array' : ''},
+  endLogits${t ? ': Float32Array' : ''},
+  maxAnswerLen${t ? ': number' : ''} = 15
+)${t ? ': { startIndex: number; endIndex: number; score: number }' : ''} {
+  const len = startLogits.length;
+  let bestScore = -Infinity;
+  let bestStart = 0;
+  let bestEnd = 0;
+
+  for (let s = 0; s < len; s++) {
+    for (let e = s; e < Math.min(s + maxAnswerLen, len); e++) {
+      const score = startLogits[s] + endLogits[e];
+      if (score > bestScore) {
+        bestScore = score;
+        bestStart = s;
+        bestEnd = e;
+      }
+    }
+  }
+
+  return { startIndex: bestStart, endIndex: bestEnd, score: bestScore };
+}`;
+}
+
+// ---- Visual Question Answering: image + question → seq2seq decode ----
+
+function emitPostprocessVQA(ts: boolean): string {
+  const t = ts;
+  return `/**
+ * Postprocess visual question answering model output.
+ * Greedy-decodes the answer sequence from decoder logits.
+ *
+ * @param logits - Decoder output logits (Float32Array), shape [1, seqLen, vocabSize]
+ * @param seqLen - Output sequence length
+ * @param vocabSize - Vocabulary size
+ * @returns Decoded token IDs for the answer
+ */
+function postprocessVQA(
+  logits${t ? ': Float32Array' : ''},
+  seqLen${t ? ': number' : ''},
+  vocabSize${t ? ': number' : ''}
+)${t ? ': number[]' : ''} {
+  return seq2seqGreedyDecode(logits, seqLen, vocabSize);
+}`;
+}
+
+// ---- Document Question Answering: document image → seq2seq decode ----
+
+function emitPostprocessDocQA(ts: boolean): string {
+  const t = ts;
+  return `/**
+ * Postprocess document question answering model output.
+ * Greedy-decodes the answer from decoder logits.
+ *
+ * @param logits - Decoder output logits (Float32Array), shape [1, seqLen, vocabSize]
+ * @param seqLen - Output sequence length
+ * @param vocabSize - Vocabulary size
+ * @returns Decoded token IDs for the answer
+ */
+function postprocessDocQA(
+  logits${t ? ': Float32Array' : ''},
+  seqLen${t ? ': number' : ''},
+  vocabSize${t ? ': number' : ''}
+)${t ? ': number[]' : ''} {
+  return seq2seqGreedyDecode(logits, seqLen, vocabSize);
+}`;
+}
+
+// ---- Image-Text to Text: vision-language model output ----
+
+function emitPostprocessImageTextToText(ts: boolean): string {
+  const t = ts;
+  return `/**
+ * Postprocess image-text-to-text (vision-language) model output.
+ * Greedy-decodes the output sequence from decoder logits.
+ *
+ * @param logits - Decoder output logits (Float32Array), shape [1, seqLen, vocabSize]
+ * @param seqLen - Output sequence length
+ * @param vocabSize - Vocabulary size
+ * @returns Decoded token IDs for the response
+ */
+function postprocessImageTextToText(
+  logits${t ? ': Float32Array' : ''},
+  seqLen${t ? ': number' : ''},
+  vocabSize${t ? ': number' : ''}
+)${t ? ': number[]' : ''} {
+  return seq2seqGreedyDecode(logits, seqLen, vocabSize);
+}`;
+}
+
 // ---- Block emitter dispatch ----
 
 /**
@@ -1055,6 +1314,51 @@ export function emitPostprocessBlock(config: ResolvedConfig): CodeBlock {
       parts.push(emitPlayAudio(ts));
       parts.push(emitPostprocessAudioToAudio(ts));
       exports.push('normalizeWaveform', 'playAudio', 'postprocessAudioToAudio');
+      break;
+
+    case 'speaker-diarization':
+      parts.push(emitPostprocessDiarization(ts));
+      exports.push('postprocessDiarization');
+      break;
+
+    case 'voice-activity-detection':
+      parts.push(emitPostprocessVAD(ts));
+      exports.push('postprocessVAD');
+      break;
+
+    case 'text2text-generation':
+      parts.push(emitSeq2SeqGreedyDecode(ts));
+      parts.push(emitPostprocessText2Text(ts));
+      exports.push('seq2seqGreedyDecode', 'postprocessText2Text');
+      break;
+
+    case 'conversational':
+      parts.push(emitSampleNextToken(ts));
+      parts.push(emitPostprocessConversational(ts));
+      exports.push('sampleNextToken', 'postprocessConversational');
+      break;
+
+    case 'table-question-answering':
+      parts.push(emitPostprocessTableQA(ts));
+      exports.push('postprocessTableQA');
+      break;
+
+    case 'visual-question-answering':
+      parts.push(emitSeq2SeqGreedyDecode(ts));
+      parts.push(emitPostprocessVQA(ts));
+      exports.push('seq2seqGreedyDecode', 'postprocessVQA');
+      break;
+
+    case 'document-question-answering':
+      parts.push(emitSeq2SeqGreedyDecode(ts));
+      parts.push(emitPostprocessDocQA(ts));
+      exports.push('seq2seqGreedyDecode', 'postprocessDocQA');
+      break;
+
+    case 'image-text-to-text':
+      parts.push(emitSeq2SeqGreedyDecode(ts));
+      parts.push(emitPostprocessImageTextToText(ts));
+      exports.push('seq2seqGreedyDecode', 'postprocessImageTextToText');
       break;
 
     default:

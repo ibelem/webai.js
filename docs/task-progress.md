@@ -1,8 +1,8 @@
 # webai.js — Task Implementation Progress
 
-## Implemented Tasks (19/25)
+## Implemented Tasks (27/27)
 
-### Image Tasks (5/5) ✓
+### Image Tasks (5/5) ✓ DONE
 
 | Task | Profile | Preprocess | Postprocess | Emitter | HTML | React | Vanilla | Next.js | Svelte | Web UI Mock | Status |
 |------|---------|------------|-------------|---------|------|-------|---------|---------|--------|-------------|--------|
@@ -12,7 +12,7 @@
 | feature-extraction | Y | Y | passthrough | Y | Y | Y | Y | Y | Y | Y | Done |
 | depth-estimation | Y | Y | depthNormalize+colormap | Y | — | — | — | — | — | Y | Phase 3A |
 
-### Audio Tasks (4/6)
+### Audio Tasks (6/6) ✓ DONE
 
 | Task | Profile | Preprocess | Postprocess | Emitter | HTML | React | Vanilla | Next.js | Svelte | Web UI Mock | Status |
 |------|---------|------------|-------------|---------|------|-------|---------|---------|--------|-------------|--------|
@@ -20,10 +20,10 @@
 | speech-to-text | Y | MFCC | CTC decode | Y | Y | Y | Y | Y | Y | Y | Done |
 | text-to-speech | Y | BPE tokenizer | audio playback | Y | Y | Y | Y | Y | Y | Y | Done |
 | audio-to-audio | Y | MFCC | normalizeWaveform+playAudio | Y | — | — | — | — | — | Y | Phase 3C |
-| speaker-diarization | | | | | | | | | | | — |
-| voice-activity-detection | | | | | | | | | | | — |
+| speaker-diarization | Y | MFCC | segmentSpeakers | Y | — | — | — | — | — | Y | Phase 4 |
+| voice-activity-detection | Y | MFCC | binaryThreshold | Y | — | — | — | — | — | Y | Phase 4 |
 
-### Text Tasks (9/12)
+### Text Tasks (12/12) ✓ DONE
 
 | Task | Profile | Preprocess | Postprocess | Emitter | HTML | React | Vanilla | Next.js | Svelte | Web UI Mock | Status |
 |------|---------|------------|-------------|---------|------|-------|---------|---------|--------|-------------|--------|
@@ -36,18 +36,18 @@
 | question-answering | Y | BPE tokenizer | start/end span extraction | Y | — | — | — | — | — | Y | Phase 3B |
 | summarization | Y | BPE tokenizer | seq2seqGreedyDecode | Y | — | — | — | — | — | Y | Phase 3B |
 | translation | Y | BPE tokenizer | seq2seqGreedyDecode | Y | — | — | — | — | — | Y | Phase 3B |
-| text2text-generation | | | | | | | | | | | — |
-| conversational | | | | | | | | | | | — |
-| table-question-answering | | | | | | | | | | | — |
+| text2text-generation | Y | BPE tokenizer | seq2seqGreedyDecode | Y | — | — | — | — | — | Y | Phase 4 |
+| conversational | Y | BPE tokenizer | sampleNextToken | Y | — | — | — | — | — | Y | Phase 4 |
+| table-question-answering | Y | BPE tokenizer | span extraction | Y | — | — | — | — | — | Y | Phase 4 |
 
-### Multimodal Tasks (1/4)
+### Multimodal Tasks (4/4) ✓ DONE
 
 | Task | Profile | Preprocess | Postprocess | Emitter | HTML | React | Vanilla | Next.js | Svelte | Web UI Mock | Status |
 |------|---------|------------|-------------|---------|------|-------|---------|---------|--------|-------------|--------|
 | image-to-text | Y | Y (image) | seq2seqGreedyDecode | Y | — | — | — | — | — | Y | Phase 3C |
-| visual-question-answering | | | | | | | | | | | — |
-| document-question-answering | | | | | | | | | | | — |
-| image-text-to-text | | | | | | | | | | | — |
+| visual-question-answering | Y | Y (image) | seq2seqGreedyDecode | Y | — | — | — | — | — | Y | Phase 4 |
+| document-question-answering | Y | Y (image) | seq2seqGreedyDecode | Y | — | — | — | — | — | Y | Phase 4 |
+| image-text-to-text | Y | Y (image) | seq2seqGreedyDecode | Y | — | — | — | — | — | Y | Phase 4 |
 
 ---
 
@@ -90,21 +90,28 @@ Added in the video streams session (prior to Phase 3):
 | **image-to-text** | seq2seqGreedyDecode + postprocessImageToText | Done |
 | **audio-to-audio** | normalizeWaveform + playAudio + postprocessAudioToAudio | Done |
 
-### Phase 3D — High Effort (Multimodal) — Not Started
+### Phase 3D — High Effort (Multimodal) ✓ DONE (see Phase 4)
 
-| Task | What's Needed | Effort |
-|------|--------------|--------|
-| **visual-question-answering** | Image encoder + text encoder + decoder, dual input UI | High |
-| **document-question-answering** | Similar to VQA but with document/page images | High |
-| **image-text-to-text** | Vision-language model, combined pipeline | High |
+Moved to Phase 4 below along with remaining audio/text tasks.
+
+### Phase 4 — Remaining Tasks ✓ DONE
+
+| Task | Postprocessing | Status |
+|------|---------------|--------|
+| **speaker-diarization** | segmentSpeakers (per-frame speaker argmax + segment merging) | Done |
+| **voice-activity-detection** | binaryThreshold (speech probability thresholding) | Done |
+| **text2text-generation** | seq2seqGreedyDecode + postprocessText2Text | Done |
+| **conversational** | sampleNextToken + postprocessConversational | Done |
+| **table-question-answering** | postprocessTableQA (start/end span extraction) | Done |
+| **visual-question-answering** | seq2seqGreedyDecode + postprocessVQA | Done |
+| **document-question-answering** | seq2seqGreedyDecode + postprocessDocQA | Done |
+| **image-text-to-text** | seq2seqGreedyDecode + postprocessImageTextToText | Done |
 
 ---
 
 ## Remaining Work
 
-- **Framework UI for Phase 3 tasks** — 9 new tasks have emitters but not framework-specific UI templates (HTML/React/Vanilla/Next.js/SvelteKit). Currently they generate code using the default/fallback UI.
-- **Phase 3D (multimodal)** — visual-question-answering, document-question-answering, image-text-to-text. Requires dual-input UI and more complex encoder-decoder pipelines.
-- **speaker-diarization, voice-activity-detection** — Not planned for near term.
+- **Framework UI for Phase 3/4 tasks** — 17 tasks have emitters but not framework-specific UI templates (HTML/React/Vanilla/Next.js/SvelteKit). Currently they generate code using the default/fallback UI.
 
 ---
 
@@ -130,7 +137,7 @@ Each new task requires:
 ```
 packages/core/src/                    ← Knowledge layer
 ├── tasks/
-│   ├── types.ts                      ← TaskType union (19 tasks)
+│   ├── types.ts                      ← TaskType union (27 tasks)
 │   ├── task-profiles.ts              ← TASK_PROFILES[task]
 │   └── task-detector.ts              ← Auto-detect from model shape
 ├── config/

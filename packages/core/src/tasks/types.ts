@@ -21,7 +21,15 @@ export type TaskType =
   | 'summarization'
   | 'translation'
   | 'image-to-text'
-  | 'audio-to-audio';
+  | 'audio-to-audio'
+  | 'speaker-diarization'
+  | 'voice-activity-detection'
+  | 'text2text-generation'
+  | 'conversational'
+  | 'table-question-answering'
+  | 'visual-question-answering'
+  | 'document-question-answering'
+  | 'image-text-to-text';
 
 export type Confidence = 'high' | 'medium' | 'low';
 

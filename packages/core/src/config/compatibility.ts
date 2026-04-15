@@ -31,6 +31,14 @@ const TASK_INPUT_MATRIX: Record<TaskType, Set<InputMode>> = {
   'translation': new Set(['file']),
   'image-to-text': new Set(['file', 'camera', 'video', 'screen']),
   'audio-to-audio': new Set(['file', 'mic']),
+  'speaker-diarization': new Set(['file', 'mic']),
+  'voice-activity-detection': new Set(['file', 'mic']),
+  'text2text-generation': new Set(['file']),
+  'conversational': new Set(['file']),
+  'table-question-answering': new Set(['file']),
+  'visual-question-answering': new Set(['file', 'camera', 'video', 'screen']),
+  'document-question-answering': new Set(['file', 'camera', 'video', 'screen']),
+  'image-text-to-text': new Set(['file', 'camera', 'video', 'screen']),
 };
 
 /**
@@ -56,6 +64,14 @@ const TASK_ENGINE_MATRIX: Record<TaskType, Set<Engine>> = {
   'translation': new Set(['ort', 'litert', 'webnn']),
   'image-to-text': new Set(['ort', 'litert', 'webnn']),
   'audio-to-audio': new Set(['ort']),
+  'speaker-diarization': new Set(['ort']),
+  'voice-activity-detection': new Set(['ort']),
+  'text2text-generation': new Set(['ort', 'litert', 'webnn']),
+  'conversational': new Set(['ort', 'litert', 'webnn']),
+  'table-question-answering': new Set(['ort', 'litert', 'webnn']),
+  'visual-question-answering': new Set(['ort', 'litert', 'webnn']),
+  'document-question-answering': new Set(['ort', 'litert', 'webnn']),
+  'image-text-to-text': new Set(['ort', 'litert', 'webnn']),
 };
 
 export class ConfigValidationError extends Error {

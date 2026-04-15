@@ -115,6 +115,50 @@ const TASK_SHAPES: Record<string, { inputs: ModelMetadata['inputs']; outputs: Mo
     inputs: [{ name: 'input', dataType: 'float32', shape: [1, 1, 16000] }],
     outputs: [{ name: 'output', dataType: 'float32', shape: [1, 1, 16000] }],
   },
+  'speaker-diarization': {
+    inputs: [{ name: 'input', dataType: 'float32', shape: [1, 1, 16000] }],
+    outputs: [{ name: 'output', dataType: 'float32', shape: [1, 500, 4] }],
+  },
+  'voice-activity-detection': {
+    inputs: [{ name: 'input', dataType: 'float32', shape: [1, 1, 16000] }],
+    outputs: [{ name: 'output', dataType: 'float32', shape: [1, 500] }],
+  },
+  'text2text-generation': {
+    inputs: [
+      { name: 'input_ids', dataType: 'int64', shape: [1, 512] },
+      { name: 'attention_mask', dataType: 'int64', shape: [1, 512] },
+    ],
+    outputs: [{ name: 'logits', dataType: 'float32', shape: [1, 128, 32128] }],
+  },
+  'conversational': {
+    inputs: [
+      { name: 'input_ids', dataType: 'int64', shape: [1, 512] },
+      { name: 'attention_mask', dataType: 'int64', shape: [1, 512] },
+    ],
+    outputs: [{ name: 'logits', dataType: 'float32', shape: [1, 512, 50257] }],
+  },
+  'table-question-answering': {
+    inputs: [
+      { name: 'input_ids', dataType: 'int64', shape: [1, 512] },
+      { name: 'attention_mask', dataType: 'int64', shape: [1, 512] },
+    ],
+    outputs: [
+      { name: 'start_logits', dataType: 'float32', shape: [1, 512] },
+      { name: 'end_logits', dataType: 'float32', shape: [1, 512] },
+    ],
+  },
+  'visual-question-answering': {
+    inputs: [{ name: 'pixel_values', dataType: 'float32', shape: [1, 3, 224, 224] }],
+    outputs: [{ name: 'logits', dataType: 'float32', shape: [1, 64, 50257] }],
+  },
+  'document-question-answering': {
+    inputs: [{ name: 'pixel_values', dataType: 'float32', shape: [1, 3, 224, 224] }],
+    outputs: [{ name: 'logits', dataType: 'float32', shape: [1, 64, 50257] }],
+  },
+  'image-text-to-text': {
+    inputs: [{ name: 'pixel_values', dataType: 'float32', shape: [1, 3, 224, 224] }],
+    outputs: [{ name: 'logits', dataType: 'float32', shape: [1, 128, 50257] }],
+  },
 };
 
 export function createMockMetadata(task: TaskType, format: 'onnx' | 'tflite' = 'onnx'): ModelMetadata {
