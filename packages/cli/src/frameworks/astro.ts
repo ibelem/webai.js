@@ -205,7 +205,7 @@ import Layout from '../layouts/Layout.astro';
              aria-label="Drop an image here or click to browse for ${taskLabel.toLowerCase()}">
           <p>Drop an image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
-          <input type="file" id="fileInput" accept="image/*" hidden>
+          <input type="file" id="fileInput" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1">
         </div>
         <div id="preview" class="preview" hidden>
           <img id="previewImage" alt="Selected image for ${taskLabel.toLowerCase()}">
@@ -356,7 +356,7 @@ import Layout from '../layouts/Layout.astro';
              aria-label="Drop an image here or click to browse for ${taskLabel.toLowerCase()}">
           <p>Drop an image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
-          <input type="file" id="fileInput" accept="image/*" hidden>
+          <input type="file" id="fileInput" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1">
         </div>
         <div id="preview" class="preview" hidden>
           <div class="preview-wrapper">
@@ -527,7 +527,7 @@ import Layout from '../layouts/Layout.astro';
              aria-label="Drop an image here or click to browse for ${taskLabel.toLowerCase()}">
           <p>Drop an image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
-          <input type="file" id="fileInput" accept="image/*" hidden>
+          <input type="file" id="fileInput" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1">
         </div>
         <div id="preview" class="preview" hidden>
           <div class="preview-wrapper">
@@ -696,7 +696,7 @@ import Layout from '../layouts/Layout.astro';
              aria-label="Drop an image here or click to browse for ${taskLabel.toLowerCase()}">
           <p>Drop an image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
-          <input type="file" id="fileInput" accept="image/*" hidden>
+          <input type="file" id="fileInput" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1">
         </div>
         <div id="preview" class="preview" hidden>
           <img id="previewImage" alt="Selected image for ${taskLabel.toLowerCase()}">
@@ -833,7 +833,7 @@ import Layout from '../layouts/Layout.astro';
              aria-label="Drop an image here or click to browse for ${taskLabel.toLowerCase()}">
           <p>Drop an image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
-          <input type="file" id="fileInput" accept="image/*" hidden>
+          <input type="file" id="fileInput" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1">
         </div>
         <div id="preview" class="preview" hidden>
           <img id="previewImage" alt="Selected image for depth estimation">
@@ -2815,7 +2815,7 @@ import Layout from '../layouts/Layout.astro';
              aria-label="Drop an image here or click to browse for ${taskLabel.toLowerCase()}">
           <p>Drop an image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
-          <input type="file" id="fileInput" accept="image/*" hidden>
+          <input type="file" id="fileInput" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1">
         </div>
         <div id="preview" class="preview" hidden>
           <img id="previewImage" alt="Selected image for captioning">
@@ -2914,7 +2914,7 @@ import Layout from '../layouts/Layout.astro';
         <div class="drop-zone" id="dropZone" role="button" tabindex="0">
           <p>${dropHint}</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
-          <input type="file" id="fileInput" accept="image/*" hidden>
+          <input type="file" id="fileInput" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1">
         </div>
         <div id="preview" class="preview" hidden>
           <img id="previewImage" alt="${imgAlt}">

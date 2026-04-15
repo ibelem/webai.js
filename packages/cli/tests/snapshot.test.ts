@@ -4,11 +4,11 @@
  * Each test captures the full generated output for a specific config combo.
  * Snapshots detect unintended changes to emitted code.
  *
- * T24: image-classification + ORT Web + html + file input + raw mode (JS)
- * T25: image-classification + ORT Web + react-vite + file input + raw mode (JS)
- * T26: image-classification + ORT Web + html + file input + compact mode (JS)
- * T27: image-classification + ORT Web + html + file input + raw mode (TS)
- * T28: image-classification + ORT Web + html + --backend webnn-npu
+ * T24: image-classification + ONNX Runtime Web + html + file input + raw mode (JS)
+ * T25: image-classification + ONNX Runtime Web + react-vite + file input + raw mode (JS)
+ * T26: image-classification + ONNX Runtime Web + html + file input + compact mode (JS)
+ * T27: image-classification + ONNX Runtime Web + html + file input + raw mode (TS)
+ * T28: image-classification + ONNX Runtime Web + html + --backend webnn-npu
  */
 
 import { describe, it, expect } from 'vitest';

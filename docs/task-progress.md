@@ -186,7 +186,7 @@ packages/web/src/                     ← Web UI
 
 | Engine | Package | Supported Tasks |
 |--------|---------|----------------|
-| **ORT Web** (onnxruntime-web) | ort | All 27 tasks |
+| **ONNX Runtime Web** (onnxruntime-web) | ort | All 27 tasks |
 | **LiteRT.js** (TFLite) | litert | Image + Text + Multimodal tasks (not audio) |
 | **WebNN API** | webnn | Image + Text + Multimodal tasks (not audio) |
 

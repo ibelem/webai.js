@@ -28,7 +28,7 @@ import {
   getModelPath,
 } from './shared.js';
 
-const ORT_CDN = 'https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/esm/ort.min.mjs';
+const ORT_CDN = 'https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.mjs';
 
 // ---- Helpers ----
 
@@ -2688,7 +2688,7 @@ function emitFileClassificationBody(config: ResolvedConfig): string {
              aria-label="Drop an image here or click to browse for ${taskLabel.toLowerCase()}">
           <p>Drop an image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
-          <input type="file" id="fileInput" accept="image/*" hidden>
+          <input type="file" id="fileInput" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1">
         </div>
 
         <div id="preview" class="preview" hidden>
@@ -2711,7 +2711,7 @@ function emitFileOverlayBody(config: ResolvedConfig): string {
              aria-label="Drop an image here or click to browse for ${taskLabel.toLowerCase()}">
           <p>Drop an image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
-          <input type="file" id="fileInput" accept="image/*" hidden>
+          <input type="file" id="fileInput" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1">
         </div>
 
         <div id="preview" class="preview" hidden>
@@ -2890,7 +2890,7 @@ function emitDepthEstimationBody(config: ResolvedConfig): string {
              aria-label="Drop an image here or click to browse for ${taskLabel.toLowerCase()}">
           <p>Drop an image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
-          <input type="file" id="fileInput" accept="image/*" hidden>
+          <input type="file" id="fileInput" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1">
         </div>
 
         <div id="preview" class="preview" hidden>
@@ -3027,7 +3027,7 @@ function emitImageToTextBody(config: ResolvedConfig): string {
              aria-label="Drop an image here or click to browse for ${taskLabel.toLowerCase()}">
           <p>Drop an image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
-          <input type="file" id="fileInput" accept="image/*" hidden>
+          <input type="file" id="fileInput" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1">
         </div>
 
         <div id="preview" class="preview" hidden>
@@ -3052,7 +3052,7 @@ function emitVQABody(config: ResolvedConfig): string {
              aria-label="Drop an image here or click to browse">
           <p>Drop an image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
-          <input type="file" id="fileInput" accept="image/*" hidden>
+          <input type="file" id="fileInput" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1">
         </div>
 
         <div id="preview" class="preview" hidden>
@@ -3080,7 +3080,7 @@ function emitDocQABody(config: ResolvedConfig): string {
              aria-label="Drop a document image here or click to browse">
           <p>Drop a document image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
-          <input type="file" id="fileInput" accept="image/*" hidden>
+          <input type="file" id="fileInput" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1">
         </div>
 
         <div id="preview" class="preview" hidden>
@@ -3108,7 +3108,7 @@ function emitImageTextToTextBody(config: ResolvedConfig): string {
              aria-label="Drop an image here or click to browse">
           <p>Drop an image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
-          <input type="file" id="fileInput" accept="image/*" hidden>
+          <input type="file" id="fileInput" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1">
         </div>
 
         <div id="preview" class="preview" hidden>

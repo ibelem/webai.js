@@ -4,9 +4,9 @@
 
 **Goal:** Add audio inference support (ASR, audio classification, TTS) with browser-native audio preprocessing (Mel spectrogram, MFCC via vendored FFT), enhanced mic capture with AudioWorklet, and a `webai compare` benchmarking command.
 
-**Architecture:** Audio preprocessing follows the same 3-layer pattern as image tasks. Core package gets real DSP functions (FFT, STFT, mel, MFCC) for cross-verification testing. CLI emitters generate equivalent browser code as strings. Framework emitters wrap audio tasks with mic-capture UI, waveform display, and audio playback. The compare command generates a standalone HTML benchmark page that runs ORT Web across backends (WASM, WebGPU, WebNN) and displays results.
+**Architecture:** Audio preprocessing follows the same 3-layer pattern as image tasks. Core package gets real DSP functions (FFT, STFT, mel, MFCC) for cross-verification testing. CLI emitters generate equivalent browser code as strings. Framework emitters wrap audio tasks with mic-capture UI, waveform display, and audio playback. The compare command generates a standalone HTML benchmark page that runs ONNX Runtime Web across backends (WASM, WebGPU, WebNN) and displays results.
 
-**Tech Stack:** Vitest, TypeScript, vendored radix-2 FFT (zero deps), AudioWorklet API, Web Audio API, ORT Web
+**Tech Stack:** Vitest, TypeScript, vendored radix-2 FFT (zero deps), AudioWorklet API, Web Audio API, ONNX Runtime Web
 
 ---
 
@@ -2299,7 +2299,7 @@ git commit -m "test(cli): add audio task snapshot tests (9 combos)"
 - Create: `packages/cli/src/compare.ts`
 - Modify: `packages/cli/src/cli.ts`
 
-Per CEO plan: `webai compare ./model.onnx` generates a single HTML benchmark page. Metrics: first-inference latency (cold), steady-state latency (warm, avg of 10), throughput (inferences/sec), peak JS heap. Also `--json` for machine-readable output. Phase 2 scope: ORT Web backends only (WASM, WebGPU, WebNN).
+Per CEO plan: `webai compare ./model.onnx` generates a single HTML benchmark page. Metrics: first-inference latency (cold), steady-state latency (warm, avg of 10), throughput (inferences/sec), peak JS heap. Also `--json` for machine-readable output. Phase 2 scope: ONNX Runtime Web backends only (WASM, WebGPU, WebNN).
 
 The compare command doesn't run benchmarks at generation time. It generates an HTML page that, when opened in a browser, runs the benchmarks client-side and displays results.
 
@@ -2374,7 +2374,7 @@ Expected: FAIL — module not found
 
 /**
  * Compare command: generates a benchmark page for comparing
- * ORT Web backends (WASM, WebGPU, WebNN).
+ * ONNX Runtime Web backends (WASM, WebGPU, WebNN).
  *
  * The generated HTML runs benchmarks client-side in the browser.
  * Metrics: cold start latency, warm average latency, throughput, peak heap.
@@ -2619,7 +2619,7 @@ Replace the `compare` command action:
 ```typescript
 program
   .command('compare')
-  .description('Benchmark model across available ORT Web backends')
+  .description('Benchmark model across available ONNX Runtime Web backends')
   .argument('<model>', 'Path or URL to model file (.onnx)')
   .option('--json', 'Output JSON template instead of HTML')
   .option('-o, --output <dir>', 'Output directory', './compare-output/')

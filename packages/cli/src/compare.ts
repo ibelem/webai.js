@@ -1,6 +1,6 @@
 /**
  * Compare command: generates a self-contained HTML benchmark page
- * that compares ORT Web backends (WASM, WebGPU, WebNN) client-side.
+ * that compares ONNX Runtime Web backends (WASM, WebGPU, WebNN) client-side.
  *
  * The generated page loads ONNX Runtime Web from CDN and runs
  * benchmarks directly in the browser when opened.
@@ -14,7 +14,7 @@ const BACKENDS = ['wasm', 'webgpu', 'webnn'] as const;
 /**
  * Generate a self-contained HTML benchmark page.
  *
- * The page loads ORT Web from CDN, runs cold + warm benchmarks
+ * The page loads ONNX Runtime Web from CDN, runs cold + warm benchmarks
  * for each backend, and displays results in a table with bar charts.
  */
 export function generateCompareHtml(modelPath: string, modelMeta: ModelMetadata): string {

@@ -76,7 +76,7 @@ function emitFileClassificationBody(config: ResolvedConfig): string {
                aria-label="Drop an image here or click to browse for ${taskLabel.toLowerCase()}">
             <p>Drop an image here or click to browse</p>
             <p class="hint">Supports JPG, PNG, WebP</p>
-            <input type="file" id="fileInput" accept="image/*" hidden>
+            <input type="file" id="fileInput" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1">
           </div>
           <div id="preview" class="preview" hidden>
             <img id="previewImage" alt="Selected image for ${taskLabel.toLowerCase()}">
@@ -96,7 +96,7 @@ function emitFileOverlayBody(config: ResolvedConfig): string {
                aria-label="Drop an image here or click to browse for ${taskLabel.toLowerCase()}">
             <p>Drop an image here or click to browse</p>
             <p class="hint">Supports JPG, PNG, WebP</p>
-            <input type="file" id="fileInput" accept="image/*" hidden>
+            <input type="file" id="fileInput" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1">
           </div>
           <div id="preview" class="preview" hidden>
             <div class="preview-wrapper">
@@ -244,7 +244,7 @@ function emitDepthEstimationBody(config: ResolvedConfig): string {
                aria-label="Drop an image here or click to browse for ${taskLabel.toLowerCase()}">
             <p>Drop an image here or click to browse</p>
             <p class="hint">Supports JPG, PNG, WebP</p>
-            <input type="file" id="fileInput" accept="image/*" hidden>
+            <input type="file" id="fileInput" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1">
           </div>
           <div id="preview" class="preview" hidden>
             <img id="previewImage" alt="Selected image for depth estimation">
@@ -355,7 +355,7 @@ function emitImageToTextBody2(config: ResolvedConfig): string {
                aria-label="Drop an image here or click to browse for ${taskLabel.toLowerCase()}">
             <p>Drop an image here or click to browse</p>
             <p class="hint">Supports JPG, PNG, WebP</p>
-            <input type="file" id="fileInput" accept="image/*" hidden>
+            <input type="file" id="fileInput" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1">
           </div>
           <div id="preview" class="preview" hidden>
             <img id="previewImage" alt="Selected image for captioning">
@@ -375,7 +375,7 @@ function emitVQABody2(config: ResolvedConfig): string {
           <div class="drop-zone" id="dropZone" role="button" tabindex="0">
             <p>Drop an image here or click to browse</p>
             <p class="hint">Supports JPG, PNG, WebP</p>
-            <input type="file" id="fileInput" accept="image/*" hidden>
+            <input type="file" id="fileInput" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1">
           </div>
           <div id="preview" class="preview" hidden>
             <img id="previewImage" alt="Selected image">
@@ -397,7 +397,7 @@ function emitDocQABody2(config: ResolvedConfig): string {
           <div class="drop-zone" id="dropZone" role="button" tabindex="0">
             <p>Drop a document image here or click to browse</p>
             <p class="hint">Supports JPG, PNG, WebP</p>
-            <input type="file" id="fileInput" accept="image/*" hidden>
+            <input type="file" id="fileInput" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1">
           </div>
           <div id="preview" class="preview" hidden>
             <img id="previewImage" alt="Document image">
@@ -419,7 +419,7 @@ function emitImageTextToTextBody2(config: ResolvedConfig): string {
           <div class="drop-zone" id="dropZone" role="button" tabindex="0">
             <p>Drop an image here or click to browse</p>
             <p class="hint">Supports JPG, PNG, WebP</p>
-            <input type="file" id="fileInput" accept="image/*" hidden>
+            <input type="file" id="fileInput" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1">
           </div>
           <div id="preview" class="preview" hidden>
             <img id="previewImage" alt="Selected image">

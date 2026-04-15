@@ -251,7 +251,7 @@ function reset() { imageUrl.value = null; results.value = null; if (fileInput.va
           @drop="handleDrop">
           <p>Drop an image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
-          <input ref="fileInput" type="file" accept="image/*" hidden @change="handleFileChange" />
+          <input ref="fileInput" type="file" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1" @change="handleFileChange" />
         </div>
         <div v-else class="preview">
           <img :src="imageUrl" alt="Selected image for classification" />
@@ -379,7 +379,7 @@ function reset() { imageUrl.value = null; boxes.value = null; if (fileInput.valu
           @dragover.prevent="dragOver = true" @dragleave="dragOver = false" @drop="handleDrop">
           <p>Drop an image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
-          <input ref="fileInput" type="file" accept="image/*" hidden @change="handleFileChange" />
+          <input ref="fileInput" type="file" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1" @change="handleFileChange" />
         </div>
         <div v-else class="preview">
           <div class="preview-wrapper">
@@ -504,7 +504,7 @@ function reset() { imageUrl.value = null; mask.value = null; if (fileInput.value
           @dragover.prevent="dragOver = true" @dragleave="dragOver = false" @drop="handleDrop">
           <p>Drop an image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
-          <input ref="fileInput" type="file" accept="image/*" hidden @change="handleFileChange" />
+          <input ref="fileInput" type="file" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1" @change="handleFileChange" />
         </div>
         <div v-else class="preview">
           <div class="preview-wrapper">
@@ -596,7 +596,7 @@ function reset() { imageUrl.value = null; embedding.value = null; if (fileInput.
           @dragover.prevent="dragOver = true" @dragleave="dragOver = false" @drop="handleDrop">
           <p>Drop an image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
-          <input ref="fileInput" type="file" accept="image/*" hidden @change="handleFileChange" />
+          <input ref="fileInput" type="file" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1" @change="handleFileChange" />
         </div>
         <div v-else class="preview">
           <img :src="imageUrl" alt="Selected image for feature extraction" />
@@ -697,7 +697,7 @@ function reset() { imageUrl.value = null; if (fileInput.value) fileInput.value.v
           @dragover.prevent="dragOver = true" @dragleave="dragOver = false" @drop="handleDrop">
           <p>Drop an image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
-          <input ref="fileInput" type="file" accept="image/*" hidden @change="handleFileChange" />
+          <input ref="fileInput" type="file" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1" @change="handleFileChange" />
         </div>
         <div v-else class="preview">
           <img :src="imageUrl" alt="Source image for depth estimation" />
@@ -2353,7 +2353,7 @@ function reset() { imageUrl.value = null; caption.value = ''; if (fileInput.valu
           @dragover.prevent="dragOver = true" @dragleave="dragOver = false" @drop="handleDrop">
           <p>Drop an image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
-          <input ref="fileInput" type="file" accept="image/*" hidden @change="handleFileChange" />
+          <input ref="fileInput" type="file" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1" @change="handleFileChange" />
         </div>
         <div v-else class="preview">
           <img :src="imageUrl" alt="Selected image for captioning" />
@@ -2451,7 +2451,7 @@ function reset() { imageUrl.value = null; answer.value = ''; loadedImg.value = n
           @dragover.prevent="dragOver = true" @dragleave="dragOver = false" @drop="handleDrop">
           <p>Drop an image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
-          <input ref="fileInput" type="file" accept="image/*" hidden @change="handleFileChange" />
+          <input ref="fileInput" type="file" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1" @change="handleFileChange" />
         </div>
         <div v-else class="preview">
           <img :src="imageUrl" alt="Selected image" />
@@ -2551,7 +2551,7 @@ function reset() { imageUrl.value = null; answer.value = ''; loadedImg.value = n
           @dragover.prevent="dragOver = true" @dragleave="dragOver = false" @drop="handleDrop">
           <p>Drop a document image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
-          <input ref="fileInput" type="file" accept="image/*" hidden @change="handleFileChange" />
+          <input ref="fileInput" type="file" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1" @change="handleFileChange" />
         </div>
         <div v-else class="preview">
           <img :src="imageUrl" alt="Document image" />
@@ -2654,7 +2654,7 @@ function reset() { imageUrl.value = null; output.value = ''; loadedImg.value = n
           @dragover.prevent="dragOver = true" @dragleave="dragOver = false" @drop="handleDrop">
           <p>Drop an image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
-          <input ref="fileInput" type="file" accept="image/*" hidden @change="handleFileChange" />
+          <input ref="fileInput" type="file" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1" @change="handleFileChange" />
         </div>
         <div v-else class="preview">
           <img :src="imageUrl" alt="Selected image" />

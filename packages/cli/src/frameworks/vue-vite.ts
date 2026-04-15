@@ -253,7 +253,7 @@ function reset() {
         >
           <p>Drop an image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
-          <input ref="fileInputRef" type="file" accept="image/*" hidden @change="handleFileChange" />
+          <input ref="fileInputRef" type="file" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1" @change="handleFileChange" />
         </div>
         <div v-else class="preview">
           <img :src="imageUrl" alt="Selected image for classification" />
@@ -404,7 +404,7 @@ function reset() { imageUrl.value = null; boxes.value = null; if (fileInputRef.v
         >
           <p>Drop an image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
-          <input ref="fileInputRef" type="file" accept="image/*" hidden @change="handleFileChange" />
+          <input ref="fileInputRef" type="file" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1" @change="handleFileChange" />
         </div>
         <div v-else class="preview">
           <div class="preview-wrapper">
@@ -551,7 +551,7 @@ function reset() { imageUrl.value = null; mask.value = null; if (fileInputRef.va
         >
           <p>Drop an image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
-          <input ref="fileInputRef" type="file" accept="image/*" hidden @change="handleFileChange" />
+          <input ref="fileInputRef" type="file" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1" @change="handleFileChange" />
         </div>
         <div v-else class="preview">
           <div class="preview-wrapper">
@@ -658,7 +658,7 @@ function reset() { imageUrl.value = null; embedding.value = null; if (fileInputR
         >
           <p>Drop an image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
-          <input ref="fileInputRef" type="file" accept="image/*" hidden @change="handleFileChange" />
+          <input ref="fileInputRef" type="file" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1" @change="handleFileChange" />
         </div>
         <div v-else class="preview">
           <img :src="imageUrl" alt="Selected image for feature extraction" />
@@ -1639,7 +1639,7 @@ function handleFileChange(e${t ? ': Event' : ''}) { const f = (e.target as HTMLI
         >
           <p>Drop an image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
-          <input ref="fileInputRef" type="file" accept="image/*" hidden @change="handleFileChange" />
+          <input ref="fileInputRef" type="file" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1" @change="handleFileChange" />
         </div>
         <div v-else class="preview">
           <img :src="imageUrl" alt="Source" />
@@ -2227,7 +2227,7 @@ function handleFileChange(e${t ? ': Event' : ''}) { const f = (e.target as HTMLI
         >
           <p>Drop an image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
-          <input ref="fileInputRef" type="file" accept="image/*" hidden @change="handleFileChange" />
+          <input ref="fileInputRef" type="file" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1" @change="handleFileChange" />
         </div>
         <div v-else class="preview">
           <img :src="imageUrl" alt="Source" />
@@ -2325,7 +2325,7 @@ function handleFileChange(e${t ? ': Event' : ''}) { const f = (e.target as HTMLI
         >
           <p>Drop an image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
-          <input ref="fileInputRef" type="file" accept="image/*" hidden @change="handleFileChange" />
+          <input ref="fileInputRef" type="file" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1" @change="handleFileChange" />
         </div>
         <div v-else class="preview">
           <img :src="imageUrl" alt="Selected" />
@@ -2425,7 +2425,7 @@ function handleFileChange(e${t ? ': Event' : ''}) { const f = (e.target as HTMLI
         >
           <p>Drop a document image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
-          <input ref="fileInputRef" type="file" accept="image/*" hidden @change="handleFileChange" />
+          <input ref="fileInputRef" type="file" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1" @change="handleFileChange" />
         </div>
         <div v-else class="preview">
           <img :src="imageUrl" alt="Document" />
@@ -2528,7 +2528,7 @@ function handleFileChange(e${t ? ': Event' : ''}) { const f = (e.target as HTMLI
         >
           <p>Drop an image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
-          <input ref="fileInputRef" type="file" accept="image/*" hidden @change="handleFileChange" />
+          <input ref="fileInputRef" type="file" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1" @change="handleFileChange" />
         </div>
         <div v-else class="preview">
           <img :src="imageUrl" alt="Selected" />

@@ -40,7 +40,7 @@ const TASK_LABELS: Record<string, string> = {
 };
 
 const ENGINE_LABELS: Record<string, string> = {
-  ort: 'ORT Web',
+  ort: 'ONNX Runtime Web',
   litert: 'LiteRT.js',
   webnn: 'WebNN API',
 };

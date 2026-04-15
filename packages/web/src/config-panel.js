@@ -13,7 +13,7 @@ const TASKS = Object.entries(TASK_PROFILES)
     .map(([key, profile]) => ({ value: key, label: profile.label }))
     .sort((a, b) => a.label.localeCompare(b.label));
 const ENGINES = [
-    { value: 'ort', label: 'ORT Web' },
+    { value: 'ort', label: 'ONNX Runtime Web' },
     { value: 'litert', label: 'LiteRT.js' },
     { value: 'webnn', label: 'WebNN API' },
 ];

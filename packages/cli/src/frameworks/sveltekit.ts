@@ -279,7 +279,7 @@ function emitFileClassificationPageSvelte(config: ResolvedConfig): string {
           ondrop={(e) => { e.preventDefault(); dragOver = false; const f = e.dataTransfer?.files[0]; if (f) processImage(f); }}>
           <p>Drop an image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
-          <input bind:this={fileInput} type="file" accept="image/*" hidden onchange={(e) => { const f = e.currentTarget.files?.[0]; if (f) processImage(f); }} />
+          <input bind:this={fileInput} type="file" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1" onchange={(e) => { const f = e.currentTarget.files?.[0]; if (f) processImage(f); }} />
         </div>
       {:else}
         <div class="preview">
@@ -412,7 +412,7 @@ ${boxType}
           ondrop={(e) => { e.preventDefault(); dragOver = false; const f = e.dataTransfer?.files[0]; if (f) processImage(f); }}>
           <p>Drop an image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
-          <input bind:this={fileInput} type="file" accept="image/*" hidden onchange={(e) => { const f = e.currentTarget.files?.[0]; if (f) processImage(f); }} />
+          <input bind:this={fileInput} type="file" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1" onchange={(e) => { const f = e.currentTarget.files?.[0]; if (f) processImage(f); }} />
         </div>
       {:else}
         <div class="preview">
@@ -541,7 +541,7 @@ function emitFileSegmentationPageSvelte(config: ResolvedConfig): string {
           ondrop={(e) => { e.preventDefault(); dragOver = false; const f = e.dataTransfer?.files[0]; if (f) processImage(f); }}>
           <p>Drop an image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
-          <input bind:this={fileInput} type="file" accept="image/*" hidden onchange={(e) => { const f = e.currentTarget.files?.[0]; if (f) processImage(f); }} />
+          <input bind:this={fileInput} type="file" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1" onchange={(e) => { const f = e.currentTarget.files?.[0]; if (f) processImage(f); }} />
         </div>
       {:else}
         <div class="preview">
@@ -635,7 +635,7 @@ function emitFileFeatureExtractionPageSvelte(config: ResolvedConfig): string {
           ondrop={(e) => { e.preventDefault(); dragOver = false; const f = e.dataTransfer?.files[0]; if (f) processImage(f); }}>
           <p>Drop an image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
-          <input bind:this={fileInput} type="file" accept="image/*" hidden onchange={(e) => { const f = e.currentTarget.files?.[0]; if (f) processImage(f); }} />
+          <input bind:this={fileInput} type="file" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1" onchange={(e) => { const f = e.currentTarget.files?.[0]; if (f) processImage(f); }} />
         </div>
       {:else}
         <div class="preview">
@@ -898,7 +898,7 @@ function emitDepthEstimationSvelte(config: ResolvedConfig): string {
           ondrop={(e) => { e.preventDefault(); dragOver = false; const f = e.dataTransfer?.files[0]; if (f) processImage(f); }}>
           <p>Drop an image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
-          <input bind:this={fileInput} type="file" accept="image/*" hidden onchange={(e) => { const f = e.currentTarget.files?.[0]; if (f) processImage(f); }} />
+          <input bind:this={fileInput} type="file" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1" onchange={(e) => { const f = e.currentTarget.files?.[0]; if (f) processImage(f); }} />
         </div>
       {:else}
         <div class="preview">
@@ -1511,7 +1511,7 @@ function emitImageToTextSvelte(config: ResolvedConfig): string {
           ondrop={(e) => { e.preventDefault(); dragOver = false; const f = e.dataTransfer?.files[0]; if (f) processImage(f); }}>
           <p>Drop an image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
-          <input bind:this={fileInput} type="file" accept="image/*" hidden onchange={(e) => { const f = e.currentTarget.files?.[0]; if (f) processImage(f); }} />
+          <input bind:this={fileInput} type="file" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1" onchange={(e) => { const f = e.currentTarget.files?.[0]; if (f) processImage(f); }} />
         </div>
       {:else}
         <div class="preview">
@@ -1611,7 +1611,7 @@ function emitVQASvelte(config: ResolvedConfig): string {
           ondrop={(e) => { e.preventDefault(); dragOver = false; const f = e.dataTransfer?.files[0]; if (f) handleFile(f); }}>
           <p>Drop an image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
-          <input bind:this={fileInput} type="file" accept="image/*" hidden onchange={(e) => { const f = e.currentTarget.files?.[0]; if (f) handleFile(f); }} />
+          <input bind:this={fileInput} type="file" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1" onchange={(e) => { const f = e.currentTarget.files?.[0]; if (f) handleFile(f); }} />
         </div>
       {:else}
         <div class="preview">
@@ -1713,7 +1713,7 @@ function emitDocQASvelte(config: ResolvedConfig): string {
           ondrop={(e) => { e.preventDefault(); dragOver = false; const f = e.dataTransfer?.files[0]; if (f) handleFile(f); }}>
           <p>Drop a document image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
-          <input bind:this={fileInput} type="file" accept="image/*" hidden onchange={(e) => { const f = e.currentTarget.files?.[0]; if (f) handleFile(f); }} />
+          <input bind:this={fileInput} type="file" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1" onchange={(e) => { const f = e.currentTarget.files?.[0]; if (f) handleFile(f); }} />
         </div>
       {:else}
         <div class="preview">
@@ -1818,7 +1818,7 @@ function emitImageTextToTextSvelte(config: ResolvedConfig): string {
           ondrop={(e) => { e.preventDefault(); dragOver = false; const f = e.dataTransfer?.files[0]; if (f) handleFile(f); }}>
           <p>Drop an image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
-          <input bind:this={fileInput} type="file" accept="image/*" hidden onchange={(e) => { const f = e.currentTarget.files?.[0]; if (f) handleFile(f); }} />
+          <input bind:this={fileInput} type="file" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1" onchange={(e) => { const f = e.currentTarget.files?.[0]; if (f) handleFile(f); }} />
         </div>
       {:else}
         <div class="preview">

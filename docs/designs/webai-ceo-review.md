@@ -45,7 +45,7 @@ The platonic ideal is a tool that makes web AI *obvious*. Not just possible. Obv
 | # | Proposal | Effort | Decision | Reasoning |
 |---|----------|--------|----------|-----------|
 | 1 | Auto-detect task from model | M | ACCEPTED | Parse ONNX/TFLite output tensors to infer task type. Zero-config for common models. |
-| 2 | Backend auto-selection | M | ACCEPTED | Default to ORT Web with backend negotiation (WebNN NPU/GPU → WebGPU → WASM). --engine and --backend become optional. |
+| 2 | Backend auto-selection | M | ACCEPTED | Default to ONNX Runtime Web with backend negotiation (WebNN NPU/GPU → WebGPU → WASM). --engine and --backend become optional. |
 | 3 | Generated README per project | S | ACCEPTED | Self-documenting generated projects. Template string per framework. |
 | 4 | Accessibility in generated UI | S-M | ACCEPTED | ARIA labels, keyboard nav, screen reader support in all generated UI. Table stakes. |
 | 5 | Offline-first generated apps | M | ACCEPTED | Service worker caches model after first load. --offline flag. Conference demo killer. |
@@ -56,7 +56,7 @@ The platonic ideal is a tool that makes web AI *obvious*. Not just possible. Obv
 From the original design (Solution C, defined in `docs/design-webai.md`):
 - 5 framework templates (html, vanilla-vite, nextjs, sveltekit, react-vite)
 - Realtime input (camera/mic/video/screen capture)
-- 3 inference engines (ORT Web, LiteRT.js, WebNN API)
+- 3 inference engines (ONNX Runtime Web, LiteRT.js, WebNN API)
 - Phase 1-3 task coverage
 - Web UI with live preview
 - CLI with `generate` command
@@ -66,7 +66,7 @@ with framework templates and realtime input as core features. Full spec: `docs/d
 
 Expansion additions:
 - Auto-detect task from model file (new resolver step)
-- Backend auto-selection (ORT Web default with WebNN NPU/GPU → WebGPU → WASM negotiation)
+- Backend auto-selection (ONNX Runtime Web default with WebNN NPU/GPU → WebGPU → WASM negotiation)
 - Generated README per project
 - Accessibility in all generated UI (ARIA, keyboard, screen reader)
 - Offline-first via --offline flag (service worker + model caching)
@@ -113,7 +113,7 @@ TTS: text input. Text tasks: text input. All 5 frameworks support all valid inpu
 ### Task x Engine Matrix
 
 ```
-                  ORT Web    LiteRT.js   WebNN API
+                  ONNX Runtime Web    LiteRT.js   WebNN API
 image-classif.      Y           Y           Y
 object-detection    Y           Y           Y (if ops supported)
 image-segment.      Y           Y           Y (if ops supported)
@@ -126,7 +126,7 @@ text-generation     Y           Y*          Y (with dual session)
 ```
 
 Y* = LiteRT.js support depends on model format availability (TFLite). Not all HuggingFace
-models ship TFLite weights. ORT Web (ONNX) has the widest model coverage. WebNN API
+models ship TFLite weights. ONNX Runtime Web (ONNX) has the widest model coverage. WebNN API
 requires all model ops to be WebNN-supported (check via model2webnn op compatibility).
 
 **WebNN device type notes:** WebNN columns in this matrix apply to all three device types
@@ -180,10 +180,10 @@ Shape-based detection is heuristic. Priority order:
 
 ### Backend Auto-Selection
 
-Default engine: ORT Web. Default backend: auto-negotiate the best available.
+Default engine: ONNX Runtime Web. Default backend: auto-negotiate the best available.
 
 **Terminology:**
-- **Engine** (`--engine`): the JS inference library. ORT Web, LiteRT.js, or WebNN API.
+- **Engine** (`--engine`): the JS inference library. ONNX Runtime Web, LiteRT.js, or WebNN API.
   Determines the generated code's API calls.
 - **Backend** (`--backend`): the hardware execution path. WASM (CPU only), WebGPU (GPU only),
   or WebNN (CPU, GPU, or NPU). Determines what hardware runs the math.
@@ -199,9 +199,9 @@ webnn-gpu      GPU         Via DirectML (Windows), CoreML (macOS), etc.
 webnn-npu      NPU         Dedicated AI accelerator. Not available on all hardware.
 ```
 
-ORT Web and LiteRT.js can use ALL backends. WebNN API engine uses only webnn-* backends.
+ONNX Runtime Web and LiteRT.js can use ALL backends. WebNN API engine uses only webnn-* backends.
 
-**Generated code (ORT Web, default auto-selection):**
+**Generated code (ONNX Runtime Web, default auto-selection):**
 
 ```javascript
 // Backend auto-selection (generated code)
@@ -290,10 +290,10 @@ Flag               Short   Values                         Default
 ```
 
 Engine (which JS inference library, `-e`):
-- `-e ort` — ORT Web (default). Generated code uses `ort.InferenceSession`.
+- `-e ort` — ONNX Runtime Web (default). Generated code uses `ort.InferenceSession`.
 - `-e litert` — LiteRT.js. Generated code uses `@litertjs/core`: `loadLiteRt()` → `loadAndCompile()` → `model.run()`.
 - `-e webnn` — Pure WebNN API. Generated code uses `navigator.ml.createContext()`
-  + `MLGraphBuilder`. No ORT Web or LiteRT.js dependency.
+  + `MLGraphBuilder`. No ONNX Runtime Web or LiteRT.js dependency.
 
 Backend (which hardware execution path, `-b`, optional override):
 - `-b wasm` — Force WASM (CPU only).
@@ -342,8 +342,8 @@ webai compare ./model.onnx                         # benchmark all backends
 
 ### Generated Code Correctness
 
-6. **Golden output tests**: for image-classification + ORT Web + html, maintain a reference model (e.g., MobileNetV2 quantized, ~5MB). Run the generated HTML in Playwright, feed a test image, verify top-1 classification matches expected label.
-7. **Cross-backend parity**: same model + same input should produce identical results across ORT Web backends (WASM vs WebGPU). Tolerance: <1e-5 for float32 outputs.
+6. **Golden output tests**: for image-classification + ONNX Runtime Web + html, maintain a reference model (e.g., MobileNetV2 quantized, ~5MB). Run the generated HTML in Playwright, feed a test image, verify top-1 classification matches expected label.
+7. **Cross-backend parity**: same model + same input should produce identical results across ONNX Runtime Web backends (WASM vs WebGPU). Tolerance: <1e-5 for float32 outputs.
 
 ### Test Framework
 
@@ -383,11 +383,11 @@ Vitest (matches the Vite-based build, supports TypeScript natively, fast).
 - T23: Full emitted preprocessing chain (resize + normalize + NCHW) matches real function chain output
 
 **Snapshot tests (packages/cli):**
-- T24: image-classification + ORT Web + html + file input + raw mode → snapshot
-- T25: image-classification + ORT Web + react-vite + file input + raw mode → snapshot
-- T26: image-classification + ORT Web + html + file input + compact mode → snapshot
-- T27: image-classification + ORT Web + html + file input + TypeScript → snapshot
-- T28: image-classification + ORT Web + html + `--backend webnn-npu` → snapshot with forced backend
+- T24: image-classification + ONNX Runtime Web + html + file input + raw mode → snapshot
+- T25: image-classification + ONNX Runtime Web + react-vite + file input + raw mode → snapshot
+- T26: image-classification + ONNX Runtime Web + html + file input + compact mode → snapshot
+- T27: image-classification + ONNX Runtime Web + html + file input + TypeScript → snapshot
+- T28: image-classification + ONNX Runtime Web + html + `--backend webnn-npu` → snapshot with forced backend
 
 **Assembler integration (packages/cli):**
 - T29: Assembled output for (image-classification, ort, html, file, raw, js) parses as valid JS (TypeScript compiler API)
@@ -405,7 +405,7 @@ Vitest (matches the Vite-based build, supports TypeScript natively, fast).
 **Template build tests (CI, slower):**
 - T38: [→E2E] Generated html project opens in browser without errors (Playwright)
 - T39: [→E2E] Generated react-vite project: `npm install && npm run build` succeeds
-- T40: [→E2E] Golden output: image-classification + ORT Web + html + MobileNetV2 + test image → correct top-1 label
+- T40: [→E2E] Golden output: image-classification + ONNX Runtime Web + html + MobileNetV2 + test image → correct top-1 label
 
 **Test model strategy (revised per Decision #36):** No real model committed to git. (a) Synthetic ONNX file (~1KB, valid header + correct shapes + random weights) committed to `tests/fixtures/` for unit tests T1-T9. (b) Golden test model (MobileNetV2 quantized, ~5MB) downloaded in CI setup step and cached, never in repo. (c) Any fixture >100KB uses git-lfs. Prevents git bloat as Phase 2+ adds audio/text model fixtures.
 
@@ -417,8 +417,8 @@ Vitest (matches the Vite-based build, supports TypeScript natively, fast).
 - CLI bin entry in packages/cli/package.json
 - Preprocessing catalog: image-resize, image-normalize, image-to-nchw, softmax, topk, argmax
 - Task auto-detection from model shapes (Expansion #1)
-- Backend auto-selection defaulting to ORT Web (Expansion #2)
-- 1 task end-to-end: Image Classification with ORT Web
+- Backend auto-selection defaulting to ONNX Runtime Web (Expansion #2)
+- 1 task end-to-end: Image Classification with ONNX Runtime Web
 - 2 framework templates: html + react-vite
 - File input mode
 - CLI `generate` command (core flags: --task, --model, --engine, --backend, --framework, --mode, --lang, -o)
@@ -455,7 +455,7 @@ Vitest (matches the Vite-based build, supports TypeScript natively, fast).
   Each WebNN device type is benchmarked separately because performance varies dramatically
   (NPU optimized for sustained throughput, GPU for parallel ops, CPU as baseline).
 - **Backend unavailable:** Skip with warning per backend ("WebNN (NPU): not available in this browser"). Test remaining backends.
-- **Scope:** ORT Web backends only in Phase 2. LiteRT.js and pure WebNN API comparison in Phase 3.
+- **Scope:** ONNX Runtime Web backends only in Phase 2. LiteRT.js and pure WebNN API comparison in Phase 3.
 
 **Compare page layout:**
 ```
@@ -521,7 +521,7 @@ Vitest (matches the Vite-based build, supports TypeScript natively, fast).
 | Task auto-detect: no match | Fail: "Could not detect task from model shape. Use --task to specify." |
 | Backend not available in browser | Generated code falls through EP chain (WebNN NPU -> WebNN GPU -> WebGPU -> WASM). Console warning for each unavailable backend. |
 | WebNN device type unavailable | Fallback within WebNN: NPU -> GPU -> CPU. If all WebNN devices fail, fall through to WebGPU -> WASM. Status bar shows actual device used. |
-| Model has unsupported WebNN ops | CLI warning at generation time (if detectable from op list). Generated code includes try/catch around WebNN session creation with ORT Web WASM fallback. |
+| Model has unsupported WebNN ops | CLI warning at generation time (if detectable from op list). Generated code includes try/catch around WebNN session creation with ONNX Runtime Web WASM fallback. |
 | HF config fetch fails (network) | CLI warning: "Could not fetch HF config, using task defaults." Continue generation. |
 | HF URL model fetch fails (network) | Fail fast: "Could not fetch model from {url} — check URL and network connection." Suggest using a local file instead. |
 | HF URL returns non-model content (HTML) | Fail fast: "URL returned HTML, not a model file. For HuggingFace, use the /resolve/ URL (not /blob/)." Auto-rewrite attempted first. |
@@ -569,7 +569,7 @@ LAYER 1: Inference Emitter (one per engine)
 │                       // files (WebNN: WGWT + manifest)│
 │ }                                                     │
 │                                                       │
-│ Example output for ORT Web + image-classification:    │
+│ Example output for ONNX Runtime Web + image-classification:    │
 │   [                                                   │
 │     { id: 'preprocess', code: 'function resizeImage.. │
 │     { id: 'inference',  code: 'async function run..   │
@@ -628,7 +628,7 @@ directly. The assembler orchestrates: `config → L1(config) → L2(config, bloc
 20. **Generated code versioning:** Snapshot pattern. --force required to overwrite. Documented in generated README.
 21. **Cross-repo compatibility:** Semver strictly. model2webnn pins @webai/core to major version range.
 22. **AudioWorklet:** Separate .js file for worklet processor (Blob URL doesn't work with addModule). ScriptProcessorNode fallback.
-23. **WebNN device types (from design review):** WebNN has three device types: CPU, GPU, NPU. All plans, UI, status bars, compare benchmarks, CLI output, and generated code must distinguish between them. The auto-selection chain is: WebNN NPU → WebNN GPU → WebGPU → WASM. CLI override: `--backend webnn-npu`, `--backend webnn-gpu`, `--backend webnn-cpu`. Pure WebNN API code negotiates `createContext({ deviceType })` with per-device try/catch. ORT Web EP uses `{ name: 'webnn', deviceType: 'npu' | 'gpu' | 'cpu' }`.
+23. **WebNN device types (from design review):** WebNN has three device types: CPU, GPU, NPU. All plans, UI, status bars, compare benchmarks, CLI output, and generated code must distinguish between them. The auto-selection chain is: WebNN NPU → WebNN GPU → WebGPU → WASM. CLI override: `--backend webnn-npu`, `--backend webnn-gpu`, `--backend webnn-cpu`. Pure WebNN API code negotiates `createContext({ deviceType })` with per-device try/catch. ONNX Runtime Web EP uses `{ name: 'webnn', deviceType: 'npu' | 'gpu' | 'cpu' }`.
 24. **Engine + Backend terminology (from design review):** `--engine` selects the JS inference library (ort, litert, webnn). `--backend` selects the hardware execution path (wasm, webgpu, webnn-cpu, webnn-gpu, webnn-npu). WASM is CPU only, WebGPU is GPU only, WebNN covers CPU/GPU/NPU. Replaces the overloaded `--runtime` flag which conflated two distinct concepts.
 25. **CLI framework (from eng review):** commander. Declarative subcommands (`generate`, `compare`, `tasks`, `models`, `frameworks`), auto-generated help, built-in support for short aliases (-e, -b, -t). Layer 1, same choice as Transformers.js.
 26. **Build tool (from eng review):** tsup (esbuild-based). One `tsup.config.ts` per package. ESM+CJS dual output for `@webai/core`. ESM-only for CLI. Zero-config TypeScript compilation.
@@ -638,7 +638,7 @@ directly. The assembler orchestrates: `config → L1(config) → L2(config, bloc
 28. **Preprocessing dual-use (from eng review):** `@webai/core` has real, executable, Vitest-tested preprocessing functions (resizeImage, softmax, topK, etc.). The CLI's preprocess-emitter mirrors the same logic as template literals, emitting standalone JS/TS. Cross-verification: snapshot tests feed identical inputs to both the real function and eval(emitted code), assert outputs match. Two copies of the logic, one test that binds them.
 27. **Package boundary (from eng review):** `@webai/core` = knowledge (preprocessing function implementations, postprocessing functions, task profiles, config resolver, model parser). `packages/cli` = ALL codegen (preprocess emitter, postprocess emitter, inference emitters, assembler, framework IO emitters, file writer). model2webnn imports `@webai/core` for the function catalog and task profiles, not for codegen. Clean separation: core knows WHAT to do, CLI knows HOW to emit it as code.
 32. **ONNX metadata parsing perf (from eng review outside voice, RESOLVED):** Originally `parseOnnxMetadata()` called `ModelProto.decode(buffer)` which deserialized the entire protobuf. Fixed in model2webnn commits `1a0a6dc` + `5dff577`: replaced with a hand-rolled zero-copy protobuf scanner. The new implementation uses `pbVarUint`/`pbSkip`/`pbLenView` helpers to scan only GraphProto fields 5 (initializer names), 11 (inputs), 12 (outputs). Weight data (`raw_data` field 9) is skipped in O(1) via a length-varint read. A 2GB model with 200 initializers reads only a few KB of actual bytes, no heap allocations for weight data. The <3s budget now holds for all model sizes. Pre-opset-9 models handled correctly (initializer names filtered from `graph.input`).
-33. **CodeBlock auxiliary files (from eng review outside voice):** WebNN engine (`--engine webnn`) via model2webnn's `convert()` returns a `buildGraph()` function (potentially 50K+ lines for large models) plus a WGWT binary weights file plus a manifest JSON. This is fundamentally different from ORT Web / LiteRT which just reference a model file. The CodeBlock interface needs an `auxiliaryFiles` field: `CodeBlock = { id, code, imports, exports, auxiliaryFiles?: GeneratedFile[] }`. The inference-webnn.ts emitter populates `auxiliaryFiles` with the WGWT binary and manifest. Layer 2 (IO emitter) passes them through to Layer 3 (writer) without needing engine-specific knowledge. This preserves the "layers don't call each other" contract.
+33. **CodeBlock auxiliary files (from eng review outside voice):** WebNN engine (`--engine webnn`) via model2webnn's `convert()` returns a `buildGraph()` function (potentially 50K+ lines for large models) plus a WGWT binary weights file plus a manifest JSON. This is fundamentally different from ONNX Runtime Web / LiteRT which just reference a model file. The CodeBlock interface needs an `auxiliaryFiles` field: `CodeBlock = { id, code, imports, exports, auxiliaryFiles?: GeneratedFile[] }`. The inference-webnn.ts emitter populates `auxiliaryFiles` with the WGWT binary and manifest. Layer 2 (IO emitter) passes them through to Layer 3 (writer) without needing engine-specific knowledge. This preserves the "layers don't call each other" contract.
 34. **WebNN generation exempt from 3s budget (from eng review outside voice):** model2webnn's `convert()` does full protobuf/flatbuffers parse, free dimension resolution, shape propagation, constant folding (up to 10 iterations), MatMulNBits fixup, weight packing, and code generation. For large models this can take 10+ seconds. The 3-second CLI performance budget (Decision #31) applies to `--engine ort` and `--engine litert` only. `--engine webnn` is exempt. CLI output for WebNN shows a progress indicator during conversion. Document this in CLI help text.
 35. **Cross-verification test isolation (from eng review outside voice):** Tests T20-T23 that cross-verify emitted code against real functions use `vm.runInNewContext()` with a controlled global, not raw `eval()`. This prevents scope leaks and provides a clean execution environment. Only the JS emit path is tested via execution; the TS emit path is verified via TypeScript compiler API parse (T29-T30). Emitted preprocessing functions use typed-array-only implementations (no DOM APIs like ImageData or OffscreenCanvas) so they run in both Node and browser contexts.
 36. **Test model strategy (from eng review outside voice):** No 5MB model committed directly to git. Instead: (a) Generate a minimal synthetic ONNX file (~1KB, valid header, correct shapes, random weights) for unit tests T1-T9. Committed to `tests/fixtures/`. (b) The golden output test model (MobileNetV2 quantized, ~5MB) is downloaded in CI via a setup step and cached. Never in the repo. (c) If any model fixture exceeds 100KB, use git-lfs. This prevents git history bloat as more model formats are needed in Phase 2+.
@@ -665,7 +665,7 @@ webai CLI (packages/cli)
 ├── src/cli.ts               # commander: generate, compare, tasks, models, frameworks
 ├── src/assembler.ts         # Orchestrator: config → L1 → L2 → L3
 ├── src/emitters/            # Layer 1: produce CodeBlock[]
-│   ├── inference-ort.ts     # ORT Web inference code
+│   ├── inference-ort.ts     # ONNX Runtime Web inference code
 │   ├── inference-litert.ts  # LiteRT.js inference code
 │   ├── inference-webnn.ts   # WebNN API inference code
 │   ├── preprocess-emitter.ts  # Emits preprocessing source code
@@ -783,7 +783,7 @@ Hierarchy:
 │   │                     │  │  ...                 │ │
 │   └─────────────────────┘  └─────────────────────┘ │
 │                                                     │
-│   Status: mobilenet-v2 · ORT Web (WASM) · 45ms     │
+│   Status: mobilenet-v2 · ONNX Runtime Web (WASM) · 45ms     │
 └─────────────────────────────────────────────────────┘
 
 Hierarchy:
@@ -1109,7 +1109,7 @@ webai ./yolov8n.onnx --framework nextjs
 ✓ Parsed model: yolov8n.onnx (6.3 MB, ONNX)
 ✓ Detected task: object-detection
   (from output shape [1,84,8400])
-✓ Engine: ORT Web (auto-select: WebNN NPU → WebNN GPU → WebGPU → WASM)
+✓ Engine: ONNX Runtime Web (auto-select: WebNN NPU → WebNN GPU → WebGPU → WASM)
 ✓ Input: camera (default for detection)
 ✓ Framework: Next.js (app router)
 
@@ -1131,7 +1131,7 @@ webai https://huggingface.co/nicjac/yolov8n-onnx/resolve/main/yolov8n.onnx -f ne
 ✓ Fetched model: yolov8n.onnx (6.3 MB, from huggingface.co)
 ✓ Detected task: object-detection
   (from output shape [1,84,8400])
-✓ Engine: ORT Web (auto-select: WebNN NPU → WebNN GPU → WebGPU → WASM)
+✓ Engine: ONNX Runtime Web (auto-select: WebNN NPU → WebNN GPU → WebGPU → WASM)
 ✓ Input: camera (default for detection)
 ✓ Framework: Next.js (app router)
 ✓ Generated code uses model URL (OPFS cache on first load)
@@ -1228,7 +1228,7 @@ user SEES, not backend behavior.
 |-------|-----------|
 | **Best backend** | Status bar: "WebNN (NPU)" or "WebNN (GPU)" or "WebGPU" (green indicator). Always shows the specific backend, not just "WebNN." |
 | **Fallback occurred** | Subtle toast explaining the chain: "WebNN NPU unavailable, using WebNN GPU" or "WebNN not available, fell back to WebGPU" or "Using WASM (slowest)." Toast auto-dismisses after 5s. Status bar shows actual backend. |
-| **All backends failed** | "Could not initialize inference engine. Your browser may not support WebAssembly." (This should be extremely rare.) |
+| **All backends failed** | "Could not initialize inference engine. Your browser may not suppONNX Runtime WebAssembly." (This should be extremely rare.) |
 
 ### File Input States
 
@@ -1243,7 +1243,7 @@ user SEES, not backend behavior.
 ## Open Questions (from design doc)
 
 1. **Model weight hosting:** RESOLVED (Decision #40). Both CLI and Web UI support local files, HuggingFace URLs, and HuggingFace model IDs. CLI fetches model to temp for metadata parsing; generated code references URL directly. OPFS caching handles offline after first load.
-2. **WebNN fallback:** Default: console warning + ORT Web WASM auto-fallback in generated code. The backend auto-selection EP chain handles this naturally. No separate decision needed.
+2. **WebNN fallback:** Default: console warning + ONNX Runtime Web WASM auto-fallback in generated code. The backend auto-selection EP chain handles this naturally. No separate decision needed.
 
 ## NOT in Scope (from eng review)
 
@@ -1268,7 +1268,7 @@ Existing code in the reference projects that the plan reuses:
 | `detectFormat()` | model2webnn `src/parsers/format-detector.ts` | Reused for ONNX vs TFLite detection. |
 | `convert()` | model2webnn `src/index.ts:81` | Reused for WebNN codegen (inference-webnn.ts emitter). |
 | LiteRT.js API | LiteRT `litert/js/packages/core/src/` | Referenced for inference-litert.ts emitter pattern. |
-| ORT Web API | onnxruntime `js/web/` | Referenced for inference-ort.ts emitter pattern. |
+| ONNX Runtime Web API | onnxruntime `js/web/` | Referenced for inference-ort.ts emitter pattern. |
 | Transformers.js pipeline patterns | transformers.js `src/` | Referenced for preprocessing patterns (resize, normalize). NOT imported. |
 
 The plan correctly reuses model2webnn parsing (no duplicate protobuf/flatbuffers). The preprocessing functions in @webai/core are new implementations (typed-array math, no Canvas dependency) because existing implementations in reference projects are tightly coupled to their frameworks.

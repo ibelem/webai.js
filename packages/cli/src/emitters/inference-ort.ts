@@ -1,5 +1,5 @@
 /**
- * ORT Web inference emitter (Layer 1).
+ * ONNX Runtime Web inference emitter (Layer 1).
  *
  * Generates code that:
  * 1. Creates an ORT InferenceSession with backend auto-selection EP chain
@@ -63,7 +63,7 @@ function emitCreateSession(config: ResolvedConfig, ts: boolean): string {
   });`;
 
   return `/**
- * Create an ORT Web inference session with backend selection.
+ * Create an ONNX Runtime Web inference session with backend selection.
  * The execution provider list determines hardware acceleration priority.
  */
 async function createSession(modelPath${t ? ': string' : ''})${t ? ': Promise<ort.InferenceSession>' : ''} {
@@ -113,14 +113,14 @@ function emitBackendStatus(ts: boolean): string {
  * Used by the status bar: "yolov8n · 8ms · WebNN (NPU)"
  */
 function getBackendLabel(session${t ? ': ort.InferenceSession' : ''})${t ? ': string' : ''} {
-  // ORT Web doesn't expose the selected EP directly in session.
+  // ONNX Runtime Web doesn't expose the selected EP directly in session.
   // We infer from the handler metadata if available.
-  return 'ORT Web';
+  return 'ONNX Runtime Web';
 }`;
 }
 
 /**
- * Emit the ORT Web inference CodeBlock.
+ * Emit the ONNX Runtime Web inference CodeBlock.
  */
 export function emitOrtInferenceBlock(config: ResolvedConfig): CodeBlock {
   const ts = config.lang === 'ts';

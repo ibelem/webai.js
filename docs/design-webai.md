@@ -37,7 +37,7 @@ The generated code has zero runtime dependencies beyond the inference engine its
 ## Premises
 
 1. **Code generation > library distribution** for web AI pre/post-processing. Generating minimal, standalone JS per task eliminates the bundle-size problem entirely.
-2. **Three-engine abstraction is tractable.** ORT Web, LiteRT.js, and WebNN API have similar load/run patterns. A thin unified abstraction works.
+2. **Three-engine abstraction is tractable.** ONNX Runtime Web, LiteRT.js, and WebNN API have similar load/run patterns. A thin unified abstraction works.
 3. **Pre/post-processing is the actual bottleneck, not inference.** The inference engines are mature. The glue code is where developers struggle.
 4. **HuggingFace task taxonomy is the right organizing principle.** It's what the model ecosystem already uses.
 5. **model2webnn's codegen architecture can be extended or consumed.** Its IR, operator registry, and WGWT weight format are proven.
@@ -64,7 +64,7 @@ Add pre/post-processing codegen directly into model2webnn. Fastest path, reuses 
 Effort: M | Risk: Low-Medium | Completeness: 7/10
 
 ### Approach C: Hybrid — Shared Core + Two Frontends
-Extract atomic pre/post-processing catalog into a shared core. model2webnn consumes this core for WebNN. webai.js is the unified CLI/Web UI that adds ORT Web and LiteRT.js inference emitters.
+Extract atomic pre/post-processing catalog into a shared core. model2webnn consumes this core for WebNN. webai.js is the unified CLI/Web UI that adds ONNX Runtime Web and LiteRT.js inference emitters.
 Effort: M-L | Risk: Low | Completeness: 9/10
 
 ## Recommended Approach
@@ -120,7 +120,7 @@ webai CLI + Web UI (this repo: webai.js)
 ├── src/cli.ts               # CLI entry: webai generate --model ... --engine ... --task ...
 ├── src/web/                  # Web UI (Vite-based)
 ├── src/codegen/
-│   ├── inference-ort.ts      # ORT Web inference boilerplate emitter
+│   ├── inference-ort.ts      # ONNX Runtime Web inference boilerplate emitter
 │   ├── inference-litert.ts   # LiteRT.js inference boilerplate emitter
 │   ├── inference-webnn.ts    # WebNN inference emitter (delegates to model2webnn)
 │   ├── html-template.ts      # Standalone HTML page generator
@@ -354,7 +354,7 @@ webai compare ./model.onnx
 A Vite-based web interface that mirrors the CLI:
 1. Select task from dropdown (organized by HuggingFace categories)
 2. Select or upload model (HF model ID, URL, or local file)
-3. Select inference engine (ORT Web / LiteRT.js / WebNN API)
+3. Select inference engine (ONNX Runtime Web / LiteRT.js / WebNN API)
 4. Select input mode (file / camera / mic / video / screen)
 5. Select framework (HTML / Vanilla+Vite / Next.js / SvelteKit / React+Vite)
 6. Select output mode (Raw / Compact) and language (JS / TS)
@@ -420,7 +420,7 @@ The answer is built into the architecture:
 
 **Generated code runtime errors** (the generated code's responsibility):
 - Generated code does NOT include try/catch — that's the user's application concern. The generated code is a building block, not a framework.
-- Exception: `--engine webnn` generates a capability check (`if (!navigator.ml)`) with a console warning suggesting fallback to ORT Web, and device type negotiation (NPU → GPU → CPU) with per-device try/catch. This is the one case where the tool generates error handling because WebNN availability and device support are uncertain.
+- Exception: `--engine webnn` generates a capability check (`if (!navigator.ml)`) with a console warning suggesting fallback to ONNX Runtime Web, and device type negotiation (NPU → GPU → CPU) with per-device try/catch. This is the one case where the tool generates error handling because WebNN availability and device support are uncertain.
 
 ## Tokenizer Strategy (Phase 2 gate)
 
@@ -575,7 +575,7 @@ The Web UI (`webai` web interface) is separate from framework templates. The Web
 ## Open Questions
 
 1. **Model weight hosting:** For the "HuggingFace model ID" flow, the generated code needs to point to hosted model weights. Should it reference HuggingFace CDN URLs directly, or should the user provide their own hosting?
-2. **WebNN availability:** WebNN is still Chrome-only and flag-gated. The generated WebNN code includes a capability check. How graceful should the fallback be — console warning, or auto-switch to ORT Web?
+2. **WebNN availability:** WebNN is still Chrome-only and flag-gated. The generated WebNN code includes a capability check. How graceful should the fallback be — console warning, or auto-switch to ONNX Runtime Web?
 
 ## Success Criteria
 
@@ -583,7 +583,7 @@ The Web UI (`webai` web interface) is separate from framework templates. The Web
 - `npx webai generate --task object-detection --model ./yolov8n.onnx --engine ort --framework nextjs --input camera -o ./app/` produces a Next.js project that, after `npm install && npm run dev`, shows live camera feed with bounding boxes
 - `npx webai generate --task automatic-speech-recognition --model ./whisper.onnx --engine ort --framework react --input mic -o ./app/` produces a React app with live mic transcription
 - Generated code is readable, documented (raw mode), and has zero dependencies beyond the inference engine + framework
-- Three engines work: ORT Web, LiteRT.js, WebNN API
+- Three engines work: ONNX Runtime Web, LiteRT.js, WebNN API
 - Five framework outputs work: html, vanilla-vite, nextjs, sveltekit, react-vite
 - Realtime inputs work: camera, mic, video, screen
 - Core CV tasks covered with both file and camera input (Phase 1: 4 tasks)
@@ -619,7 +619,7 @@ The Web UI (`webai` web interface) is separate from framework templates. The Web
 2. Implement the preprocessing function catalog: image (resize, normalize, to-nchw, crop) + postprocess (softmax, topk, argmax, nms)
 3. Implement camera-capture and canvas-overlay for realtime input/output
 4. Build the framework template scaffolds (html, vanilla-vite, nextjs, sveltekit, react-vite) with input UI generation
-5. Implement 1 task profile end-to-end: image-classification with ORT Web, file + camera input, all framework templates
+5. Implement 1 task profile end-to-end: image-classification with ONNX Runtime Web, file + camera input, all framework templates
 6. Build the CLI with the `generate` command (including `--framework`, `--input` flags)
 7. Expand to object-detection, image-segmentation with camera support (Phase 1 CV complete)
 8. Add LiteRT.js and WebNN inference emitters

@@ -360,7 +360,7 @@ export default function Page() {
                 onDrop={(e) => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files[0]; if (f) processImage(f); }}>
                 <p>Drop an image here or click to browse</p>
                 <p className="hint">Supports JPG, PNG, WebP</p>
-                <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) processImage(f); }} />
+                <input ref={fileInputRef} type="file" accept="image/*" style={{position:"absolute",left:"-9999px",width:"1px",height:"1px",opacity:0}} aria-hidden="true" tabIndex={-1} onChange={(e) => { const f = e.target.files?.[0]; if (f) processImage(f); }} />
               </div>
             ) : (
               <div className="preview">
@@ -937,7 +937,7 @@ export default function Page() {
                 onDragOver={(e) => { e.preventDefault(); setDragOver(true); }} onDragLeave={() => setDragOver(false)}
                 onDrop={(e) => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files[0]; if (f) processImage(f); }}>
                 <p>Drop an image here or click to browse</p><p className="hint">Supports JPG, PNG, WebP</p>
-                <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) processImage(f); }} />
+                <input ref={fileInputRef} type="file" accept="image/*" style={{position:"absolute",left:"-9999px",width:"1px",height:"1px",opacity:0}} aria-hidden="true" tabIndex={-1} onChange={(e) => { const f = e.target.files?.[0]; if (f) processImage(f); }} />
               </div>
             ) : (
               <div className="preview">
@@ -1028,7 +1028,7 @@ export default function Page() {
                 onDragOver={(e) => { e.preventDefault(); setDragOver(true); }} onDragLeave={() => setDragOver(false)}
                 onDrop={(e) => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files[0]; if (f) handleFile(f); }}>
                 <p>Drop an image here or click to browse</p><p className="hint">Supports JPG, PNG, WebP</p>
-                <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
+                <input ref={fileInputRef} type="file" accept="image/*" style={{position:"absolute",left:"-9999px",width:"1px",height:"1px",opacity:0}} aria-hidden="true" tabIndex={-1} onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
               </div>
             ) : (
               <div className="preview">
@@ -1119,7 +1119,7 @@ export default function Page() {
                 onDragOver={(e) => { e.preventDefault(); setDragOver(true); }} onDragLeave={() => setDragOver(false)}
                 onDrop={(e) => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files[0]; if (f) handleFile(f); }}>
                 <p>Drop a document image here or click to browse</p><p className="hint">Supports JPG, PNG, WebP</p>
-                <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
+                <input ref={fileInputRef} type="file" accept="image/*" style={{position:"absolute",left:"-9999px",width:"1px",height:"1px",opacity:0}} aria-hidden="true" tabIndex={-1} onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
               </div>
             ) : (
               <div className="preview">
@@ -1213,7 +1213,7 @@ export default function Page() {
                 onDragOver={(e) => { e.preventDefault(); setDragOver(true); }} onDragLeave={() => setDragOver(false)}
                 onDrop={(e) => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files[0]; if (f) handleFile(f); }}>
                 <p>Drop an image here or click to browse</p><p className="hint">Supports JPG, PNG, WebP</p>
-                <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
+                <input ref={fileInputRef} type="file" accept="image/*" style={{position:"absolute",left:"-9999px",width:"1px",height:"1px",opacity:0}} aria-hidden="true" tabIndex={-1} onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
               </div>
             ) : (
               <div className="preview">
@@ -1509,7 +1509,7 @@ export default function Page() {
                 onDragLeave={() => setDragOver(false)} onDrop={handleDrop}>
                 <p>Drop an image here or click to browse</p>
                 <p className="hint">Supports JPG, PNG, WebP</p>
-                <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handleFileChange} />
+                <input ref={fileInputRef} type="file" accept="image/*" style={{position:"absolute",left:"-9999px",width:"1px",height:"1px",opacity:0}} aria-hidden="true" tabIndex={-1} onChange={handleFileChange} />
               </div>
             ) : (
               <div className="preview">
@@ -1653,7 +1653,7 @@ ${boxType}export default function Page() {
                 onDragLeave={() => setDragOver(false)} onDrop={handleDrop}>
                 <p>Drop an image here or click to browse</p>
                 <p className="hint">Supports JPG, PNG, WebP</p>
-                <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handleFileChange} />
+                <input ref={fileInputRef} type="file" accept="image/*" style={{position:"absolute",left:"-9999px",width:"1px",height:"1px",opacity:0}} aria-hidden="true" tabIndex={-1} onChange={handleFileChange} />
               </div>
             ) : (
               <div className="preview">
@@ -1791,7 +1791,7 @@ export default function Page() {
                 onDragLeave={() => setDragOver(false)} onDrop={handleDrop}>
                 <p>Drop an image here or click to browse</p>
                 <p className="hint">Supports JPG, PNG, WebP</p>
-                <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handleFileChange} />
+                <input ref={fileInputRef} type="file" accept="image/*" style={{position:"absolute",left:"-9999px",width:"1px",height:"1px",opacity:0}} aria-hidden="true" tabIndex={-1} onChange={handleFileChange} />
               </div>
             ) : (
               <div className="preview">
@@ -1896,7 +1896,7 @@ export default function Page() {
                 onDragLeave={() => setDragOver(false)} onDrop={handleDrop}>
                 <p>Drop an image here or click to browse</p>
                 <p className="hint">Supports JPG, PNG, WebP</p>
-                <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handleFileChange} />
+                <input ref={fileInputRef} type="file" accept="image/*" style={{position:"absolute",left:"-9999px",width:"1px",height:"1px",opacity:0}} aria-hidden="true" tabIndex={-1} onChange={handleFileChange} />
               </div>
             ) : (
               <div className="preview">

@@ -40,7 +40,7 @@ const TASKS: SelectOption[] = Object.entries(TASK_PROFILES)
   .sort((a, b) => a.label.localeCompare(b.label));
 
 const ENGINES: SelectOption[] = [
-  { value: 'ort', label: 'ORT Web' },
+  { value: 'ort', label: 'ONNX Runtime Web' },
   { value: 'litert', label: 'LiteRT.js' },
   { value: 'webnn', label: 'WebNN API' },
 ];

@@ -89,7 +89,7 @@ function taskLabel(task: string): string {
  */
 function engineLabel(engine: string, backend: string): string {
   const engineNames: Record<string, string> = {
-    ort: 'ORT Web',
+    ort: 'ONNX Runtime Web',
     litert: 'LiteRT.js',
     webnn: 'WebNN API',
   };
