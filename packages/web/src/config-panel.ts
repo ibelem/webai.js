@@ -227,6 +227,15 @@ export function setupConfigPanel(
           'text-classification': 'text-classification',
           'text-generation': 'text-generation',
           'zero-shot-classification': 'zero-shot-classification',
+          'fill-mask': 'fill-mask',
+          'sentence-similarity': 'sentence-similarity',
+          'depth-estimation': 'depth-estimation',
+          'token-classification': 'token-classification',
+          'question-answering': 'question-answering',
+          'summarization': 'summarization',
+          'translation': 'translation',
+          'image-to-text': 'image-to-text',
+          'audio-to-audio': 'audio-to-audio',
         };
         const mapped = hfTaskMap[result.pipelineTag];
         if (mapped && taskSelect.value !== mapped) {

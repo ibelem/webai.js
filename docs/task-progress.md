@@ -1,8 +1,8 @@
 # webai.js — Task Implementation Progress
 
-## Implemented Tasks (10/25)
+## Implemented Tasks (19/25)
 
-### Image Tasks (4/5)
+### Image Tasks (5/5) ✓
 
 | Task | Profile | Preprocess | Postprocess | Emitter | HTML | React | Vanilla | Next.js | Svelte | Web UI Mock | Status |
 |------|---------|------------|-------------|---------|------|-------|---------|---------|--------|-------------|--------|
@@ -10,84 +10,101 @@
 | object-detection | Y | Y | nms+bbox | Y | Y | Y | Y | Y | Y | Y | Done |
 | image-segmentation | Y | Y | argmax mask | Y | Y | Y | Y | Y | Y | Y | Done |
 | feature-extraction | Y | Y | passthrough | Y | Y | Y | Y | Y | Y | Y | Done |
-| depth-estimation | | | | | | | | | | | Planned |
+| depth-estimation | Y | Y | depthNormalize+colormap | Y | — | — | — | — | — | Y | Phase 3A |
 
-### Audio Tasks (3/6)
+### Audio Tasks (4/6)
 
 | Task | Profile | Preprocess | Postprocess | Emitter | HTML | React | Vanilla | Next.js | Svelte | Web UI Mock | Status |
 |------|---------|------------|-------------|---------|------|-------|---------|---------|--------|-------------|--------|
 | audio-classification | Y | MFCC | softmax+topK | Y | Y | Y | Y | Y | Y | Y | Done |
 | speech-to-text | Y | MFCC | CTC decode | Y | Y | Y | Y | Y | Y | Y | Done |
 | text-to-speech | Y | BPE tokenizer | audio playback | Y | Y | Y | Y | Y | Y | Y | Done |
-| audio-to-audio | | | | | | | | | | | Planned |
+| audio-to-audio | Y | MFCC | normalizeWaveform+playAudio | Y | — | — | — | — | — | Y | Phase 3C |
 | speaker-diarization | | | | | | | | | | | — |
 | voice-activity-detection | | | | | | | | | | | — |
 
-### Text Tasks (3/12)
+### Text Tasks (9/12)
 
 | Task | Profile | Preprocess | Postprocess | Emitter | HTML | React | Vanilla | Next.js | Svelte | Web UI Mock | Status |
 |------|---------|------------|-------------|---------|------|-------|---------|---------|--------|-------------|--------|
 | text-classification | Y | BPE tokenizer | softmax+topK | Y | Y | Y | Y | Y | Y | Y | Done |
 | text-generation | Y | BPE tokenizer | argmax loop | Y | Y | Y | Y | Y | Y | Y | Done |
 | zero-shot-classification | Y | BPE tokenizer | entailment softmax | Y | Y | Y | Y | Y | Y | Y | Done |
-| fill-mask | | | | | | | | | | | Planned |
-| token-classification (NER) | | | | | | | | | | | Planned |
-| question-answering | | | | | | | | | | | Planned |
-| summarization | | | | | | | | | | | Planned |
-| translation | | | | | | | | | | | Planned |
-| sentence-similarity | | | | | | | | | | | Planned |
+| fill-mask | Y | BPE tokenizer | softmax+topK | Y | — | — | — | — | — | Y | Phase 3A |
+| sentence-similarity | Y | BPE tokenizer | cosineSimilarity | Y | — | — | — | — | — | Y | Phase 3A |
+| token-classification (NER) | Y | BPE tokenizer | tokenArgmax+extractSpans | Y | — | — | — | — | — | Y | Phase 3B |
+| question-answering | Y | BPE tokenizer | start/end span extraction | Y | — | — | — | — | — | Y | Phase 3B |
+| summarization | Y | BPE tokenizer | seq2seqGreedyDecode | Y | — | — | — | — | — | Y | Phase 3B |
+| translation | Y | BPE tokenizer | seq2seqGreedyDecode | Y | — | — | — | — | — | Y | Phase 3B |
 | text2text-generation | | | | | | | | | | | — |
 | conversational | | | | | | | | | | | — |
 | table-question-answering | | | | | | | | | | | — |
 
-### Multimodal Tasks (0/4)
+### Multimodal Tasks (1/4)
 
 | Task | Profile | Preprocess | Postprocess | Emitter | HTML | React | Vanilla | Next.js | Svelte | Web UI Mock | Status |
 |------|---------|------------|-------------|---------|------|-------|---------|---------|--------|-------------|--------|
-| image-to-text | | | | | | | | | | | Planned |
+| image-to-text | Y | Y (image) | seq2seqGreedyDecode | Y | — | — | — | — | — | Y | Phase 3C |
 | visual-question-answering | | | | | | | | | | | — |
 | document-question-answering | | | | | | | | | | | — |
 | image-text-to-text | | | | | | | | | | | — |
 
 ---
 
+## Video / WebCodecs Capabilities
+
+Added in the video streams session (prior to Phase 3):
+
+| Feature | Input Modes | Description |
+|---------|-------------|-------------|
+| `captureFrameZeroCopy` | camera, video, screen | WebCodecs `VideoFrame` zero-copy capture, falls back to canvas |
+| `processVideoFrames` | video | Seek-based batch frame extraction (faster than real-time) |
+| `createFrameAccumulator` | camera, video, screen | Ring buffer for clip-based temporal inference with configurable stride |
+| `createClipInferenceLoop` | camera, video, screen | Non-blocking rAF loop for temporal/clip inference |
+
+---
+
 ## Implementation Priority
 
-### Phase 3A — Low-Hanging Fruit
+### Phase 3A — Low-Hanging Fruit ✓ DONE
 
-Reuse existing preprocessing/postprocessing with minor variations.
+| Task | Postprocessing | Status |
+|------|---------------|--------|
+| **fill-mask** | softmax + topK + postprocessFillMask | Done |
+| **sentence-similarity** | cosineSimilarity + postprocessSimilarity | Done |
+| **depth-estimation** | depthNormalize + depthToColormap + postprocessDepth | Done |
 
-| Task | What's Needed | Effort |
-|------|--------------|--------|
-| **fill-mask** | BPE tokenizer (exists), single forward pass, replace `[MASK]` token with top predictions | Low |
-| **sentence-similarity** | Feature-extraction (exists) x2 inputs, cosine similarity | Low |
-| **depth-estimation** | Image preprocess (exists), output is HxW float map (render as grayscale/colormap) | Low |
+### Phase 3B — Medium Effort (Text) ✓ DONE
 
-### Phase 3B — Medium Effort (Text)
+| Task | Postprocessing | Status |
+|------|---------------|--------|
+| **token-classification (NER)** | tokenArgmax + extractSpans + postprocessTokenClassification | Done |
+| **question-answering** | postprocessQA (start/end logit span extraction) | Done |
+| **summarization** | seq2seqGreedyDecode + postprocessSummarization | Done |
+| **translation** | seq2seqGreedyDecode + postprocessTranslation | Done |
 
-Need new postprocessing logic or decoder loops.
+### Phase 3C — Medium Effort (Vision + Audio) ✓ DONE
 
-| Task | What's Needed | Effort |
-|------|--------------|--------|
-| **token-classification (NER)** | BPE tokenizer (exists), per-token label output, entity span merging | Medium |
-| **question-answering** | BPE tokenizer (exists), encode question+context, extract start/end span logits | Medium |
-| **summarization** | Seq2seq encoder-decoder loop (new), similar to text-generation but with encoder | Medium |
-| **translation** | Same architecture as summarization (seq2seq) | Medium |
+| Task | Postprocessing | Status |
+|------|---------------|--------|
+| **image-to-text** | seq2seqGreedyDecode + postprocessImageToText | Done |
+| **audio-to-audio** | normalizeWaveform + playAudio + postprocessAudioToAudio | Done |
 
-### Phase 3C — Medium Effort (Vision + Audio)
-
-| Task | What's Needed | Effort |
-|------|--------------|--------|
-| **image-to-text** | Image encoder (exists) + text decoder loop (new) | Medium |
-| **audio-to-audio** | Audio preprocess (exists), output is waveform (render + playback) | Low-Medium |
-
-### Phase 3D — High Effort (Multimodal)
+### Phase 3D — High Effort (Multimodal) — Not Started
 
 | Task | What's Needed | Effort |
 |------|--------------|--------|
 | **visual-question-answering** | Image encoder + text encoder + decoder, dual input UI | High |
 | **document-question-answering** | Similar to VQA but with document/page images | High |
 | **image-text-to-text** | Vision-language model, combined pipeline | High |
+
+---
+
+## Remaining Work
+
+- **Framework UI for Phase 3 tasks** — 9 new tasks have emitters but not framework-specific UI templates (HTML/React/Vanilla/Next.js/SvelteKit). Currently they generate code using the default/fallback UI.
+- **Phase 3D (multimodal)** — visual-question-answering, document-question-answering, image-text-to-text. Requires dual-input UI and more complex encoder-decoder pipelines.
+- **speaker-diarization, voice-activity-detection** — Not planned for near term.
 
 ---
 
@@ -113,7 +130,7 @@ Each new task requires:
 ```
 packages/core/src/                    ← Knowledge layer
 ├── tasks/
-│   ├── types.ts                      ← TaskType union
+│   ├── types.ts                      ← TaskType union (19 tasks)
 │   ├── task-profiles.ts              ← TASK_PROFILES[task]
 │   └── task-detector.ts              ← Auto-detect from model shape
 ├── config/
@@ -162,9 +179,9 @@ packages/web/src/                     ← Web UI
 
 | Engine | Package | Supported Tasks |
 |--------|---------|----------------|
-| **ORT Web** (onnxruntime-web) | ort | All 10 tasks |
-| **LiteRT.js** (TFLite) | litert | Image + Text tasks |
-| **WebNN API** | webnn | Image + Text tasks |
+| **ORT Web** (onnxruntime-web) | ort | All 19 tasks |
+| **LiteRT.js** (TFLite) | litert | Image + Text + Multimodal tasks (not audio) |
+| **WebNN API** | webnn | Image + Text + Multimodal tasks (not audio) |
 
 ## Frameworks
 
@@ -181,7 +198,7 @@ packages/web/src/                     ← Web UI
 | Mode | Used By |
 |------|---------|
 | file | All tasks |
-| camera | Image tasks |
+| camera | Image tasks (classification, detection, segmentation, depth-estimation, image-to-text) |
 | video | Image tasks + feature-extraction |
 | screen | Image tasks (not feature-extraction) |
-| mic | Audio tasks (speech-to-text, audio-classification) |
+| mic | Audio tasks (speech-to-text, audio-classification, audio-to-audio) |
