@@ -194,7 +194,7 @@ packages/web/src/                     ← Web UI
 
 | Framework | Output | "Try it" in Web UI |
 |-----------|--------|-------------------|
-| HTML (single file) | index.html | Yes (iframe) |
+| HTML | index.html | Yes (iframe) |
 | Vanilla + Vite | Multi-file JS/TS | No |
 | React + Vite | React components | No |
 | Next.js | Pages/components | No |
