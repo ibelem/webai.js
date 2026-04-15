@@ -11,13 +11,14 @@ import type { CliFlags } from '@webai/core';
 import { assemble } from 'webai';
 import type { GeneratedFile } from 'webai';
 import { zipSync, strToU8 } from 'fflate';
-import { setupConfigPanel, type ConfigValues } from './config-panel.js';
+import { setupConfigPanel, updateUrlParams, readUrlParams, type ConfigValues } from './config-panel.js';
 import { setupCodePreview, updateCodePreview, getActiveFileContent, setEditorTheme } from './code-preview.js';
 import { setupTryIt } from './try-it.js';
 import { createMockMetadata } from './mock-metadata.js';
 
 let currentFramework = 'html';
 let currentFiles: GeneratedFile[] = [];
+let latestConfigValues: ConfigValues | null = null;
 
 function generateCode(values: ConfigValues): GeneratedFile[] {
   const metadata = createMockMetadata(values.task, values.engine === 'litert' ? 'tflite' : 'onnx');
@@ -53,10 +54,17 @@ function generateCode(values: ConfigValues): GeneratedFile[] {
 
 // ---- Theme toggle ----
 
+function getPageTheme(): 'dark' | 'light' {
+  return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+}
+
 function setupThemeToggle(btn: HTMLButtonElement): void {
-  const stored = localStorage.getItem('webai-theme');
-  if (stored === 'light') {
+  // URL param takes precedence, then localStorage
+  const urlParams = readUrlParams();
+  const themeSource = urlParams.theme ?? localStorage.getItem('webai-theme');
+  if (themeSource === 'light') {
     document.documentElement.setAttribute('data-theme', 'light');
+    setEditorTheme('light');
   }
 
   btn.addEventListener('click', () => {
@@ -65,6 +73,10 @@ function setupThemeToggle(btn: HTMLButtonElement): void {
     document.documentElement.setAttribute('data-theme', next);
     localStorage.setItem('webai-theme', next);
     setEditorTheme(next);
+    // Update URL param for page theme
+    if (latestConfigValues) {
+      updateUrlParams(latestConfigValues, next);
+    }
   });
 }
 
@@ -125,6 +137,23 @@ function setupDownloadZip(btn: HTMLButtonElement): void {
 // ---- Init ----
 
 async function init(): Promise<void> {
+  // Redirect bare URL to include full default params
+  if (!window.location.search) {
+    const defaults = new URLSearchParams({
+      model: 'webnn/mobilenet-v2',
+      task: 'image-classification',
+      engine: 'ort',
+      backend: 'auto',
+      framework: 'html',
+      input: 'file',
+      lang: 'js',
+      uitheme: 'dark',
+      theme: 'dark',
+    });
+    const url = `${window.location.pathname}?${defaults.toString()}`;
+    window.history.replaceState(null, '', url);
+  }
+
   const configPanel = document.getElementById('configPanel')!;
   const editorContainer = document.getElementById('editor')!;
   const tabContainer = document.getElementById('fileTabs')!;
@@ -153,8 +182,10 @@ async function init(): Promise<void> {
 
   setupConfigPanel(configPanel, (values) => {
     currentFramework = values.framework;
+    latestConfigValues = values;
     currentFiles = generateCode(values);
     updateCodePreview(currentFiles, tabContainer);
+    updateUrlParams(values, getPageTheme());
   });
 }
 

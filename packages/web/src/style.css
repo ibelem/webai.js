@@ -125,6 +125,30 @@ header h1 {
   flex-shrink: 0;
 }
 
+.icon-select {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.icon-select select {
+  flex: 1;
+  min-width: 0;
+}
+
+.select-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+}
+
+.select-icon svg {
+  display: block;
+}
+
 .config-panel select:focus,
 .config-panel input:focus {
   outline: 2px solid var(--accent);
