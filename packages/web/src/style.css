@@ -109,7 +109,7 @@ header h1 {
 }
 
 .config-panel select,
-.config-panel input {
+.config-panel input:not([type="checkbox"]) {
   width: 100%;
   padding: 6px 8px;
   background: var(--surface);
@@ -118,6 +118,11 @@ header h1 {
   color: var(--text);
   font-size: 13px;
   font-family: var(--font-mono);
+}
+
+.config-panel input[type="checkbox"] {
+  width: auto;
+  flex-shrink: 0;
 }
 
 .config-panel select:focus,
@@ -173,6 +178,20 @@ header h1 {
   overflow-x: auto;
   flex-shrink: 1;
   min-width: 0;
+  scrollbar-width: thin;
+}
+
+.file-tabs::-webkit-scrollbar {
+  height: 3px;
+}
+
+.file-tabs::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.file-tabs::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
 }
 
 .file-tab {
@@ -185,6 +204,9 @@ header h1 {
   cursor: pointer;
   border-bottom: 2px solid transparent;
   white-space: nowrap;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .file-tab:hover {
@@ -252,7 +274,7 @@ header h1 {
 .try-it-frame {
   flex: 1;
   border: none;
-  background: white;
+  background: var(--bg);
   min-height: 300px;
 }
 

@@ -12,6 +12,7 @@ interface MonacoEditor {
   create(el: HTMLElement, opts: Record<string, unknown>): MonacoStandaloneEditor;
   createModel(value: string, language?: string): unknown;
   setModelLanguage(model: unknown, language: string): void;
+  setTheme(theme: string): void;
 }
 
 interface MonacoStandaloneEditor {
@@ -57,6 +58,10 @@ function loadMonacoScript(): Promise<void> {
   });
 }
 
+function getMonacoTheme(): string {
+  return document.documentElement.getAttribute('data-theme') === 'light' ? 'vs' : 'vs-dark';
+}
+
 function initMonaco(container: HTMLElement): Promise<void> {
   if (monacoReady) return monacoReady;
 
@@ -67,7 +72,7 @@ function initMonaco(container: HTMLElement): Promise<void> {
         editor = window.monaco.editor.create(container, {
           value: '// Select options to generate code',
           language: 'javascript',
-          theme: 'vs-dark',
+          theme: getMonacoTheme(),
           readOnly: true,
           minimap: { enabled: false },
           fontSize: 13,
@@ -147,4 +152,9 @@ export function getGeneratedFiles(): GeneratedFile[] {
 export function getActiveFileContent(): string | null {
   if (!currentFiles[activeTabIndex]) return null;
   return currentFiles[activeTabIndex].content;
+}
+
+export function setEditorTheme(theme: 'dark' | 'light'): void {
+  if (!editor) return;
+  window.monaco.editor.setTheme(theme === 'light' ? 'vs' : 'vs-dark');
 }

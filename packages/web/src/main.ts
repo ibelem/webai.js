@@ -12,7 +12,7 @@ import { assemble } from 'webai';
 import type { GeneratedFile } from 'webai';
 import { zipSync, strToU8 } from 'fflate';
 import { setupConfigPanel, type ConfigValues } from './config-panel.js';
-import { setupCodePreview, updateCodePreview, getActiveFileContent } from './code-preview.js';
+import { setupCodePreview, updateCodePreview, getActiveFileContent, setEditorTheme } from './code-preview.js';
 import { setupTryIt } from './try-it.js';
 import { createMockMetadata } from './mock-metadata.js';
 
@@ -64,6 +64,7 @@ function setupThemeToggle(btn: HTMLButtonElement): void {
     const next = current === 'light' ? 'dark' : 'light';
     document.documentElement.setAttribute('data-theme', next);
     localStorage.setItem('webai-theme', next);
+    setEditorTheme(next);
   });
 }
 

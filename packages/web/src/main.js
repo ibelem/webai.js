@@ -9,7 +9,7 @@ import { resolveConfig } from '@webai/core';
 import { assemble } from 'webai';
 import { zipSync, strToU8 } from 'fflate';
 import { setupConfigPanel } from './config-panel.js';
-import { setupCodePreview, updateCodePreview, getActiveFileContent } from './code-preview.js';
+import { setupCodePreview, updateCodePreview, getActiveFileContent, setEditorTheme } from './code-preview.js';
 import { setupTryIt } from './try-it.js';
 import { createMockMetadata } from './mock-metadata.js';
 let currentFramework = 'html';
@@ -55,6 +55,7 @@ function setupThemeToggle(btn) {
         const next = current === 'light' ? 'dark' : 'light';
         document.documentElement.setAttribute('data-theme', next);
         localStorage.setItem('webai-theme', next);
+        setEditorTheme(next);
     });
 }
 // ---- Copy to clipboard ----

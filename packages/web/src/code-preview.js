@@ -22,6 +22,9 @@ function loadMonacoScript() {
         document.head.appendChild(script);
     });
 }
+function getMonacoTheme() {
+    return document.documentElement.getAttribute('data-theme') === 'light' ? 'vs' : 'vs-dark';
+}
 function initMonaco(container) {
     if (monacoReady)
         return monacoReady;
@@ -32,7 +35,7 @@ function initMonaco(container) {
                 editor = window.monaco.editor.create(container, {
                     value: '// Select options to generate code',
                     language: 'javascript',
-                    theme: 'vs-dark',
+                    theme: getMonacoTheme(),
                     readOnly: true,
                     minimap: { enabled: false },
                     fontSize: 13,
@@ -106,5 +109,10 @@ export function getActiveFileContent() {
     if (!currentFiles[activeTabIndex])
         return null;
     return currentFiles[activeTabIndex].content;
+}
+export function setEditorTheme(theme) {
+    if (!editor)
+        return;
+    window.monaco.editor.setTheme(theme === 'light' ? 'vs' : 'vs-dark');
 }
 //# sourceMappingURL=code-preview.js.map
