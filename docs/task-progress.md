@@ -10,7 +10,7 @@
 | object-detection | Y | Y | nms+bbox | Y | Y | Y | Y | Y | Y | Y | Done |
 | image-segmentation | Y | Y | argmax mask | Y | Y | Y | Y | Y | Y | Y | Done |
 | feature-extraction | Y | Y | passthrough | Y | Y | Y | Y | Y | Y | Y | Done |
-| depth-estimation | Y | Y | depthNormalize+colormap | Y | — | — | — | — | — | Y | Phase 3A |
+| depth-estimation | Y | Y | depthNormalize+colormap | Y | Y | Y | Y | Y | Y | Y | Done |
 
 ### Audio Tasks (6/6) ✓ DONE
 
@@ -19,9 +19,9 @@
 | audio-classification | Y | MFCC | softmax+topK | Y | Y | Y | Y | Y | Y | Y | Done |
 | speech-to-text | Y | MFCC | CTC decode | Y | Y | Y | Y | Y | Y | Y | Done |
 | text-to-speech | Y | BPE tokenizer | audio playback | Y | Y | Y | Y | Y | Y | Y | Done |
-| audio-to-audio | Y | MFCC | normalizeWaveform+playAudio | Y | — | — | — | — | — | Y | Phase 3C |
-| speaker-diarization | Y | MFCC | segmentSpeakers | Y | — | — | — | — | — | Y | Phase 4 |
-| voice-activity-detection | Y | MFCC | binaryThreshold | Y | — | — | — | — | — | Y | Phase 4 |
+| audio-to-audio | Y | MFCC | normalizeWaveform+playAudio | Y | Y | Y | Y | Y | Y | Y | Done |
+| speaker-diarization | Y | MFCC | segmentSpeakers | Y | Y | Y | Y | Y | Y | Y | Done |
+| voice-activity-detection | Y | MFCC | binaryThreshold | Y | Y | Y | Y | Y | Y | Y | Done |
 
 ### Text Tasks (12/12) ✓ DONE
 
@@ -30,24 +30,24 @@
 | text-classification | Y | BPE tokenizer | softmax+topK | Y | Y | Y | Y | Y | Y | Y | Done |
 | text-generation | Y | BPE tokenizer | argmax loop | Y | Y | Y | Y | Y | Y | Y | Done |
 | zero-shot-classification | Y | BPE tokenizer | entailment softmax | Y | Y | Y | Y | Y | Y | Y | Done |
-| fill-mask | Y | BPE tokenizer | softmax+topK | Y | — | — | — | — | — | Y | Phase 3A |
-| sentence-similarity | Y | BPE tokenizer | cosineSimilarity | Y | — | — | — | — | — | Y | Phase 3A |
-| token-classification (NER) | Y | BPE tokenizer | tokenArgmax+extractSpans | Y | — | — | — | — | — | Y | Phase 3B |
-| question-answering | Y | BPE tokenizer | start/end span extraction | Y | — | — | — | — | — | Y | Phase 3B |
-| summarization | Y | BPE tokenizer | seq2seqGreedyDecode | Y | — | — | — | — | — | Y | Phase 3B |
-| translation | Y | BPE tokenizer | seq2seqGreedyDecode | Y | — | — | — | — | — | Y | Phase 3B |
-| text2text-generation | Y | BPE tokenizer | seq2seqGreedyDecode | Y | — | — | — | — | — | Y | Phase 4 |
-| conversational | Y | BPE tokenizer | sampleNextToken | Y | — | — | — | — | — | Y | Phase 4 |
-| table-question-answering | Y | BPE tokenizer | span extraction | Y | — | — | — | — | — | Y | Phase 4 |
+| fill-mask | Y | BPE tokenizer | softmax+topK | Y | Y | Y | Y | Y | Y | Y | Done |
+| sentence-similarity | Y | BPE tokenizer | cosineSimilarity | Y | Y | Y | Y | Y | Y | Y | Done |
+| token-classification (NER) | Y | BPE tokenizer | tokenArgmax+extractSpans | Y | Y | Y | Y | Y | Y | Y | Done |
+| question-answering | Y | BPE tokenizer | start/end span extraction | Y | Y | Y | Y | Y | Y | Y | Done |
+| summarization | Y | BPE tokenizer | seq2seqGreedyDecode | Y | Y | Y | Y | Y | Y | Y | Done |
+| translation | Y | BPE tokenizer | seq2seqGreedyDecode | Y | Y | Y | Y | Y | Y | Y | Done |
+| text2text-generation | Y | BPE tokenizer | seq2seqGreedyDecode | Y | Y | Y | Y | Y | Y | Y | Done |
+| conversational | Y | BPE tokenizer | sampleNextToken | Y | Y | Y | Y | Y | Y | Y | Done |
+| table-question-answering | Y | BPE tokenizer | span extraction | Y | Y | Y | Y | Y | Y | Y | Done |
 
 ### Multimodal Tasks (4/4) ✓ DONE
 
 | Task | Profile | Preprocess | Postprocess | Emitter | HTML | React | Vanilla | Next.js | Svelte | Web UI Mock | Status |
 |------|---------|------------|-------------|---------|------|-------|---------|---------|--------|-------------|--------|
-| image-to-text | Y | Y (image) | seq2seqGreedyDecode | Y | — | — | — | — | — | Y | Phase 3C |
-| visual-question-answering | Y | Y (image) | seq2seqGreedyDecode | Y | — | — | — | — | — | Y | Phase 4 |
-| document-question-answering | Y | Y (image) | seq2seqGreedyDecode | Y | — | — | — | — | — | Y | Phase 4 |
-| image-text-to-text | Y | Y (image) | seq2seqGreedyDecode | Y | — | — | — | — | — | Y | Phase 4 |
+| image-to-text | Y | Y (image) | seq2seqGreedyDecode | Y | Y | Y | Y | Y | Y | Y | Done |
+| visual-question-answering | Y | Y (image) | seq2seqGreedyDecode | Y | Y | Y | Y | Y | Y | Y | Done |
+| document-question-answering | Y | Y (image) | seq2seqGreedyDecode | Y | Y | Y | Y | Y | Y | Y | Done |
+| image-text-to-text | Y | Y (image) | seq2seqGreedyDecode | Y | Y | Y | Y | Y | Y | Y | Done |
 
 ---
 
@@ -111,7 +111,7 @@ Moved to Phase 4 below along with remaining audio/text tasks.
 
 ## Remaining Work
 
-- **Framework UI for Phase 3/4 tasks** — 17 tasks have emitters but not framework-specific UI templates (HTML/React/Vanilla/Next.js/SvelteKit). Currently they generate code using the default/fallback UI.
+None — all 27 tasks have full framework UI across HTML, React, Vanilla, Next.js, and SvelteKit.
 
 ---
 
@@ -186,7 +186,7 @@ packages/web/src/                     ← Web UI
 
 | Engine | Package | Supported Tasks |
 |--------|---------|----------------|
-| **ORT Web** (onnxruntime-web) | ort | All 19 tasks |
+| **ORT Web** (onnxruntime-web) | ort | All 27 tasks |
 | **LiteRT.js** (TFLite) | litert | Image + Text + Multimodal tasks (not audio) |
 | **WebNN API** | webnn | Image + Text + Multimodal tasks (not audio) |
 
