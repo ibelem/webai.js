@@ -109,7 +109,7 @@ function setupDownloadZip(btn: HTMLButtonElement): void {
     }
 
     const zipped = zipSync(files);
-    const blob = new Blob([zipped], { type: 'application/zip' });
+    const blob = new Blob([zipped.buffer as ArrayBuffer], { type: 'application/zip' });
     const url = URL.createObjectURL(blob);
 
     const a = document.createElement('a');

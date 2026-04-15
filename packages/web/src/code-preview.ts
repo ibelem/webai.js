@@ -7,17 +7,36 @@
 
 import type { GeneratedFile } from 'webai';
 
+/** Minimal Monaco type surface used by this module (loaded from CDN at runtime). */
+interface MonacoEditor {
+  create(el: HTMLElement, opts: Record<string, unknown>): MonacoStandaloneEditor;
+  createModel(value: string, language?: string): unknown;
+  setModelLanguage(model: unknown, language: string): void;
+}
+
+interface MonacoStandaloneEditor {
+  setModel(model: unknown): void;
+  layout(): void;
+  getValue(): string;
+}
+
+interface MonacoNamespace {
+  editor: MonacoEditor;
+}
+
+interface MonacoRequire {
+  config: (opts: Record<string, unknown>) => void;
+  (deps: string[], callback: (...args: unknown[]) => void): void;
+}
+
 declare global {
   interface Window {
-    require: {
-      config: (opts: Record<string, unknown>) => void;
-      (deps: string[], callback: (...args: unknown[]) => void): void;
-    };
-    monaco: typeof import('monaco-editor');
+    require?: MonacoRequire;
+    monaco: MonacoNamespace;
   }
 }
 
-let editor: import('monaco-editor').editor.IStandaloneCodeEditor | null = null;
+let editor: MonacoStandaloneEditor | null = null;
 let monacoReady: Promise<void> | null = null;
 let currentFiles: GeneratedFile[] = [];
 let activeTabIndex = 0;
@@ -43,8 +62,8 @@ function initMonaco(container: HTMLElement): Promise<void> {
 
   monacoReady = loadMonacoScript().then(() => {
     return new Promise<void>((resolve) => {
-      window.require.config({ paths: { vs: `${MONACO_CDN}/vs` } });
-      window.require(['vs/editor/editor.main'], () => {
+      window.require!.config({ paths: { vs: `${MONACO_CDN}/vs` } });
+      window.require!(['vs/editor/editor.main'], () => {
         editor = window.monaco.editor.create(container, {
           value: '// Select options to generate code',
           language: 'javascript',
@@ -104,7 +123,7 @@ function showFile(index: number): void {
 
 export async function setupCodePreview(
   editorContainer: HTMLElement,
-  tabContainer: HTMLElement,
+  _tabContainer: HTMLElement,
 ): Promise<void> {
   await initMonaco(editorContainer);
 }
