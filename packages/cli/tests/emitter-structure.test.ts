@@ -143,6 +143,18 @@ describe('emitPreprocessBlock', () => {
     const block = emitPreprocessBlock(makeConfig({ task: 'translation' }));
     expect(block.exports).toContain('tokenizeText');
   });
+
+  it('uses image preprocessing for image-to-text', () => {
+    const block = emitPreprocessBlock(makeConfig({ task: 'image-to-text' }));
+    expect(block.exports).toEqual(['resizeImage', 'normalize', 'toNCHW', 'preprocessImage']);
+  });
+
+  it('routes audio-to-audio to audio preprocessing', () => {
+    const block = emitPreprocessBlock(makeConfig({ task: 'audio-to-audio' }));
+    expect(block.id).toBe('preprocess');
+    // Audio preprocessing exports mel spectrogram functions
+    expect(block.code).toContain('melSpectrogram');
+  });
 });
 
 describe('emitPostprocessBlock', () => {
@@ -341,6 +353,44 @@ describe('emitPostprocessBlock', () => {
     // Both should contain the same shared decode function
     expect(sumBlock.code).toContain('function seq2seqGreedyDecode(');
     expect(transBlock.code).toContain('function seq2seqGreedyDecode(');
+  });
+
+  it('exports seq2seqGreedyDecode, postprocessImageToText for image-to-text', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'image-to-text' }));
+    expect(block.exports).toEqual(['seq2seqGreedyDecode', 'postprocessImageToText']);
+  });
+
+  it('image-to-text code contains seq2seq decode and caption postprocessing', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'image-to-text' }));
+    expect(block.code).toContain('function seq2seqGreedyDecode(');
+    expect(block.code).toContain('function postprocessImageToText(');
+    expect(block.code).toContain('eosTokenId');
+  });
+
+  it('image-to-text reuses same seq2seqGreedyDecode as summarization', () => {
+    const imgBlock = emitPostprocessBlock(makeConfig({ task: 'image-to-text' }));
+    const sumBlock = emitPostprocessBlock(makeConfig({ task: 'summarization' }));
+    expect(imgBlock.code).toContain('function seq2seqGreedyDecode(');
+    expect(sumBlock.code).toContain('function seq2seqGreedyDecode(');
+  });
+
+  it('exports normalizeWaveform, playAudio, postprocessAudioToAudio for audio-to-audio', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'audio-to-audio' }));
+    expect(block.exports).toEqual(['normalizeWaveform', 'playAudio', 'postprocessAudioToAudio']);
+  });
+
+  it('audio-to-audio code contains waveform normalization and playback', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'audio-to-audio' }));
+    expect(block.code).toContain('function normalizeWaveform(');
+    expect(block.code).toContain('function playAudio(');
+    expect(block.code).toContain('function postprocessAudioToAudio(');
+    expect(block.code).toContain('peak');
+  });
+
+  it('audio-to-audio emits TypeScript annotations when lang=ts', () => {
+    const block = emitPostprocessBlock(makeConfig({ task: 'audio-to-audio', lang: 'ts' }));
+    expect(block.code).toContain(': Float32Array');
+    expect(block.code).toContain(': Promise<void>');
   });
 });
 

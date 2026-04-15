@@ -19,7 +19,9 @@ export type TaskType =
   | 'token-classification'
   | 'question-answering'
   | 'summarization'
-  | 'translation';
+  | 'translation'
+  | 'image-to-text'
+  | 'audio-to-audio';
 
 export type Confidence = 'high' | 'medium' | 'low';
 

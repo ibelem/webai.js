@@ -41,6 +41,7 @@ const VALID_TASKS = new Set<string>([
   'zero-shot-classification', 'fill-mask', 'sentence-similarity',
   'depth-estimation', 'token-classification', 'question-answering',
   'summarization', 'translation',
+  'image-to-text', 'audio-to-audio',
 ]);
 
 function assertValid<T extends string>(value: string, validSet: Set<T>, label: string): T {

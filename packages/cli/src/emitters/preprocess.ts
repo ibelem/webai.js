@@ -155,7 +155,7 @@ ${layoutStep}
  * Emit the preprocess CodeBlock for a given config.
  */
 export function emitPreprocessBlock(config: ResolvedConfig): CodeBlock {
-  const audioTasks: string[] = ['speech-to-text', 'audio-classification', 'text-to-speech'];
+  const audioTasks: string[] = ['speech-to-text', 'audio-classification', 'text-to-speech', 'audio-to-audio'];
   if (audioTasks.includes(config.task)) {
     return emitAudioPreprocessBlock(config);
   }

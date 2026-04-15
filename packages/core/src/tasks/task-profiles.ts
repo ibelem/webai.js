@@ -154,4 +154,20 @@ export const TASK_PROFILES: Record<TaskType, TaskProfile> = {
     preprocess: null,
     postprocess: ['autoregressive-decode'],
   },
+  'image-to-text': {
+    task: 'image-to-text',
+    label: 'Image to Text',
+    defaultInput: 'file',
+    supportedInputs: ['file', 'camera', 'video', 'screen'],
+    preprocess: IMAGENET_PREPROCESS,
+    postprocess: ['autoregressive-decode'],
+  },
+  'audio-to-audio': {
+    task: 'audio-to-audio',
+    label: 'Audio to Audio',
+    defaultInput: 'mic',
+    supportedInputs: ['file', 'mic'],
+    preprocess: null,
+    postprocess: ['waveform-normalize'],
+  },
 };

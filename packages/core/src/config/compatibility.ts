@@ -29,6 +29,8 @@ const TASK_INPUT_MATRIX: Record<TaskType, Set<InputMode>> = {
   'question-answering': new Set(['file']),
   'summarization': new Set(['file']),
   'translation': new Set(['file']),
+  'image-to-text': new Set(['file', 'camera', 'video', 'screen']),
+  'audio-to-audio': new Set(['file', 'mic']),
 };
 
 /**
@@ -52,6 +54,8 @@ const TASK_ENGINE_MATRIX: Record<TaskType, Set<Engine>> = {
   'question-answering': new Set(['ort', 'litert', 'webnn']),
   'summarization': new Set(['ort', 'litert', 'webnn']),
   'translation': new Set(['ort', 'litert', 'webnn']),
+  'image-to-text': new Set(['ort', 'litert', 'webnn']),
+  'audio-to-audio': new Set(['ort']),
 };
 
 export class ConfigValidationError extends Error {

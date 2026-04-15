@@ -16,6 +16,8 @@
  *   question-answering    → postprocessQA (start/end span extraction)
  *   summarization         → seq2seqGreedyDecode + postprocessSummarization
  *   translation           → seq2seqGreedyDecode + postprocessTranslation
+ *   image-to-text         → seq2seqGreedyDecode + postprocessImageToText
+ *   audio-to-audio        → normalizeWaveform + playAudio + postprocessAudioToAudio
  */
 
 import type { ResolvedConfig } from '@webai/core';
@@ -849,6 +851,70 @@ function postprocessTranslation(
 }`;
 }
 
+// ---- Image-to-Text: encoder-decoder captioning ----
+
+function emitPostprocessImageToText(ts: boolean): string {
+  const t = ts;
+  return `/**
+ * Postprocess image-to-text (captioning) model output.
+ * Greedy-decodes the output sequence from decoder logits.
+ *
+ * @param logits - Decoder output logits (Float32Array), shape [1, seqLen, vocabSize]
+ * @param seqLen - Output sequence length
+ * @param vocabSize - Vocabulary size
+ * @returns Decoded token IDs for the caption
+ */
+function postprocessImageToText(
+  logits${t ? ': Float32Array' : ''},
+  seqLen${t ? ': number' : ''},
+  vocabSize${t ? ': number' : ''}
+)${t ? ': number[]' : ''} {
+  return seq2seqGreedyDecode(logits, seqLen, vocabSize);
+}`;
+}
+
+// ---- Audio-to-Audio: waveform normalization + playback ----
+
+function emitNormalizeWaveform(ts: boolean): string {
+  const t = ts;
+  return `/**
+ * Normalize audio waveform to [-1, 1] range using peak normalization.
+ * Prevents clipping while preserving dynamics.
+ *
+ * @param samples - Raw audio samples (Float32Array)
+ * @returns Normalized samples in [-1, 1]
+ */
+function normalizeWaveform(samples${t ? ': Float32Array' : ''})${t ? ': Float32Array' : ''} {
+  let peak = 0;
+  for (let i = 0; i < samples.length; i++) {
+    const abs = Math.abs(samples[i]);
+    if (abs > peak) peak = abs;
+  }
+
+  if (peak === 0) return samples;
+
+  const out = new Float32Array(samples.length);
+  for (let i = 0; i < samples.length; i++) {
+    out[i] = samples[i] / peak;
+  }
+  return out;
+}`;
+}
+
+function emitPostprocessAudioToAudio(ts: boolean): string {
+  const t = ts;
+  return `/**
+ * Postprocess audio-to-audio model output.
+ * Normalizes the waveform for safe playback.
+ *
+ * @param output - Raw model output waveform (Float32Array)
+ * @returns Normalized audio samples ready for playback
+ */
+function postprocessAudioToAudio(output${t ? ': Float32Array' : ''})${t ? ': Float32Array' : ''} {
+  return normalizeWaveform(output);
+}`;
+}
+
 // ---- Block emitter dispatch ----
 
 /**
@@ -870,6 +936,8 @@ function postprocessTranslation(
  *   question-answering       → postprocessQA
  *   summarization            → seq2seqGreedyDecode + postprocessSummarization
  *   translation              → seq2seqGreedyDecode + postprocessTranslation
+ *   image-to-text            → seq2seqGreedyDecode + postprocessImageToText
+ *   audio-to-audio           → normalizeWaveform + playAudio + postprocessAudioToAudio
  */
 export function emitPostprocessBlock(config: ResolvedConfig): CodeBlock {
   const ts = config.lang === 'ts';
@@ -974,6 +1042,19 @@ export function emitPostprocessBlock(config: ResolvedConfig): CodeBlock {
       parts.push(emitSeq2SeqGreedyDecode(ts));
       parts.push(emitPostprocessTranslation(ts));
       exports.push('seq2seqGreedyDecode', 'postprocessTranslation');
+      break;
+
+    case 'image-to-text':
+      parts.push(emitSeq2SeqGreedyDecode(ts));
+      parts.push(emitPostprocessImageToText(ts));
+      exports.push('seq2seqGreedyDecode', 'postprocessImageToText');
+      break;
+
+    case 'audio-to-audio':
+      parts.push(emitNormalizeWaveform(ts));
+      parts.push(emitPlayAudio(ts));
+      parts.push(emitPostprocessAudioToAudio(ts));
+      exports.push('normalizeWaveform', 'playAudio', 'postprocessAudioToAudio');
       break;
 
     default:
