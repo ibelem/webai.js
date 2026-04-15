@@ -71,7 +71,8 @@ function emitBlockCode(config: ResolvedConfig, blocks: CodeBlock[]): string {
 // ---- Audio task helpers ----
 
 function isAudioTask(task: string): boolean {
-  return task === 'audio-classification' || task === 'speech-to-text' || task === 'text-to-speech';
+  return task === 'audio-classification' || task === 'speech-to-text' || task === 'text-to-speech' ||
+    task === 'audio-to-audio' || task === 'speaker-diarization' || task === 'voice-activity-detection';
 }
 
 // ---- Color palette for detection/segmentation ----
@@ -1445,55 +1446,1235 @@ generateBtn.addEventListener('click', async () => {
 init();`;
 }
 
+// ---- Fill-Mask script ----
+
+function emitFillMaskScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
+  return `${emitBlockCode(config, blocks)}
+
+// --- Application ---
+const MODEL_PATH = '${getModelPath(config, '.')}';
+const TOKENIZER_PATH = MODEL_PATH.replace(/\\.onnx$/, '') + '/tokenizer.json';
+let session = null;
+let tokenizer = null;
+
+function updateStatus(text) {
+  document.getElementById('status').textContent = text;
+}
+
+async function init() {
+  updateStatus('Loading model and tokenizer...');
+  try {
+    [session, tokenizer] = await Promise.all([
+      createSession(MODEL_PATH),
+      loadTokenizer(TOKENIZER_PATH),
+    ]);
+    updateStatus('${config.modelName} \\u00b7 Ready');
+  } catch (e) {
+    updateStatus('Failed to load model');
+    console.error('Model load error:', e);
+  }
+}
+
+const textInput = document.getElementById('textInput');
+const predictBtn = document.getElementById('predictBtn');
+const resultsDiv = document.getElementById('results');
+
+predictBtn.addEventListener('click', async () => {
+  const text = textInput.value.trim();
+  if (!text) return;
+
+  if (!session || !tokenizer) {
+    resultsDiv.textContent = 'Model not loaded yet. Please wait.';
+    return;
+  }
+
+  updateStatus('${config.modelName} \\u00b7 Processing...');
+  const start = performance.now();
+
+  const { inputIds, attentionMask } = tokenizeText(tokenizer, text);
+  const output = await runInference(session, inputIds);
+  const results = postprocessFillMask(output, inputIds, tokenizer);
+
+  const elapsed = (performance.now() - start).toFixed(1);
+  updateStatus('${config.modelName} \\u00b7 ' + elapsed + 'ms \\u00b7 ' + getBackendLabel(session));
+
+  resultsDiv.innerHTML = '';
+  for (const pred of results) {
+    const row = document.createElement('div');
+    row.className = 'mask-prediction';
+    row.innerHTML = '<span class="token">' + pred.token + '</span><span class="prob">' + (pred.score * 100).toFixed(1) + '%</span>';
+    resultsDiv.appendChild(row);
+  }
+});
+
+init();`;
+}
+
+// ---- Sentence Similarity script ----
+
+function emitSentenceSimilarityScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
+  return `${emitBlockCode(config, blocks)}
+
+// --- Application ---
+const MODEL_PATH = '${getModelPath(config, '.')}';
+const TOKENIZER_PATH = MODEL_PATH.replace(/\\.onnx$/, '') + '/tokenizer.json';
+let session = null;
+let tokenizer = null;
+
+function updateStatus(text) {
+  document.getElementById('status').textContent = text;
+}
+
+async function init() {
+  updateStatus('Loading model and tokenizer...');
+  try {
+    [session, tokenizer] = await Promise.all([
+      createSession(MODEL_PATH),
+      loadTokenizer(TOKENIZER_PATH),
+    ]);
+    updateStatus('${config.modelName} \\u00b7 Ready');
+  } catch (e) {
+    updateStatus('Failed to load model');
+    console.error('Model load error:', e);
+  }
+}
+
+const sourceInput = document.getElementById('sourceInput');
+const compareInput = document.getElementById('compareInput');
+const compareBtn = document.getElementById('compareBtn');
+const resultsDiv = document.getElementById('results');
+
+compareBtn.addEventListener('click', async () => {
+  const source = sourceInput.value.trim();
+  const comparisons = compareInput.value.trim().split('\\n').filter(Boolean);
+  if (!source || comparisons.length === 0) return;
+
+  if (!session || !tokenizer) {
+    resultsDiv.textContent = 'Model not loaded yet. Please wait.';
+    return;
+  }
+
+  updateStatus('${config.modelName} \\u00b7 Computing embeddings...');
+  const start = performance.now();
+
+  const { inputIds: srcIds } = tokenizeText(tokenizer, source);
+  const srcEmb = await runInference(session, srcIds);
+
+  resultsDiv.innerHTML = '';
+  for (const sentence of comparisons) {
+    const { inputIds: cmpIds } = tokenizeText(tokenizer, sentence);
+    const cmpEmb = await runInference(session, cmpIds);
+    const score = cosineSimilarity(srcEmb, cmpEmb);
+
+    const row = document.createElement('div');
+    row.className = 'similarity-score';
+    row.innerHTML = '<span>' + sentence + '</span><span class="value">' + score.toFixed(4) + '</span>';
+    resultsDiv.appendChild(row);
+  }
+
+  const elapsed = (performance.now() - start).toFixed(1);
+  updateStatus('${config.modelName} \\u00b7 ' + elapsed + 'ms \\u00b7 ' + getBackendLabel(session));
+});
+
+init();`;
+}
+
+// ---- Depth Estimation script ----
+
+function emitDepthEstimationScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
+  return `${emitBlockCode(config, blocks)}
+
+// --- Application ---
+const MODEL_PATH = '${getModelPath(config, '.')}';
+let session = null;
+
+function updateStatus(text) {
+  document.getElementById('status').textContent = text;
+}
+
+async function init() {
+  updateStatus('Loading model...');
+  try {
+    session = await createSession(MODEL_PATH);
+    updateStatus('${config.modelName} \\u00b7 Ready');
+  } catch (e) {
+    updateStatus('Failed to load model');
+    console.error('Model load error:', e);
+  }
+}
+
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const preview = document.getElementById('preview');
+const previewImage = document.getElementById('previewImage');
+const depthCanvas = document.getElementById('depthCanvas');
+const changeBtn = document.getElementById('changeBtn');
+
+function handleFile(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  const url = URL.createObjectURL(file);
+  previewImage.src = url;
+  previewImage.onload = () => processImage(previewImage);
+  preview.hidden = false;
+  dropZone.hidden = true;
+}
+
+async function processImage(img) {
+  if (!session) return;
+  updateStatus('${config.modelName} \\u00b7 Processing...');
+  const start = performance.now();
+
+  const input = preprocessImage(img);
+  const output = await runInference(session, input);
+  const depthMap = postprocessDepth(output);
+
+  depthCanvas.width = img.naturalWidth;
+  depthCanvas.height = img.naturalHeight;
+  const ctx = depthCanvas.getContext('2d');
+  const imgData = ctx.createImageData(depthCanvas.width, depthCanvas.height);
+  for (let i = 0; i < depthMap.length; i++) {
+    const v = depthMap[i];
+    imgData.data[i * 4] = v;
+    imgData.data[i * 4 + 1] = v;
+    imgData.data[i * 4 + 2] = v;
+    imgData.data[i * 4 + 3] = 255;
+  }
+  ctx.putImageData(imgData, 0, 0);
+
+  const elapsed = (performance.now() - start).toFixed(1);
+  updateStatus('${config.modelName} \\u00b7 ' + elapsed + 'ms \\u00b7 ' + getBackendLabel(session));
+}
+
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') fileInput.click(); });
+dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('drag-over'); handleFile(e.dataTransfer.files[0]); });
+fileInput.addEventListener('change', () => handleFile(fileInput.files[0]));
+changeBtn.addEventListener('click', () => { preview.hidden = true; dropZone.hidden = false; });
+
+init();`;
+}
+
+// ---- Token Classification (NER) script ----
+
+function emitTokenClassificationScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
+  return `${emitBlockCode(config, blocks)}
+
+// --- Application ---
+const MODEL_PATH = '${getModelPath(config, '.')}';
+const TOKENIZER_PATH = MODEL_PATH.replace(/\\.onnx$/, '') + '/tokenizer.json';
+let session = null;
+let tokenizer = null;
+
+function updateStatus(text) {
+  document.getElementById('status').textContent = text;
+}
+
+async function init() {
+  updateStatus('Loading model and tokenizer...');
+  try {
+    [session, tokenizer] = await Promise.all([
+      createSession(MODEL_PATH),
+      loadTokenizer(TOKENIZER_PATH),
+    ]);
+    updateStatus('${config.modelName} \\u00b7 Ready');
+  } catch (e) {
+    updateStatus('Failed to load model');
+    console.error('Model load error:', e);
+  }
+}
+
+const textInput = document.getElementById('textInput');
+const analyzeBtn = document.getElementById('analyzeBtn');
+const resultsDiv = document.getElementById('results');
+
+analyzeBtn.addEventListener('click', async () => {
+  const text = textInput.value.trim();
+  if (!text) return;
+
+  if (!session || !tokenizer) {
+    resultsDiv.textContent = 'Model not loaded yet. Please wait.';
+    return;
+  }
+
+  updateStatus('${config.modelName} \\u00b7 Processing...');
+  const start = performance.now();
+
+  const { inputIds, attentionMask } = tokenizeText(tokenizer, text);
+  const output = await runInference(session, inputIds);
+  const entities = postprocessTokenClassification(output, inputIds, tokenizer);
+
+  const elapsed = (performance.now() - start).toFixed(1);
+  updateStatus('${config.modelName} \\u00b7 ' + elapsed + 'ms \\u00b7 ' + getBackendLabel(session));
+
+  let html = text;
+  for (let i = entities.length - 1; i >= 0; i--) {
+    const e = entities[i];
+    const before = html.slice(0, e.start);
+    const word = html.slice(e.start, e.end);
+    const after = html.slice(e.end);
+    html = before + '<span class="ner-entity" data-type="' + e.type + '" title="' + e.type + ' (' + (e.score * 100).toFixed(1) + '%)">' + word + '</span>' + after;
+  }
+  resultsDiv.innerHTML = html;
+});
+
+init();`;
+}
+
+// ---- Question Answering script ----
+
+function emitQuestionAnsweringScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
+  return `${emitBlockCode(config, blocks)}
+
+// --- Application ---
+const MODEL_PATH = '${getModelPath(config, '.')}';
+const TOKENIZER_PATH = MODEL_PATH.replace(/\\.onnx$/, '') + '/tokenizer.json';
+let session = null;
+let tokenizer = null;
+
+function updateStatus(text) {
+  document.getElementById('status').textContent = text;
+}
+
+async function init() {
+  updateStatus('Loading model and tokenizer...');
+  try {
+    [session, tokenizer] = await Promise.all([
+      createSession(MODEL_PATH),
+      loadTokenizer(TOKENIZER_PATH),
+    ]);
+    updateStatus('${config.modelName} \\u00b7 Ready');
+  } catch (e) {
+    updateStatus('Failed to load model');
+    console.error('Model load error:', e);
+  }
+}
+
+const contextInput = document.getElementById('contextInput');
+const questionInput = document.getElementById('questionInput');
+const answerBtn = document.getElementById('answerBtn');
+const answerDiv = document.getElementById('answer');
+
+answerBtn.addEventListener('click', async () => {
+  const context = contextInput.value.trim();
+  const question = questionInput.value.trim();
+  if (!context || !question) return;
+
+  if (!session || !tokenizer) {
+    answerDiv.textContent = 'Model not loaded yet. Please wait.';
+    return;
+  }
+
+  updateStatus('${config.modelName} \\u00b7 Processing...');
+  const start = performance.now();
+
+  const combined = question + ' [SEP] ' + context;
+  const { inputIds, attentionMask } = tokenizeText(tokenizer, combined);
+  const output = await runInference(session, inputIds);
+  const result = postprocessQA(output, inputIds, tokenizer);
+
+  const elapsed = (performance.now() - start).toFixed(1);
+  updateStatus('${config.modelName} \\u00b7 ' + elapsed + 'ms \\u00b7 ' + getBackendLabel(session));
+
+  answerDiv.innerHTML = '<div>' + result.answer + '</div><div class="score">Confidence: ' + (result.score * 100).toFixed(1) + '%</div>';
+});
+
+init();`;
+}
+
+// ---- Summarization script ----
+
+function emitSummarizationScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
+  return `${emitBlockCode(config, blocks)}
+
+// --- Application ---
+const MODEL_PATH = '${getModelPath(config, '.')}';
+const TOKENIZER_PATH = MODEL_PATH.replace(/\\.onnx$/, '') + '/tokenizer.json';
+const MAX_NEW_TOKENS = 128;
+const EOS_TOKEN_ID = 1;
+let session = null;
+let tokenizer = null;
+
+function updateStatus(text) {
+  document.getElementById('status').textContent = text;
+}
+
+async function init() {
+  updateStatus('Loading model and tokenizer...');
+  try {
+    [session, tokenizer] = await Promise.all([
+      createSession(MODEL_PATH),
+      loadTokenizer(TOKENIZER_PATH),
+    ]);
+    updateStatus('${config.modelName} \\u00b7 Ready');
+  } catch (e) {
+    updateStatus('Failed to load model');
+    console.error('Model load error:', e);
+  }
+}
+
+const textInput = document.getElementById('textInput');
+const summarizeBtn = document.getElementById('summarizeBtn');
+const outputDiv = document.getElementById('output');
+
+summarizeBtn.addEventListener('click', async () => {
+  const text = textInput.value.trim();
+  if (!text) return;
+
+  if (!session || !tokenizer) {
+    outputDiv.textContent = 'Model not loaded yet. Please wait.';
+    return;
+  }
+
+  summarizeBtn.disabled = true;
+  updateStatus('${config.modelName} \\u00b7 Summarizing...');
+  const start = performance.now();
+
+  const { inputIds } = tokenizeText(tokenizer, text);
+  const output = await runInference(session, inputIds);
+  const summary = postprocessSummarization(output, tokenizer, MAX_NEW_TOKENS, EOS_TOKEN_ID);
+
+  const elapsed = (performance.now() - start).toFixed(1);
+  updateStatus('${config.modelName} \\u00b7 ' + elapsed + 'ms \\u00b7 ' + getBackendLabel(session));
+
+  outputDiv.textContent = summary;
+  summarizeBtn.disabled = false;
+});
+
+init();`;
+}
+
+// ---- Translation script ----
+
+function emitTranslationScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
+  return `${emitBlockCode(config, blocks)}
+
+// --- Application ---
+const MODEL_PATH = '${getModelPath(config, '.')}';
+const TOKENIZER_PATH = MODEL_PATH.replace(/\\.onnx$/, '') + '/tokenizer.json';
+const MAX_NEW_TOKENS = 128;
+const EOS_TOKEN_ID = 1;
+let session = null;
+let tokenizer = null;
+
+function updateStatus(text) {
+  document.getElementById('status').textContent = text;
+}
+
+async function init() {
+  updateStatus('Loading model and tokenizer...');
+  try {
+    [session, tokenizer] = await Promise.all([
+      createSession(MODEL_PATH),
+      loadTokenizer(TOKENIZER_PATH),
+    ]);
+    updateStatus('${config.modelName} \\u00b7 Ready');
+  } catch (e) {
+    updateStatus('Failed to load model');
+    console.error('Model load error:', e);
+  }
+}
+
+const textInput = document.getElementById('textInput');
+const translateBtn = document.getElementById('translateBtn');
+const outputDiv = document.getElementById('output');
+
+translateBtn.addEventListener('click', async () => {
+  const text = textInput.value.trim();
+  if (!text) return;
+
+  if (!session || !tokenizer) {
+    outputDiv.textContent = 'Model not loaded yet. Please wait.';
+    return;
+  }
+
+  translateBtn.disabled = true;
+  updateStatus('${config.modelName} \\u00b7 Translating...');
+  const start = performance.now();
+
+  const { inputIds } = tokenizeText(tokenizer, text);
+  const output = await runInference(session, inputIds);
+  const translation = postprocessTranslation(output, tokenizer, MAX_NEW_TOKENS, EOS_TOKEN_ID);
+
+  const elapsed = (performance.now() - start).toFixed(1);
+  updateStatus('${config.modelName} \\u00b7 ' + elapsed + 'ms \\u00b7 ' + getBackendLabel(session));
+
+  outputDiv.textContent = translation;
+  translateBtn.disabled = false;
+});
+
+init();`;
+}
+
+// ---- Text2Text Generation script ----
+
+function emitText2TextScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
+  return `${emitBlockCode(config, blocks)}
+
+// --- Application ---
+const MODEL_PATH = '${getModelPath(config, '.')}';
+const TOKENIZER_PATH = MODEL_PATH.replace(/\\.onnx$/, '') + '/tokenizer.json';
+const MAX_NEW_TOKENS = 128;
+const EOS_TOKEN_ID = 1;
+let session = null;
+let tokenizer = null;
+
+function updateStatus(text) {
+  document.getElementById('status').textContent = text;
+}
+
+async function init() {
+  updateStatus('Loading model and tokenizer...');
+  try {
+    [session, tokenizer] = await Promise.all([
+      createSession(MODEL_PATH),
+      loadTokenizer(TOKENIZER_PATH),
+    ]);
+    updateStatus('${config.modelName} \\u00b7 Ready');
+  } catch (e) {
+    updateStatus('Failed to load model');
+    console.error('Model load error:', e);
+  }
+}
+
+const textInput = document.getElementById('textInput');
+const runBtn = document.getElementById('runBtn');
+const outputDiv = document.getElementById('output');
+
+runBtn.addEventListener('click', async () => {
+  const text = textInput.value.trim();
+  if (!text) return;
+
+  if (!session || !tokenizer) {
+    outputDiv.textContent = 'Model not loaded yet. Please wait.';
+    return;
+  }
+
+  runBtn.disabled = true;
+  updateStatus('${config.modelName} \\u00b7 Processing...');
+  const start = performance.now();
+
+  const { inputIds } = tokenizeText(tokenizer, text);
+  const output = await runInference(session, inputIds);
+  const result = postprocessText2Text(output, tokenizer, MAX_NEW_TOKENS, EOS_TOKEN_ID);
+
+  const elapsed = (performance.now() - start).toFixed(1);
+  updateStatus('${config.modelName} \\u00b7 ' + elapsed + 'ms \\u00b7 ' + getBackendLabel(session));
+
+  outputDiv.textContent = result;
+  runBtn.disabled = false;
+});
+
+init();`;
+}
+
+// ---- Conversational script ----
+
+function emitConversationalScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
+  return `${emitBlockCode(config, blocks)}
+
+// --- Application ---
+const MODEL_PATH = '${getModelPath(config, '.')}';
+const TOKENIZER_PATH = MODEL_PATH.replace(/\\.onnx$/, '') + '/tokenizer.json';
+const MAX_NEW_TOKENS = 50;
+const EOS_TOKEN_ID = 2;
+let session = null;
+let tokenizer = null;
+
+function updateStatus(text) {
+  document.getElementById('status').textContent = text;
+}
+
+async function init() {
+  updateStatus('Loading model and tokenizer...');
+  try {
+    [session, tokenizer] = await Promise.all([
+      createSession(MODEL_PATH),
+      loadTokenizer(TOKENIZER_PATH),
+    ]);
+    updateStatus('${config.modelName} \\u00b7 Ready');
+  } catch (e) {
+    updateStatus('Failed to load model');
+    console.error('Model load error:', e);
+  }
+}
+
+const chatMessages = document.getElementById('chatMessages');
+const chatInput = document.getElementById('chatInput');
+const sendBtn = document.getElementById('sendBtn');
+const history = [];
+
+function addMessage(role, text) {
+  const div = document.createElement('div');
+  div.className = 'chat-msg ' + role;
+  div.textContent = text;
+  chatMessages.appendChild(div);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+sendBtn.addEventListener('click', async () => {
+  const text = chatInput.value.trim();
+  if (!text) return;
+
+  if (!session || !tokenizer) return;
+
+  addMessage('user', text);
+  chatInput.value = '';
+  history.push(text);
+
+  sendBtn.disabled = true;
+  updateStatus('${config.modelName} \\u00b7 Generating...');
+  const start = performance.now();
+
+  const prompt = history.join(' ');
+  const encoded = tokenizer.encode(prompt);
+  let inputIds = encoded.inputIds;
+
+  for (let i = 0; i < MAX_NEW_TOKENS; i++) {
+    const inputBigInt = new BigInt64Array(inputIds.map((id) => BigInt(id)));
+    const output = await runInference(session, inputBigInt);
+
+    const vocabSize = tokenizer.getVocabSize();
+    const seqLen = inputIds.length;
+    const logits = postprocessConversational(output, seqLen, vocabSize);
+    const nextToken = sampleNextToken(logits);
+
+    if (nextToken === EOS_TOKEN_ID) break;
+    inputIds = [...inputIds, nextToken];
+  }
+
+  const decoded = tokenizer.decode(inputIds);
+  const reply = decoded.slice(prompt.length).trim();
+  addMessage('bot', reply || '(no response)');
+  history.push(reply);
+
+  const elapsed = (performance.now() - start).toFixed(1);
+  updateStatus('${config.modelName} \\u00b7 ' + elapsed + 'ms \\u00b7 ' + getBackendLabel(session));
+  sendBtn.disabled = false;
+});
+
+chatInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendBtn.click(); }
+});
+
+init();`;
+}
+
+// ---- Table Question Answering script ----
+
+function emitTableQAScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
+  return `${emitBlockCode(config, blocks)}
+
+// --- Application ---
+const MODEL_PATH = '${getModelPath(config, '.')}';
+const TOKENIZER_PATH = MODEL_PATH.replace(/\\.onnx$/, '') + '/tokenizer.json';
+let session = null;
+let tokenizer = null;
+
+function updateStatus(text) {
+  document.getElementById('status').textContent = text;
+}
+
+async function init() {
+  updateStatus('Loading model and tokenizer...');
+  try {
+    [session, tokenizer] = await Promise.all([
+      createSession(MODEL_PATH),
+      loadTokenizer(TOKENIZER_PATH),
+    ]);
+    updateStatus('${config.modelName} \\u00b7 Ready');
+  } catch (e) {
+    updateStatus('Failed to load model');
+    console.error('Model load error:', e);
+  }
+}
+
+const tableInput = document.getElementById('tableInput');
+const questionInput = document.getElementById('questionInput');
+const answerBtn = document.getElementById('answerBtn');
+const answerDiv = document.getElementById('answer');
+
+answerBtn.addEventListener('click', async () => {
+  const table = tableInput.value.trim();
+  const question = questionInput.value.trim();
+  if (!table || !question) return;
+
+  if (!session || !tokenizer) {
+    answerDiv.textContent = 'Model not loaded yet. Please wait.';
+    return;
+  }
+
+  updateStatus('${config.modelName} \\u00b7 Processing...');
+  const start = performance.now();
+
+  const combined = table + ' [SEP] ' + question;
+  const { inputIds, attentionMask } = tokenizeText(tokenizer, combined);
+  const output = await runInference(session, inputIds);
+  const result = postprocessTableQA(output, inputIds, tokenizer);
+
+  const elapsed = (performance.now() - start).toFixed(1);
+  updateStatus('${config.modelName} \\u00b7 ' + elapsed + 'ms \\u00b7 ' + getBackendLabel(session));
+
+  answerDiv.innerHTML = '<div>' + result.answer + '</div><div class="score">Confidence: ' + (result.score * 100).toFixed(1) + '%</div>';
+});
+
+init();`;
+}
+
+// ---- Image-to-Text script ----
+
+function emitImageToTextScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
+  return `${emitBlockCode(config, blocks)}
+
+// --- Application ---
+const MODEL_PATH = '${getModelPath(config, '.')}';
+let session = null;
+
+function updateStatus(text) {
+  document.getElementById('status').textContent = text;
+}
+
+async function init() {
+  updateStatus('Loading model...');
+  try {
+    session = await createSession(MODEL_PATH);
+    updateStatus('${config.modelName} \\u00b7 Ready');
+  } catch (e) {
+    updateStatus('Failed to load model');
+    console.error('Model load error:', e);
+  }
+}
+
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const preview = document.getElementById('preview');
+const previewImage = document.getElementById('previewImage');
+const changeBtn = document.getElementById('changeBtn');
+const outputDiv = document.getElementById('output');
+
+function handleFile(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  const url = URL.createObjectURL(file);
+  previewImage.src = url;
+  previewImage.onload = () => processImage(previewImage);
+  preview.hidden = false;
+  dropZone.hidden = true;
+}
+
+async function processImage(img) {
+  if (!session) return;
+  updateStatus('${config.modelName} \\u00b7 Generating caption...');
+  const start = performance.now();
+
+  const input = preprocessImage(img);
+  const output = await runInference(session, input);
+  const caption = postprocessImageToText(output);
+
+  const elapsed = (performance.now() - start).toFixed(1);
+  updateStatus('${config.modelName} \\u00b7 ' + elapsed + 'ms \\u00b7 ' + getBackendLabel(session));
+
+  outputDiv.textContent = caption;
+}
+
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') fileInput.click(); });
+dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('drag-over'); handleFile(e.dataTransfer.files[0]); });
+fileInput.addEventListener('change', () => handleFile(fileInput.files[0]));
+changeBtn.addEventListener('click', () => { preview.hidden = true; dropZone.hidden = false; outputDiv.textContent = ''; });
+
+init();`;
+}
+
+// ---- Visual Question Answering script ----
+
+function emitVQAScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
+  return `${emitBlockCode(config, blocks)}
+
+// --- Application ---
+const MODEL_PATH = '${getModelPath(config, '.')}';
+const TOKENIZER_PATH = MODEL_PATH.replace(/\\.onnx$/, '') + '/tokenizer.json';
+let session = null;
+let tokenizer = null;
+
+function updateStatus(text) {
+  document.getElementById('status').textContent = text;
+}
+
+async function init() {
+  updateStatus('Loading model and tokenizer...');
+  try {
+    [session, tokenizer] = await Promise.all([
+      createSession(MODEL_PATH),
+      loadTokenizer(TOKENIZER_PATH),
+    ]);
+    updateStatus('${config.modelName} \\u00b7 Ready');
+  } catch (e) {
+    updateStatus('Failed to load model');
+    console.error('Model load error:', e);
+  }
+}
+
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const preview = document.getElementById('preview');
+const previewImage = document.getElementById('previewImage');
+const changeBtn = document.getElementById('changeBtn');
+const questionInput = document.getElementById('questionInput');
+const askBtn = document.getElementById('askBtn');
+const answerDiv = document.getElementById('answer');
+let currentImage = null;
+
+function handleFile(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  const url = URL.createObjectURL(file);
+  previewImage.src = url;
+  previewImage.onload = () => { currentImage = previewImage; };
+  preview.hidden = false;
+  dropZone.hidden = true;
+}
+
+askBtn.addEventListener('click', async () => {
+  const question = questionInput.value.trim();
+  if (!question || !currentImage) return;
+
+  if (!session || !tokenizer) {
+    answerDiv.textContent = 'Model not loaded yet. Please wait.';
+    return;
+  }
+
+  updateStatus('${config.modelName} \\u00b7 Processing...');
+  const start = performance.now();
+
+  const imageInput = preprocessImage(currentImage);
+  const output = await runInference(session, imageInput);
+  const answer = postprocessVQA(output, tokenizer);
+
+  const elapsed = (performance.now() - start).toFixed(1);
+  updateStatus('${config.modelName} \\u00b7 ' + elapsed + 'ms \\u00b7 ' + getBackendLabel(session));
+
+  answerDiv.textContent = answer;
+});
+
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') fileInput.click(); });
+dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('drag-over'); handleFile(e.dataTransfer.files[0]); });
+fileInput.addEventListener('change', () => handleFile(fileInput.files[0]));
+changeBtn.addEventListener('click', () => { preview.hidden = true; dropZone.hidden = false; currentImage = null; answerDiv.textContent = ''; });
+
+init();`;
+}
+
+// ---- Document Question Answering script ----
+
+function emitDocQAScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
+  return `${emitBlockCode(config, blocks)}
+
+// --- Application ---
+const MODEL_PATH = '${getModelPath(config, '.')}';
+const TOKENIZER_PATH = MODEL_PATH.replace(/\\.onnx$/, '') + '/tokenizer.json';
+let session = null;
+let tokenizer = null;
+
+function updateStatus(text) {
+  document.getElementById('status').textContent = text;
+}
+
+async function init() {
+  updateStatus('Loading model and tokenizer...');
+  try {
+    [session, tokenizer] = await Promise.all([
+      createSession(MODEL_PATH),
+      loadTokenizer(TOKENIZER_PATH),
+    ]);
+    updateStatus('${config.modelName} \\u00b7 Ready');
+  } catch (e) {
+    updateStatus('Failed to load model');
+    console.error('Model load error:', e);
+  }
+}
+
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const preview = document.getElementById('preview');
+const previewImage = document.getElementById('previewImage');
+const changeBtn = document.getElementById('changeBtn');
+const questionInput = document.getElementById('questionInput');
+const askBtn = document.getElementById('askBtn');
+const answerDiv = document.getElementById('answer');
+let currentImage = null;
+
+function handleFile(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  const url = URL.createObjectURL(file);
+  previewImage.src = url;
+  previewImage.onload = () => { currentImage = previewImage; };
+  preview.hidden = false;
+  dropZone.hidden = true;
+}
+
+askBtn.addEventListener('click', async () => {
+  const question = questionInput.value.trim();
+  if (!question || !currentImage) return;
+
+  if (!session || !tokenizer) {
+    answerDiv.textContent = 'Model not loaded yet. Please wait.';
+    return;
+  }
+
+  updateStatus('${config.modelName} \\u00b7 Processing...');
+  const start = performance.now();
+
+  const imageInput = preprocessImage(currentImage);
+  const output = await runInference(session, imageInput);
+  const answer = postprocessDocQA(output, tokenizer);
+
+  const elapsed = (performance.now() - start).toFixed(1);
+  updateStatus('${config.modelName} \\u00b7 ' + elapsed + 'ms \\u00b7 ' + getBackendLabel(session));
+
+  answerDiv.textContent = answer;
+});
+
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') fileInput.click(); });
+dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('drag-over'); handleFile(e.dataTransfer.files[0]); });
+fileInput.addEventListener('change', () => handleFile(fileInput.files[0]));
+changeBtn.addEventListener('click', () => { preview.hidden = true; dropZone.hidden = false; currentImage = null; answerDiv.textContent = ''; });
+
+init();`;
+}
+
+// ---- Image-Text-to-Text script ----
+
+function emitImageTextToTextScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
+  return `${emitBlockCode(config, blocks)}
+
+// --- Application ---
+const MODEL_PATH = '${getModelPath(config, '.')}';
+const TOKENIZER_PATH = MODEL_PATH.replace(/\\.onnx$/, '') + '/tokenizer.json';
+let session = null;
+let tokenizer = null;
+
+function updateStatus(text) {
+  document.getElementById('status').textContent = text;
+}
+
+async function init() {
+  updateStatus('Loading model and tokenizer...');
+  try {
+    [session, tokenizer] = await Promise.all([
+      createSession(MODEL_PATH),
+      loadTokenizer(TOKENIZER_PATH),
+    ]);
+    updateStatus('${config.modelName} \\u00b7 Ready');
+  } catch (e) {
+    updateStatus('Failed to load model');
+    console.error('Model load error:', e);
+  }
+}
+
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const preview = document.getElementById('preview');
+const previewImage = document.getElementById('previewImage');
+const changeBtn = document.getElementById('changeBtn');
+const promptInput = document.getElementById('promptInput');
+const generateBtn = document.getElementById('generateBtn');
+const outputDiv = document.getElementById('output');
+let currentImage = null;
+
+function handleFile(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  const url = URL.createObjectURL(file);
+  previewImage.src = url;
+  previewImage.onload = () => { currentImage = previewImage; };
+  preview.hidden = false;
+  dropZone.hidden = true;
+}
+
+generateBtn.addEventListener('click', async () => {
+  const prompt = promptInput.value.trim();
+  if (!currentImage) return;
+
+  if (!session || !tokenizer) {
+    outputDiv.textContent = 'Model not loaded yet. Please wait.';
+    return;
+  }
+
+  generateBtn.disabled = true;
+  updateStatus('${config.modelName} \\u00b7 Generating...');
+  const start = performance.now();
+
+  const imageInput = preprocessImage(currentImage);
+  const output = await runInference(session, imageInput);
+  const result = postprocessImageTextToText(output, tokenizer);
+
+  const elapsed = (performance.now() - start).toFixed(1);
+  updateStatus('${config.modelName} \\u00b7 ' + elapsed + 'ms \\u00b7 ' + getBackendLabel(session));
+
+  outputDiv.textContent = result;
+  generateBtn.disabled = false;
+});
+
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') fileInput.click(); });
+dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('drag-over'); handleFile(e.dataTransfer.files[0]); });
+fileInput.addEventListener('change', () => handleFile(fileInput.files[0]));
+changeBtn.addEventListener('click', () => { preview.hidden = true; dropZone.hidden = false; currentImage = null; outputDiv.textContent = ''; });
+
+init();`;
+}
+
+// ---- Audio-to-Audio script ----
+
+function emitAudioToAudioScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
+  return `${emitBlockCode(config, blocks)}
+
+// --- Application ---
+const MODEL_PATH = '${getModelPath(config, '.')}';
+let session = null;
+
+function updateStatus(text) {
+  document.getElementById('status').textContent = text;
+}
+
+async function init() {
+  updateStatus('Loading model...');
+  try {
+    session = await createSession(MODEL_PATH);
+    updateStatus('${config.modelName} \\u00b7 Ready');
+  } catch (e) {
+    updateStatus('Failed to load model');
+    console.error('Model load error:', e);
+  }
+}
+
+const fileInput = document.getElementById('fileInput');
+const outputDiv = document.getElementById('output');
+
+fileInput.addEventListener('change', async () => {
+  const file = fileInput.files[0];
+  if (!file || !session) return;
+
+  updateStatus('${config.modelName} \\u00b7 Processing...');
+  const start = performance.now();
+
+  const audioCtx = new AudioContext({ sampleRate: 16000 });
+  const arrayBuffer = await file.arrayBuffer();
+  const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+  const samples = audioBuffer.getChannelData(0);
+
+  const input = preprocessAudio(samples);
+  const output = await runInference(session, input);
+  const processedSamples = postprocessAudioToAudio(output);
+  await playAudio(processedSamples);
+
+  const elapsed = (performance.now() - start).toFixed(1);
+  updateStatus('${config.modelName} \\u00b7 ' + elapsed + 'ms \\u00b7 ' + getBackendLabel(session));
+  outputDiv.textContent = 'Processed ' + (samples.length / 16000).toFixed(1) + 's of audio. Playing output...';
+});
+
+init();`;
+}
+
+// ---- Speaker Diarization script ----
+
+function emitSpeakerDiarizationScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
+  return `${emitBlockCode(config, blocks)}
+
+// --- Application ---
+const MODEL_PATH = '${getModelPath(config, '.')}';
+let session = null;
+
+function updateStatus(text) {
+  document.getElementById('status').textContent = text;
+}
+
+async function init() {
+  updateStatus('Loading model...');
+  try {
+    session = await createSession(MODEL_PATH);
+    updateStatus('${config.modelName} \\u00b7 Ready');
+  } catch (e) {
+    updateStatus('Failed to load model');
+    console.error('Model load error:', e);
+  }
+}
+
+const fileInput = document.getElementById('fileInput');
+const resultsDiv = document.getElementById('results');
+
+fileInput.addEventListener('change', async () => {
+  const file = fileInput.files[0];
+  if (!file || !session) return;
+
+  updateStatus('${config.modelName} \\u00b7 Processing...');
+  const start = performance.now();
+
+  const audioCtx = new AudioContext({ sampleRate: 16000 });
+  const arrayBuffer = await file.arrayBuffer();
+  const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+  const samples = audioBuffer.getChannelData(0);
+
+  const input = preprocessAudio(samples);
+  const output = await runInference(session, input);
+  const segments = postprocessSpeakerDiarization(output);
+
+  const elapsed = (performance.now() - start).toFixed(1);
+  updateStatus('${config.modelName} \\u00b7 ' + elapsed + 'ms \\u00b7 ' + getBackendLabel(session));
+
+  resultsDiv.innerHTML = '';
+  for (const seg of segments) {
+    const row = document.createElement('div');
+    row.className = 'diarization-segment';
+    row.innerHTML = '<span class="speaker">Speaker ' + seg.speaker + '</span><span>' + seg.text + '</span><span class="time">' + seg.start.toFixed(1) + 's - ' + seg.end.toFixed(1) + 's</span>';
+    resultsDiv.appendChild(row);
+  }
+});
+
+init();`;
+}
+
+// ---- Voice Activity Detection script ----
+
+function emitVADScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
+  return `${emitBlockCode(config, blocks)}
+
+// --- Application ---
+const MODEL_PATH = '${getModelPath(config, '.')}';
+let session = null;
+
+function updateStatus(text) {
+  document.getElementById('status').textContent = text;
+}
+
+async function init() {
+  updateStatus('Loading model...');
+  try {
+    session = await createSession(MODEL_PATH);
+    updateStatus('${config.modelName} \\u00b7 Ready');
+  } catch (e) {
+    updateStatus('Failed to load model');
+    console.error('Model load error:', e);
+  }
+}
+
+const fileInput = document.getElementById('fileInput');
+const resultsDiv = document.getElementById('results');
+
+fileInput.addEventListener('change', async () => {
+  const file = fileInput.files[0];
+  if (!file || !session) return;
+
+  updateStatus('${config.modelName} \\u00b7 Processing...');
+  const start = performance.now();
+
+  const audioCtx = new AudioContext({ sampleRate: 16000 });
+  const arrayBuffer = await file.arrayBuffer();
+  const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+  const samples = audioBuffer.getChannelData(0);
+
+  const input = preprocessAudio(samples);
+  const output = await runInference(session, input);
+  const segments = postprocessVAD(output);
+
+  const elapsed = (performance.now() - start).toFixed(1);
+  updateStatus('${config.modelName} \\u00b7 ' + elapsed + 'ms \\u00b7 ' + getBackendLabel(session));
+
+  resultsDiv.innerHTML = '';
+  for (const seg of segments) {
+    const row = document.createElement('div');
+    row.className = 'vad-segment';
+    row.innerHTML = '<span class="label">' + seg.label + '</span><span class="time">' + seg.start.toFixed(1) + 's - ' + seg.end.toFixed(1) + 's</span>';
+    resultsDiv.appendChild(row);
+  }
+});
+
+init();`;
+}
+
 // ---- Script dispatcher ----
 
 function emitAppScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
-  // Audio tasks
-  if (config.task === 'audio-classification') {
-    if (config.input === 'mic') {
-      return emitRealtimeAudioClassificationScript(config, blocks);
-    }
-    return emitFileAudioClassificationScript(config, blocks);
-  }
-  if (config.task === 'speech-to-text') {
-    if (config.input === 'mic') {
-      return emitRealtimeSpeechToTextScript(config, blocks);
-    }
-    return emitFileSpeechToTextScript(config, blocks);
-  }
-  if (config.task === 'text-to-speech') {
-    return emitTextToSpeechScript(config, blocks);
-  }
-
-  // Text tasks
-  if (config.task === 'text-classification') return emitTextClassificationScript(config, blocks);
-  if (config.task === 'zero-shot-classification') return emitZeroShotScript(config, blocks);
-  if (config.task === 'text-generation') return emitTextGenerationScript(config, blocks);
-
-  // Realtime input modes (visual)
-  if (config.input === 'camera' || config.input === 'screen') {
-    return emitRealtimeScript(config, blocks);
-  }
-
-  // File input: dispatch by task
-  if (config.input === 'file') {
-    if (isClassificationTask(config.task)) {
+  const task = config.task;
+  switch (task) {
+    // Audio tasks
+    case 'audio-classification':
+      return config.input === 'mic' ? emitRealtimeAudioClassificationScript(config, blocks) : emitFileAudioClassificationScript(config, blocks);
+    case 'speech-to-text':
+      return config.input === 'mic' ? emitRealtimeSpeechToTextScript(config, blocks) : emitFileSpeechToTextScript(config, blocks);
+    case 'text-to-speech':
+      return emitTextToSpeechScript(config, blocks);
+    case 'audio-to-audio':
+      return emitAudioToAudioScript(config, blocks);
+    case 'speaker-diarization':
+      return emitSpeakerDiarizationScript(config, blocks);
+    case 'voice-activity-detection':
+      return emitVADScript(config, blocks);
+    // Text tasks
+    case 'text-classification':
+      return emitTextClassificationScript(config, blocks);
+    case 'zero-shot-classification':
+      return emitZeroShotScript(config, blocks);
+    case 'text-generation':
+      return emitTextGenerationScript(config, blocks);
+    case 'fill-mask':
+      return emitFillMaskScript(config, blocks);
+    case 'sentence-similarity':
+      return emitSentenceSimilarityScript(config, blocks);
+    case 'token-classification':
+      return emitTokenClassificationScript(config, blocks);
+    case 'question-answering':
+      return emitQuestionAnsweringScript(config, blocks);
+    case 'summarization':
+      return emitSummarizationScript(config, blocks);
+    case 'translation':
+      return emitTranslationScript(config, blocks);
+    case 'text2text-generation':
+      return emitText2TextScript(config, blocks);
+    case 'conversational':
+      return emitConversationalScript(config, blocks);
+    case 'table-question-answering':
+      return emitTableQAScript(config, blocks);
+    // Multimodal tasks
+    case 'image-to-text':
+      return emitImageToTextScript(config, blocks);
+    case 'visual-question-answering':
+      return emitVQAScript(config, blocks);
+    case 'document-question-answering':
+      return emitDocQAScript(config, blocks);
+    case 'image-text-to-text':
+      return emitImageTextToTextScript(config, blocks);
+    // Image tasks: dispatch by input mode
+    case 'depth-estimation':
+      return emitDepthEstimationScript(config, blocks);
+    default: {
+      if (config.input === 'camera' || config.input === 'screen') {
+        return emitRealtimeScript(config, blocks);
+      }
+      if (config.input === 'file') {
+        switch (task) {
+          case 'object-detection':
+            return emitFileDetectionScript(config, blocks);
+          case 'image-segmentation':
+            return emitFileSegmentationScript(config, blocks);
+          case 'feature-extraction':
+            return emitFileFeatureExtractionScript(config, blocks);
+          default:
+            return emitFileClassificationScript(config, blocks);
+        }
+      }
       return emitFileClassificationScript(config, blocks);
     }
-    switch (config.task) {
-      case 'object-detection':
-        return emitFileDetectionScript(config, blocks);
-      case 'image-segmentation':
-        return emitFileSegmentationScript(config, blocks);
-      case 'feature-extraction':
-        return emitFileFeatureExtractionScript(config, blocks);
-      default:
-        return emitFileClassificationScript(config, blocks);
-    }
   }
-
-  // Fallback: file classification for any unhandled combo
-  return emitFileClassificationScript(config, blocks);
 }
 
 // ---- HTML body content ----
@@ -1666,22 +2847,380 @@ function emitTextGenerationBody(config: ResolvedConfig): string {
     </div>`;
 }
 
-function emitBodyContent(config: ResolvedConfig): string {
-  // Audio tasks
-  if (config.task === 'text-to-speech') {
-    return emitTtsBody();
-  }
-  if (config.task === 'speech-to-text' || config.task === 'audio-classification') {
-    if (config.input === 'mic') {
-      return emitAudioMicBody(config);
-    }
-    return emitAudioFileBody(config);
-  }
+/** Fill-Mask body */
+function emitFillMaskBody(config: ResolvedConfig): string {
+  const taskLabel = getTaskLabel(config.task);
+  return `    <h2>${taskLabel}</h2>
 
-  // Text tasks
-  if (config.task === 'text-classification') return emitTextClassificationBody(config);
-  if (config.task === 'zero-shot-classification') return emitZeroShotBody(config);
-  if (config.task === 'text-generation') return emitTextGenerationBody(config);
+    <div class="text-input">
+      <label for="textInput">Enter text with [MASK] token</label>
+      <textarea id="textInput" rows="4" aria-label="Text with mask token">The capital of France is [MASK].</textarea>
+      <button id="predictBtn" class="run-btn" aria-label="Predict masked token">Predict</button>
+    </div>
+
+    <div id="results" class="mask-predictions" role="status" aria-live="polite" aria-atomic="true">
+    </div>`;
+}
+
+/** Sentence Similarity body */
+function emitSentenceSimilarityBody(config: ResolvedConfig): string {
+  const taskLabel = getTaskLabel(config.task);
+  return `    <h2>${taskLabel}</h2>
+
+    <div class="text-input">
+      <label for="sourceInput">Source sentence</label>
+      <textarea id="sourceInput" rows="2" aria-label="Source sentence">The weather is lovely today.</textarea>
+      <label for="compareInput">Sentences to compare (one per line)</label>
+      <textarea id="compareInput" rows="4" aria-label="Comparison sentences">It is a beautiful day.
+The sun is shining bright.
+I need to buy groceries.</textarea>
+      <button id="compareBtn" class="run-btn" aria-label="Compare similarity">Compare</button>
+    </div>
+
+    <div id="results" class="similarity-pairs" role="status" aria-live="polite" aria-atomic="true">
+    </div>`;
+}
+
+/** Depth Estimation body */
+function emitDepthEstimationBody(config: ResolvedConfig): string {
+  const taskLabel = getTaskLabel(config.task);
+  return `    <div class="container">
+      <div>
+        <div class="drop-zone" id="dropZone" role="button" tabindex="0"
+             aria-label="Drop an image here or click to browse for ${taskLabel.toLowerCase()}">
+          <p>Drop an image here or click to browse</p>
+          <p class="hint">Supports JPG, PNG, WebP</p>
+          <input type="file" id="fileInput" accept="image/*" hidden>
+        </div>
+
+        <div id="preview" class="preview" hidden>
+          <img id="previewImage" alt="Selected image for depth estimation">
+          <button id="changeBtn" class="change-btn">Choose another image</button>
+        </div>
+      </div>
+
+      <div>
+        <canvas id="depthCanvas" class="depth-canvas" role="img" aria-label="Depth estimation output"></canvas>
+      </div>
+    </div>`;
+}
+
+/** Token Classification (NER) body */
+function emitTokenClassificationBody(config: ResolvedConfig): string {
+  const taskLabel = getTaskLabel(config.task);
+  return `    <h2>${taskLabel}</h2>
+
+    <div class="text-input">
+      <label for="textInput">Enter text to analyze</label>
+      <textarea id="textInput" rows="4" aria-label="Text for named entity recognition">John Smith works at Google in Mountain View, California.</textarea>
+      <button id="analyzeBtn" class="run-btn" aria-label="Analyze entities">Analyze</button>
+    </div>
+
+    <div id="results" class="ner-output" role="status" aria-live="polite" aria-atomic="true">
+    </div>`;
+}
+
+/** Question Answering body */
+function emitQuestionAnsweringBody(config: ResolvedConfig): string {
+  const taskLabel = getTaskLabel(config.task);
+  return `    <h2>${taskLabel}</h2>
+
+    <div class="qa-input">
+      <label for="contextInput">Context</label>
+      <textarea id="contextInput" rows="4" class="text-input" aria-label="Context passage">The Eiffel Tower is a wrought-iron lattice tower in Paris, France. It was constructed from 1887 to 1889 as the centerpiece of the 1889 World's Fair.</textarea>
+      <label for="questionInput">Question</label>
+      <input type="text" id="questionInput" class="labels-input" value="When was the Eiffel Tower built?" aria-label="Question about the context">
+      <button id="answerBtn" class="run-btn" aria-label="Find answer">Answer</button>
+    </div>
+
+    <div id="answer" class="qa-answer" role="status" aria-live="polite" aria-atomic="true">
+    </div>`;
+}
+
+/** Summarization body */
+function emitSummarizationBody(config: ResolvedConfig): string {
+  const taskLabel = getTaskLabel(config.task);
+  return `    <h2>${taskLabel}</h2>
+
+    <div class="text-input">
+      <label for="textInput">Enter text to summarize</label>
+      <textarea id="textInput" rows="6" aria-label="Text to summarize">Artificial intelligence has transformed many industries. Machine learning models can now process natural language, recognize images, and generate creative content. These advances have led to applications in healthcare, finance, education, and entertainment.</textarea>
+      <button id="summarizeBtn" class="run-btn" aria-label="Summarize text">Summarize</button>
+    </div>
+
+    <div id="output" class="generation-output" role="status" aria-live="polite" aria-atomic="true">
+    </div>`;
+}
+
+/** Translation body */
+function emitTranslationBody(config: ResolvedConfig): string {
+  const taskLabel = getTaskLabel(config.task);
+  return `    <h2>${taskLabel}</h2>
+
+    <div class="text-input">
+      <label for="textInput">Enter text to translate</label>
+      <textarea id="textInput" rows="4" aria-label="Text to translate">Hello, how are you today?</textarea>
+      <button id="translateBtn" class="run-btn" aria-label="Translate text">Translate</button>
+    </div>
+
+    <div id="output" class="generation-output" role="status" aria-live="polite" aria-atomic="true">
+    </div>`;
+}
+
+/** Text2Text Generation body */
+function emitText2TextBody(config: ResolvedConfig): string {
+  const taskLabel = getTaskLabel(config.task);
+  return `    <h2>${taskLabel}</h2>
+
+    <div class="text-input">
+      <label for="textInput">Enter input text</label>
+      <textarea id="textInput" rows="4" aria-label="Input text">Paraphrase: The house is big and beautiful.</textarea>
+      <button id="runBtn" class="run-btn" aria-label="Process text">Run</button>
+    </div>
+
+    <div id="output" class="generation-output" role="status" aria-live="polite" aria-atomic="true">
+    </div>`;
+}
+
+/** Conversational body */
+function emitConversationalBody(config: ResolvedConfig): string {
+  const taskLabel = getTaskLabel(config.task);
+  return `    <h2>${taskLabel}</h2>
+
+    <div id="chatMessages" class="chat-messages" role="log" aria-live="polite" aria-atomic="false">
+    </div>
+
+    <div class="chat-input-row">
+      <input type="text" id="chatInput" placeholder="Type a message..." aria-label="Chat message input">
+      <button id="sendBtn" class="run-btn" aria-label="Send message">Send</button>
+    </div>`;
+}
+
+/** Table QA body */
+function emitTableQABody(config: ResolvedConfig): string {
+  const taskLabel = getTaskLabel(config.task);
+  return `    <h2>${taskLabel}</h2>
+
+    <div class="qa-input">
+      <label for="tableInput">Table data (CSV format)</label>
+      <div class="table-input">
+        <textarea id="tableInput" rows="4" aria-label="Table data in CSV format">Name, Age, City
+Alice, 30, New York
+Bob, 25, San Francisco
+Charlie, 35, Chicago</textarea>
+      </div>
+      <label for="questionInput">Question</label>
+      <input type="text" id="questionInput" class="labels-input" value="Who lives in San Francisco?" aria-label="Question about the table">
+      <button id="answerBtn" class="run-btn" aria-label="Find answer">Answer</button>
+    </div>
+
+    <div id="answer" class="qa-answer" role="status" aria-live="polite" aria-atomic="true">
+    </div>`;
+}
+
+/** Image-to-Text body */
+function emitImageToTextBody(config: ResolvedConfig): string {
+  const taskLabel = getTaskLabel(config.task);
+  return `    <div class="container">
+      <div>
+        <div class="drop-zone" id="dropZone" role="button" tabindex="0"
+             aria-label="Drop an image here or click to browse for ${taskLabel.toLowerCase()}">
+          <p>Drop an image here or click to browse</p>
+          <p class="hint">Supports JPG, PNG, WebP</p>
+          <input type="file" id="fileInput" accept="image/*" hidden>
+        </div>
+
+        <div id="preview" class="preview" hidden>
+          <img id="previewImage" alt="Selected image for captioning">
+          <button id="changeBtn" class="change-btn">Choose another image</button>
+        </div>
+      </div>
+
+      <div id="output" class="generation-output" role="status" aria-live="polite" aria-atomic="true">
+      </div>
+    </div>`;
+}
+
+/** Visual Question Answering body */
+function emitVQABody(config: ResolvedConfig): string {
+  const taskLabel = getTaskLabel(config.task);
+  return `    <h2>${taskLabel}</h2>
+
+    <div class="container">
+      <div class="multimodal-input">
+        <div class="drop-zone" id="dropZone" role="button" tabindex="0"
+             aria-label="Drop an image here or click to browse">
+          <p>Drop an image here or click to browse</p>
+          <p class="hint">Supports JPG, PNG, WebP</p>
+          <input type="file" id="fileInput" accept="image/*" hidden>
+        </div>
+
+        <div id="preview" class="preview" hidden>
+          <img id="previewImage" alt="Selected image for VQA">
+          <button id="changeBtn" class="change-btn">Choose another image</button>
+        </div>
+
+        <input type="text" id="questionInput" class="question-input" placeholder="Ask a question about the image..." value="What is in this image?" aria-label="Question about the image">
+        <button id="askBtn" class="run-btn" aria-label="Ask question">Ask</button>
+      </div>
+
+      <div id="answer" class="qa-answer" role="status" aria-live="polite" aria-atomic="true">
+      </div>
+    </div>`;
+}
+
+/** Document Question Answering body */
+function emitDocQABody(config: ResolvedConfig): string {
+  const taskLabel = getTaskLabel(config.task);
+  return `    <h2>${taskLabel}</h2>
+
+    <div class="container">
+      <div class="multimodal-input">
+        <div class="drop-zone" id="dropZone" role="button" tabindex="0"
+             aria-label="Drop a document image here or click to browse">
+          <p>Drop a document image here or click to browse</p>
+          <p class="hint">Supports JPG, PNG, WebP</p>
+          <input type="file" id="fileInput" accept="image/*" hidden>
+        </div>
+
+        <div id="preview" class="preview" hidden>
+          <img id="previewImage" alt="Selected document image">
+          <button id="changeBtn" class="change-btn">Choose another image</button>
+        </div>
+
+        <input type="text" id="questionInput" class="question-input" placeholder="Ask a question about the document..." value="What is the total amount?" aria-label="Question about the document">
+        <button id="askBtn" class="run-btn" aria-label="Ask question">Ask</button>
+      </div>
+
+      <div id="answer" class="qa-answer" role="status" aria-live="polite" aria-atomic="true">
+      </div>
+    </div>`;
+}
+
+/** Image-Text-to-Text body */
+function emitImageTextToTextBody(config: ResolvedConfig): string {
+  const taskLabel = getTaskLabel(config.task);
+  return `    <h2>${taskLabel}</h2>
+
+    <div class="container">
+      <div class="multimodal-input">
+        <div class="drop-zone" id="dropZone" role="button" tabindex="0"
+             aria-label="Drop an image here or click to browse">
+          <p>Drop an image here or click to browse</p>
+          <p class="hint">Supports JPG, PNG, WebP</p>
+          <input type="file" id="fileInput" accept="image/*" hidden>
+        </div>
+
+        <div id="preview" class="preview" hidden>
+          <img id="previewImage" alt="Selected image">
+          <button id="changeBtn" class="change-btn">Choose another image</button>
+        </div>
+
+        <input type="text" id="promptInput" class="question-input" placeholder="Enter a prompt..." value="Describe this image in detail." aria-label="Text prompt for the image">
+        <button id="generateBtn" class="run-btn" aria-label="Generate text">Generate</button>
+      </div>
+
+      <div id="output" class="generation-output" role="status" aria-live="polite" aria-atomic="true">
+      </div>
+    </div>`;
+}
+
+/** Audio-to-Audio body */
+function emitAudioToAudioBody(config: ResolvedConfig): string {
+  const taskLabel = getTaskLabel(config.task);
+  return `    <h2>${taskLabel}</h2>
+
+    <div>
+      <label for="fileInput">Choose an audio file &#9835;</label>
+      <input type="file" id="fileInput" accept="audio/*" aria-label="Select audio file for ${taskLabel.toLowerCase()}">
+    </div>
+
+    <div id="output" class="generation-output" role="status" aria-live="polite" aria-atomic="true">
+    </div>`;
+}
+
+/** Speaker Diarization body */
+function emitSpeakerDiarizationBody(config: ResolvedConfig): string {
+  const taskLabel = getTaskLabel(config.task);
+  return `    <h2>${taskLabel}</h2>
+
+    <div>
+      <label for="fileInput">Choose an audio file &#9835;</label>
+      <input type="file" id="fileInput" accept="audio/*" aria-label="Select audio file for ${taskLabel.toLowerCase()}">
+    </div>
+
+    <div id="results" class="diarization-timeline" role="status" aria-live="polite" aria-atomic="true">
+    </div>`;
+}
+
+/** Voice Activity Detection body */
+function emitVADBody(config: ResolvedConfig): string {
+  const taskLabel = getTaskLabel(config.task);
+  return `    <h2>${taskLabel}</h2>
+
+    <div>
+      <label for="fileInput">Choose an audio file &#9835;</label>
+      <input type="file" id="fileInput" accept="audio/*" aria-label="Select audio file for ${taskLabel.toLowerCase()}">
+    </div>
+
+    <div id="results" class="vad-segments" role="status" aria-live="polite" aria-atomic="true">
+    </div>`;
+}
+
+function emitBodyContent(config: ResolvedConfig): string {
+  switch (config.task) {
+    // Audio tasks
+    case 'text-to-speech':
+      return emitTtsBody();
+    case 'speech-to-text':
+    case 'audio-classification':
+      return config.input === 'mic' ? emitAudioMicBody(config) : emitAudioFileBody(config);
+    case 'audio-to-audio':
+      return emitAudioToAudioBody(config);
+    case 'speaker-diarization':
+      return emitSpeakerDiarizationBody(config);
+    case 'voice-activity-detection':
+      return emitVADBody(config);
+    // Text tasks
+    case 'text-classification':
+      return emitTextClassificationBody(config);
+    case 'zero-shot-classification':
+      return emitZeroShotBody(config);
+    case 'text-generation':
+      return emitTextGenerationBody(config);
+    case 'fill-mask':
+      return emitFillMaskBody(config);
+    case 'sentence-similarity':
+      return emitSentenceSimilarityBody(config);
+    case 'token-classification':
+      return emitTokenClassificationBody(config);
+    case 'question-answering':
+      return emitQuestionAnsweringBody(config);
+    case 'summarization':
+      return emitSummarizationBody(config);
+    case 'translation':
+      return emitTranslationBody(config);
+    case 'text2text-generation':
+      return emitText2TextBody(config);
+    case 'conversational':
+      return emitConversationalBody(config);
+    case 'table-question-answering':
+      return emitTableQABody(config);
+    // Multimodal tasks
+    case 'image-to-text':
+      return emitImageToTextBody(config);
+    case 'visual-question-answering':
+      return emitVQABody(config);
+    case 'document-question-answering':
+      return emitDocQABody(config);
+    case 'image-text-to-text':
+      return emitImageTextToTextBody(config);
+    // Depth estimation
+    case 'depth-estimation':
+      return emitDepthEstimationBody(config);
+    default:
+      break;
+  }
 
   if (config.input === 'camera' || config.input === 'screen') {
     return emitRealtimeBody(config);
@@ -1835,7 +3374,9 @@ function emitAudioCSS(): string {
 function needsExtendedCSS(config: ResolvedConfig): boolean {
   return config.input === 'camera' || config.input === 'screen' ||
     config.task === 'object-detection' || config.task === 'image-segmentation' ||
-    config.task === 'feature-extraction';
+    config.task === 'feature-extraction' || config.task === 'depth-estimation' ||
+    config.task === 'image-to-text' || config.task === 'visual-question-answering' ||
+    config.task === 'document-question-answering' || config.task === 'image-text-to-text';
 }
 
 function needsAudioCSS(config: ResolvedConfig): boolean {

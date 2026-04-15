@@ -14,12 +14,29 @@ const TASK_LABELS: Record<string, string> = {
   'object-detection': 'Object Detection',
   'image-segmentation': 'Image Segmentation',
   'feature-extraction': 'Feature Extraction',
+  'depth-estimation': 'Depth Estimation',
   'speech-to-text': 'Speech to Text',
   'audio-classification': 'Audio Classification',
   'text-to-speech': 'Text to Speech',
+  'audio-to-audio': 'Audio to Audio',
+  'speaker-diarization': 'Speaker Diarization',
+  'voice-activity-detection': 'Voice Activity Detection',
   'text-classification': 'Text Classification',
   'text-generation': 'Text Generation',
   'zero-shot-classification': 'Zero-Shot Classification',
+  'fill-mask': 'Fill Mask',
+  'sentence-similarity': 'Sentence Similarity',
+  'token-classification': 'Token Classification (NER)',
+  'question-answering': 'Question Answering',
+  'summarization': 'Summarization',
+  'translation': 'Translation',
+  'text2text-generation': 'Text-to-Text Generation',
+  'conversational': 'Conversational',
+  'table-question-answering': 'Table Question Answering',
+  'image-to-text': 'Image to Text',
+  'visual-question-answering': 'Visual Question Answering',
+  'document-question-answering': 'Document Question Answering',
+  'image-text-to-text': 'Image-Text to Text',
 };
 
 const ENGINE_LABELS: Record<string, string> = {
@@ -388,6 +405,194 @@ h1 {
   padding: var(--webai-space-2);
 }
 
+/* Depth estimation: canvas output */
+.depth-canvas {
+  max-width: 100%;
+  border-radius: var(--webai-radius);
+  display: block;
+}
+
+/* NER: entity highlights */
+.ner-output {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  padding: var(--webai-space-3);
+  line-height: 2;
+  white-space: pre-wrap;
+}
+
+.ner-entity {
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-weight: 500;
+}
+
+.ner-entity[data-type="PER"] { background: rgba(59,130,246,0.2); color: #60a5fa; }
+.ner-entity[data-type="ORG"] { background: rgba(34,197,94,0.2); color: #4ade80; }
+.ner-entity[data-type="LOC"] { background: rgba(234,179,8,0.2); color: #facc15; }
+.ner-entity[data-type="MISC"] { background: rgba(168,85,247,0.2); color: #c084fc; }
+
+/* QA: answer highlight */
+.qa-input { display: flex; flex-direction: column; gap: var(--webai-space-3); }
+.qa-input label {
+  font-size: var(--webai-font-size-sm);
+  color: var(--webai-text-muted);
+}
+.qa-answer {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  padding: var(--webai-space-3);
+  font-size: var(--webai-font-size-lg);
+}
+.qa-answer .score {
+  font-size: var(--webai-font-size-sm);
+  color: var(--webai-text-muted);
+  margin-top: var(--webai-space-1);
+}
+
+/* Similarity: score pairs */
+.similarity-pairs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webai-space-2);
+}
+.similarity-score {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--webai-space-2) var(--webai-space-3);
+  background: var(--webai-surface);
+  border-radius: var(--webai-radius);
+}
+.similarity-score .value {
+  font-family: var(--webai-font-mono);
+  font-weight: 600;
+  color: var(--webai-accent);
+}
+
+/* Fill-mask: predictions */
+.mask-predictions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webai-space-1);
+}
+.mask-prediction {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--webai-space-2) var(--webai-space-3);
+  background: var(--webai-surface);
+  border-radius: var(--webai-radius);
+}
+.mask-prediction .token { font-weight: 600; color: var(--webai-accent); }
+.mask-prediction .prob {
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  color: var(--webai-text-muted);
+}
+
+/* Conversational: chat bubbles */
+.chat-messages {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webai-space-2);
+  max-height: 400px;
+  overflow-y: auto;
+  padding: var(--webai-space-3);
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+}
+.chat-msg {
+  padding: var(--webai-space-2) var(--webai-space-3);
+  border-radius: var(--webai-radius);
+  max-width: 80%;
+}
+.chat-msg.user { background: var(--webai-accent); color: white; align-self: flex-end; }
+.chat-msg.bot { background: var(--webai-border); align-self: flex-start; }
+.chat-input-row { display: flex; gap: var(--webai-space-2); }
+.chat-input-row input {
+  flex: 1;
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  padding: var(--webai-space-2) var(--webai-space-3);
+}
+
+/* Table QA: table input */
+.table-input textarea {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  padding: var(--webai-space-3);
+  resize: vertical;
+  width: 100%;
+  min-height: 120px;
+}
+
+/* Multimodal: image + question layout */
+.multimodal-input {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webai-space-3);
+}
+.multimodal-input .question-input {
+  background: var(--webai-surface);
+  border: 1px solid var(--webai-border);
+  border-radius: var(--webai-radius);
+  color: var(--webai-text);
+  padding: var(--webai-space-2) var(--webai-space-3);
+}
+
+/* Speaker diarization: timeline */
+.diarization-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webai-space-1);
+}
+.diarization-segment {
+  display: grid;
+  grid-template-columns: 80px 1fr 80px;
+  align-items: center;
+  gap: var(--webai-space-2);
+  padding: var(--webai-space-1) var(--webai-space-2);
+  background: var(--webai-surface);
+  border-radius: var(--webai-radius);
+  font-size: var(--webai-font-size-sm);
+}
+.diarization-segment .speaker {
+  font-weight: 600;
+  color: var(--webai-accent);
+}
+.diarization-segment .time {
+  font-family: var(--webai-font-mono);
+  color: var(--webai-text-muted);
+  text-align: right;
+}
+
+/* VAD: speech segments */
+.vad-segments {
+  display: flex;
+  flex-direction: column;
+  gap: var(--webai-space-1);
+}
+.vad-segment {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--webai-space-2) var(--webai-space-3);
+  background: var(--webai-surface);
+  border-radius: var(--webai-radius);
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+}
+.vad-segment .label { color: var(--webai-success); }
+.vad-segment .time { color: var(--webai-text-muted); }
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .result-bar { transition: none; }
@@ -398,12 +603,12 @@ h1 {
 
 /** Check if a task is an audio task */
 export function isAudioTask(task: string): boolean {
-  return ['speech-to-text', 'audio-classification', 'text-to-speech'].includes(task);
+  return ['speech-to-text', 'audio-classification', 'text-to-speech', 'audio-to-audio', 'speaker-diarization', 'voice-activity-detection'].includes(task);
 }
 
 /** Check if a task is a text/NLP task */
 export function isTextTask(task: string): boolean {
-  return ['text-classification', 'text-generation', 'zero-shot-classification'].includes(task);
+  return ['text-classification', 'text-generation', 'zero-shot-classification', 'fill-mask', 'sentence-similarity', 'token-classification', 'question-answering', 'summarization', 'translation', 'text2text-generation', 'conversational', 'table-question-answering'].includes(task);
 }
 
 /** Collect auxiliary files from all code blocks (e.g. AudioWorklet processor) */
