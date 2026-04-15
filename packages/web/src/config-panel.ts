@@ -23,6 +23,8 @@ export interface ConfigValues {
   offline: boolean;
   modelUrl?: string;
   modelSource: 'local-path' | 'hf-model-id' | 'url';
+  /** Selected HF model filename (e.g., "onnx/model.onnx") */
+  hfFile?: string;
 }
 
 interface SelectOption {
@@ -99,7 +101,7 @@ const ENGINE_ICONS: Record<string, string> = {
 /** URL param key → config panel element ID */
 const URL_PARAM_MAP: Record<string, string> = {
   model: 'modelName',
-  file: 'modelFile',
+  file: 'hfFile',
   task: 'task',
   engine: 'engine',
   backend: 'backend',
@@ -128,6 +130,7 @@ export function readUrlParams(): Record<string, string> {
 export function updateUrlParams(values: ConfigValues, pageTheme: string): void {
   const params = new URLSearchParams();
   params.set('model', values.modelName);
+  if (values.hfFile) params.set('file', values.hfFile);
   params.set('task', values.task);
   params.set('engine', values.engine);
   params.set('backend', values.backend);
@@ -344,11 +347,13 @@ export function setupConfigPanel(
     };
     if (hfResult) {
       values.modelUrl = hfResult.url;
+      values.hfFile = hfResult.filename;
     }
     return values;
   }
 
-  // Wire up HF picker
+  // Wire up HF picker (pass file from URL params for pre-selection)
+  const initialHfFile = urlParams.file;
   setupHfPicker(
     modelInput,
     hfPickerContainer,
@@ -394,6 +399,7 @@ export function setupConfigPanel(
       }
       onChange(getValues());
     },
+    initialHfFile,
   );
 
   // Listen for changes on all inputs

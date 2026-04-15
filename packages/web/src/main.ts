@@ -141,6 +141,7 @@ async function init(): Promise<void> {
   if (!window.location.search) {
     const defaults = new URLSearchParams({
       model: 'webnn/mobilenet-v2',
+      file: 'onnx/model_fp16.onnx',
       task: 'image-classification',
       engine: 'ort',
       backend: 'auto',

@@ -92,7 +92,7 @@ async function fetchModelFiles(modelId) {
  * @param getPreferTflite - Function returning whether to prefer .tflite files
  * @param onSelect - Callback when a file is selected (or null when deselected)
  */
-export function setupHfPicker(input, container, getPreferTflite, onSelect) {
+export function setupHfPicker(input, container, getPreferTflite, onSelect, initialFile) {
     let debounceTimer = null;
     let currentModelId = '';
     function render(state, data) {
@@ -161,12 +161,12 @@ export function setupHfPicker(input, container, getPreferTflite, onSelect) {
             fireSelect();
         }
     }
-    async function checkInput() {
+    async function checkInput(preferFile) {
         const value = input.value.trim();
         const sourceType = classifyModelInput(value);
         // Case 1: HuggingFace model ID (e.g., "Xenova/yolov8n")
         if (sourceType === 'hf-model-id') {
-            if (value === currentModelId)
+            if (value === currentModelId && !preferFile)
                 return;
             currentModelId = value;
             render('loading');
@@ -175,7 +175,10 @@ export function setupHfPicker(input, container, getPreferTflite, onSelect) {
                 if (input.value.trim() !== value)
                     return;
                 const siblings = files.map((f) => ({ rfilename: f.filename }));
-                const bestFile = pickBestModelFile(siblings, getPreferTflite());
+                // Use preferFile from URL param if available, otherwise auto-pick
+                const bestFile = preferFile && files.some((f) => f.filename === preferFile)
+                    ? preferFile
+                    : pickBestModelFile(siblings, getPreferTflite());
                 render('files', { files, pipelineTag, bestFile, modelId: value, modelSource: 'hf-model-id' });
             }
             catch (e) {
@@ -195,7 +198,7 @@ export function setupHfPicker(input, container, getPreferTflite, onSelect) {
                 onSelect(null);
                 return;
             }
-            if (value === currentModelId)
+            if (value === currentModelId && !preferFile)
                 return;
             currentModelId = value;
             render('loading');
@@ -206,7 +209,9 @@ export function setupHfPicker(input, container, getPreferTflite, onSelect) {
                 // If the URL points to a specific file, pre-select it
                 const bestFile = parsed.filename
                     ? parsed.filename
-                    : pickBestModelFile(files.map((f) => ({ rfilename: f.filename })), getPreferTflite());
+                    : preferFile && files.some((f) => f.filename === preferFile)
+                        ? preferFile
+                        : pickBestModelFile(files.map((f) => ({ rfilename: f.filename })), getPreferTflite());
                 render('files', { files, pipelineTag, bestFile, modelId: parsed.modelId, modelSource: 'url' });
             }
             catch (e) {
@@ -243,7 +248,11 @@ export function setupHfPicker(input, container, getPreferTflite, onSelect) {
     input.addEventListener('input', () => {
         if (debounceTimer)
             clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(checkInput, 400);
+        debounceTimer = setTimeout(() => checkInput(), 400);
     });
+    // Auto-trigger on setup if the input already has a value (e.g., from URL params)
+    if (input.value.trim()) {
+        checkInput(initialFile);
+    }
 }
 //# sourceMappingURL=hf-picker.js.map

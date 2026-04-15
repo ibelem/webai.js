@@ -65,7 +65,7 @@ const ENGINE_ICONS = {
 /** URL param key → config panel element ID */
 const URL_PARAM_MAP = {
     model: 'modelName',
-    file: 'modelFile',
+    file: 'hfFile',
     task: 'task',
     engine: 'engine',
     backend: 'backend',
@@ -91,6 +91,8 @@ export function readUrlParams() {
 export function updateUrlParams(values, pageTheme) {
     const params = new URLSearchParams();
     params.set('model', values.modelName);
+    if (values.hfFile)
+        params.set('file', values.hfFile);
     params.set('task', values.task);
     params.set('engine', values.engine);
     params.set('backend', values.backend);
@@ -267,10 +269,12 @@ export function setupConfigPanel(container, onChange) {
         };
         if (hfResult) {
             values.modelUrl = hfResult.url;
+            values.hfFile = hfResult.filename;
         }
         return values;
     }
-    // Wire up HF picker
+    // Wire up HF picker (pass file from URL params for pre-selection)
+    const initialHfFile = urlParams.file;
     setupHfPicker(modelInput, hfPickerContainer, () => container.querySelector('#engine').value === 'litert', (result) => {
         hfResult = result;
         // Auto-set task from HF pipeline_tag if available
@@ -311,7 +315,7 @@ export function setupConfigPanel(container, onChange) {
             }
         }
         onChange(getValues());
-    });
+    }, initialHfFile);
     // Listen for changes on all inputs
     container.addEventListener('change', () => {
         if (document.activeElement === taskSelect) {
