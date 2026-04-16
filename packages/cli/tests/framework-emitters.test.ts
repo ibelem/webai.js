@@ -51,7 +51,7 @@ function makeConfig(overrides: Partial<ResolvedConfig> = {}): ResolvedConfig {
   return {
     task: 'image-classification',
     engine: 'ort',
-    backend: 'auto',
+    backend: 'webnn-gpu',
     framework: 'html',
     input: 'file',
     mode: 'raw',
@@ -198,7 +198,7 @@ describe('emitHtml', () => {
     it('includes model name in title', () => {
       const { files } = generateHtml();
       const html = getFile(files, 'index.html');
-      expect(html).toContain('<title>mobilenet — Image Classification</title>');
+      expect(html).toContain('<title>Image Classification · mobilenet</title>');
     });
 
     it('includes preprocessing code', () => {
@@ -1114,7 +1114,7 @@ describe('Engine dispatch — LiteRT', () => {
   it('HTML: generates LiteRT inference code', () => {
     const { files } = generateHtml(liteRTOverrides);
     const html = getFile(files, 'index.html');
-    expect(html).toContain('TFLiteModel.load');
+    expect(html).toContain('loadAndCompile');
     expect(html).toContain('LiteRT session created');
     expect(html).not.toContain('ort.InferenceSession');
   });
@@ -1122,14 +1122,14 @@ describe('Engine dispatch — LiteRT', () => {
   it('React-Vite: inference module contains LiteRT code', () => {
     const { files } = generateReactVite(liteRTOverrides);
     const inference = getFile(files, 'src/lib/inference.js');
-    expect(inference).toContain('TFLiteModel.load');
-    expect(inference).toContain('@anthropic-ai/litert-web');
+    expect(inference).toContain('loadAndCompile');
+    expect(inference).toContain('@litertjs/core');
   });
 
   it('package.json includes LiteRT dependency', () => {
     const { files } = generateReactVite(liteRTOverrides);
     const pkg = JSON.parse(getFile(files, 'package.json'));
-    expect(pkg.dependencies['@anthropic-ai/litert-web']).toBeDefined();
+    expect(pkg.dependencies['@litertjs/core']).toBeDefined();
   });
 });
 
@@ -1211,7 +1211,7 @@ describe('Offline mode — OPFS caching', () => {
     const { files } = generateHtml({ ...liteRTOverrides, ...offlineOverrides });
     const html = getFile(files, 'index.html');
     expect(html).toContain('cachedFetch');
-    expect(html).toContain('TFLiteModel.load(modelData');
+    expect(html).toContain('loadAndCompile(new Uint8Array(modelData)');
   });
 
   it('WebNN createSession uses cachedFetch when offline', () => {

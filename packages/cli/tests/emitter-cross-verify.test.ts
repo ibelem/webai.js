@@ -50,7 +50,7 @@ const classificationMeta: ModelMetadata = {
 const baseConfig: ResolvedConfig = {
   task: 'image-classification',
   engine: 'ort',
-  backend: 'auto',
+  backend: 'webnn-gpu',
   framework: 'html',
   input: 'file',
   mode: 'raw',

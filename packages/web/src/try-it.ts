@@ -6,6 +6,7 @@
  */
 
 import type { GeneratedFile } from 'webai';
+import { relayoutEditor } from './code-preview.js';
 
 export function canTryIt(framework: string): boolean {
   return framework === 'html';
@@ -32,6 +33,14 @@ export function setupTryIt(
   getFramework: () => string,
 ): void {
   tryItBtn.addEventListener('click', () => {
+    const isOpen = !section.classList.contains('is-closed');
+    if (isOpen) {
+      section.classList.remove('fullscreen');
+      section.classList.add('is-closed');
+      iframe.srcdoc = '';
+      requestAnimationFrame(() => requestAnimationFrame(() => relayoutEditor()));
+      return;
+    }
     const framework = getFramework();
     if (!canTryIt(framework)) {
       iframe.srcdoc = `<body style="font-family:system-ui;padding:2rem;color:#666">
@@ -39,16 +48,20 @@ export function setupTryIt(
         <p>The <strong>${framework}</strong> template requires <code>npm install && npm run dev</code>.</p>
         <p>Copy the generated code and run it locally.</p>
       </body>`;
-      section.hidden = false;
+      section.classList.remove('is-closed');
+      requestAnimationFrame(() => requestAnimationFrame(() => relayoutEditor()));
       return;
     }
     const files = getFiles();
     runInIframe(iframe, files);
-    section.hidden = false;
+    section.classList.remove('is-closed');
+    requestAnimationFrame(() => requestAnimationFrame(() => relayoutEditor()));
   });
 
   closeBtn.addEventListener('click', () => {
-    section.hidden = true;
+    section.classList.remove('fullscreen');
+    section.classList.add('is-closed');
     iframe.srcdoc = '';
+    requestAnimationFrame(() => requestAnimationFrame(() => relayoutEditor()));
   });
 }

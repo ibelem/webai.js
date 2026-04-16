@@ -94,9 +94,6 @@ function engineLabel(engine: string, backend: string): string {
     webnn: 'WebNN API',
   };
   const name = engineNames[engine] ?? engine;
-  if (backend === 'auto') {
-    return `${name} (auto-select: WebNN NPU → WebNN GPU → WebGPU → WASM)`;
-  }
   return `${name} (${backend})`;
 }
 

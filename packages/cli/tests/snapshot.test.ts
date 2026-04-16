@@ -25,7 +25,7 @@ function makeConfig(overrides: Partial<ResolvedConfig> = {}): ResolvedConfig {
   return {
     task: 'image-classification',
     engine: 'ort',
-    backend: 'auto',
+    backend: 'webnn-gpu',
     framework: 'html',
     input: 'file',
     mode: 'raw',

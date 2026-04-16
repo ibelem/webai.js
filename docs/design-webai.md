@@ -283,7 +283,7 @@ export default function ObjectDetector() {
 Flag               Short   Values                         Default
 ────────────────────────────────────────────────────────────────────
 --engine           -e      ort, litert, webnn             ort
---backend          -b      wasm, webgpu, webnn-cpu,       (auto)
+--backend          -b      wasm, webgpu, webnn-cpu,       (engine default)
                            webnn-gpu, webnn-npu
 --task             -t      image-classification, etc.     (auto-detect)
 --model            -m      path or HuggingFace ID         (required)

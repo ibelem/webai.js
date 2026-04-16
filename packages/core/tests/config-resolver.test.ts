@@ -32,7 +32,7 @@ describe('resolveConfig', () => {
 
       expect(config.task).toBe('image-classification');
       expect(config.engine).toBe('ort');
-      expect(config.backend).toBe('auto');
+      expect(config.backend).toBe('webnn-gpu');
       expect(config.framework).toBe('html');
       expect(config.input).toBe('file');
       expect(config.mode).toBe('raw');

@@ -2,23 +2,28 @@
  * LiteRT.js inference emitter (Layer 1).
  *
  * Generates code that:
- * 1. Creates a LiteRT (TFLite) inference session
- * 2. Runs inference with proper tensor creation
- * 3. Returns raw output data for postprocessing
+ * 1. Initializes LiteRT.js Wasm runtime
+ * 2. Loads and compiles a .tflite model (optionally with WebGPU acceleration)
+ * 3. Runs inference with Tensor creation
+ * 4. Returns raw output data for postprocessing
  *
  * LiteRT.js is Google's on-device ML runtime for web.
- * Uses @anthropic/anthropic-litert-web npm package (placeholder).
+ * Package: @litertjs/core
+ * API: loadLiteRt() → loadAndCompile() → model.run()
  *
  * The generated code exports the same interface as ORT:
- *   createSession(modelPath) → session
- *   runInference(session, inputData) → Float32Array
- *   getBackendLabel(session) → string
+ *   createSession(modelPath) → model
+ *   runInference(model, inputData) → Float32Array
+ *   getBackendLabel(model) → string
  */
 
 import type { ResolvedConfig } from '@webai/core';
 import type { CodeBlock } from '../types.js';
 
-const LITERT_PKG = '@anthropic-ai/litert-web';
+const LITERT_PKG = '@litertjs/core';
+
+/** CDN base URL for loading LiteRT Wasm files in HTML framework */
+export const LITERT_CDN = 'https://cdn.jsdelivr.net/npm/@litertjs/core/wasm/';
 
 function emitCreateSession(config: ResolvedConfig, ts: boolean): string {
   const t = ts;
@@ -29,22 +34,29 @@ function emitCreateSession(config: ResolvedConfig, ts: boolean): string {
   const modelData = await cachedFetch(modelPath, cacheKey);`
     : '';
 
-  const modelArg = config.offline ? 'modelData' : 'modelPath';
-
-  const delegateCode = config.backend === 'webgpu'
-    ? `  const delegate = await litert.createGpuDelegate();
-  const session = await litert.TFLiteModel.load(${modelArg}, { delegates: [delegate] });`
-    : `  const session = await litert.TFLiteModel.load(${modelArg});`;
+  const modelArg = config.offline ? 'new Uint8Array(modelData)' : 'modelPath';
 
   return `/**
  * Create a LiteRT inference session.
- * Loads a .tflite model for browser-based inference.
+ * Loads and compiles a .tflite model for browser-based inference.
+ * Backend is read from the runtime <select id="backend"> element.
  */
-async function createSession(modelPath${t ? ': string' : ''})${t ? ': Promise<litert.TFLiteModel>' : ''} {
-${modelSource}${modelSource ? '\n' : ''}${delegateCode}
+async function createSession(modelPath${t ? ': string' : ''})${t ? ': Promise<any>' : ''} {
+${modelSource}${modelSource ? '\n' : ''}  // Initialize LiteRT.js Wasm runtime
+  await loadLiteRt(LITERT_WASM_PATH);
 
-  console.log('LiteRT session created');
-  return session;
+  // Read backend from the runtime <select> element
+  const backendSelect = document.getElementById('backend')${t ? ' as HTMLSelectElement' : ''};
+  const backend = backendSelect ? backendSelect.value : 'webgpu';
+
+  const accelerator = backend === 'webgpu' ? 'webgpu' : undefined;
+  const options${t ? ': Record<string, unknown>' : ''} = {};
+  if (accelerator) options.accelerator = accelerator;
+
+  const model = await loadAndCompile(${modelArg}, options);
+
+  console.log('LiteRT session created (' + (accelerator || 'Wasm') + ')');
+  return model;
 }`;
 }
 
@@ -59,19 +71,30 @@ function emitRunInference(config: ResolvedConfig, ts: boolean): string {
  * Output: Float32Array of raw model output
  */
 async function runInference(
-  session${t ? ': litert.TFLiteModel' : ''},
+  model${t ? ': any' : ''},
   inputData${t ? ': Float32Array' : ''}
 )${t ? ': Promise<Float32Array>' : ''} {
-  const inputTensor = {
-    data: inputData,
-    shape: ${shapeStr},
-    dtype: 'float32',
-  };
+  const inputTensor = new Tensor(inputData, ${shapeStr});
 
-  const results = await session.predict([inputTensor]);
-  const output = results[0];
+  // Read backend to decide if we need GPU tensors
+  const backendSelect = document.getElementById('backend')${t ? ' as HTMLSelectElement' : ''};
+  const backend = backendSelect ? backendSelect.value : 'webgpu';
 
-  return output.data${t ? ' as Float32Array' : ''};
+  let runInput = inputTensor;
+  if (backend === 'webgpu') {
+    runInput = await inputTensor.moveTo('webgpu');
+    inputTensor.delete();
+  }
+
+  const results = await model.run(runInput);
+  runInput.delete();
+
+  // Move result to CPU to read the data
+  const result = results[0];
+  const output = new Float32Array(await result.data());
+  result.delete();
+
+  return output;
 }`;
 }
 
@@ -80,9 +103,11 @@ function emitBackendStatus(ts: boolean): string {
   return `/**
  * Get a display string for the active backend.
  */
-function getBackendLabel(session${t ? ': litert.TFLiteModel' : ''})${t ? ': string' : ''} {
-  void session;
-  return 'LiteRT';
+function getBackendLabel(model${t ? ': any' : ''})${t ? ': string' : ''} {
+  void model;
+  const backendSelect = document.getElementById('backend')${t ? ' as HTMLSelectElement | null' : ''};
+  const backend = backendSelect ? backendSelect.value : 'webgpu';
+  return 'LiteRT (' + (backend === 'webgpu' ? 'WebGPU' : 'Wasm') + ')';
 }`;
 }
 
@@ -92,10 +117,12 @@ function getBackendLabel(session${t ? ': litert.TFLiteModel' : ''})${t ? ': stri
 export function emitLiteRTInferenceBlock(config: ResolvedConfig): CodeBlock {
   const ts = config.lang === 'ts';
 
-  const importLine = `import * as litert from '${LITERT_PKG}';`;
+  const importLine = `import { loadLiteRt, loadAndCompile, Tensor } from '${LITERT_PKG}';`;
+  const wasmPath = `const LITERT_WASM_PATH = '/node_modules/@litertjs/core/wasm/';`;
 
   const parts = [
     importLine,
+    wasmPath,
     '',
     emitCreateSession(config, ts),
     emitRunInference(config, ts),

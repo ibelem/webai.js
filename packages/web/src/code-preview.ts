@@ -17,7 +17,7 @@ interface MonacoEditor {
 
 interface MonacoStandaloneEditor {
   setModel(model: unknown): void;
-  layout(): void;
+  layout(dimension?: { width: number; height: number }): void;
   getValue(): string;
 }
 
@@ -158,4 +158,18 @@ export function getActiveFileContent(): string | null {
 export function setEditorTheme(theme: 'dark' | 'light'): void {
   if (!editor) return;
   window.monaco.editor.setTheme(theme === 'light' ? 'vs' : 'vs-dark');
+}
+
+/** Force Monaco to recalculate its layout (e.g. after fullscreen exit). */
+export function relayoutEditor(): void {
+  if (!editor) return;
+  const container = document.getElementById('editor');
+  if (!container) return;
+  // Reset Monaco to zero so it releases cached dimensions
+  editor.layout({ width: 0, height: 0 });
+  // After browser reflows grid with zero-sized Monaco, read actual size
+  requestAnimationFrame(() => {
+    if (!editor || !container) return;
+    editor.layout({ width: container.clientWidth, height: container.clientHeight });
+  });
 }

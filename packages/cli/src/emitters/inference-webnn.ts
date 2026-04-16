@@ -22,23 +22,17 @@
 import type { ResolvedConfig } from '@webai/core';
 import type { CodeBlock } from '../types.js';
 
-function emitDevicePreference(config: ResolvedConfig): string {
-  switch (config.backend) {
-    case 'webnn-npu':
-      return "'npu'";
-    case 'webnn-gpu':
-      return "'gpu'";
-    case 'webnn-cpu':
-      return "'cpu'";
-    case 'auto':
-    default:
-      return "'npu'"; // Default to NPU for WebNN engine
-  }
+function emitDevicePreference(ts: boolean): string {
+  return `  // Read device type from the runtime <select> element
+  const backendSelect = document.getElementById('backend')${ts ? ' as HTMLSelectElement' : ''};
+  const backendValue = backendSelect ? backendSelect.value : 'webnn-gpu';
+  const deviceMap = { 'webnn-npu': 'npu', 'webnn-gpu': 'gpu', 'webnn-cpu': 'cpu' };
+  const devicePref = deviceMap[backendValue] || 'gpu';`;
 }
 
 function emitCreateSession(config: ResolvedConfig, ts: boolean): string {
   const t = ts;
-  const devicePref = emitDevicePreference(config);
+  const devicePrefCode = emitDevicePreference(ts);
   const inputShape = config.modelMeta.inputs[0]?.shape ?? [1, 3, 224, 224];
   const shapeStr = `[${inputShape.map((d) => (typeof d === 'string' ? d : String(d))).join(', ')}]`;
 
@@ -50,15 +44,18 @@ function emitCreateSession(config: ResolvedConfig, ts: boolean): string {
  * Create a WebNN inference session.
  * Uses MLContext and MLGraphBuilder for native hardware acceleration.
  *
- * Falls back through device types: NPU → GPU → CPU.
+ * The device type is read from the runtime <select id="backend"> element.
+ * Available: WebNN GPU (default), WebNN NPU, WebNN CPU.
  */
 async function createSession(modelPath${t ? ': string' : ''})${sessionType} {
   if (!('ml' in navigator)) {
     throw new Error('WebNN is not supported in this browser.');
   }
 
+${devicePrefCode}
+
   // Try preferred device, fall back gracefully
-  const devicePrefs = [${devicePref}, 'gpu', 'cpu'];
+  const devicePrefs = [devicePref, 'gpu', 'cpu'];
   let context${t ? ': MLContext | null' : ''} = null;
   let usedDevice = 'cpu';
 

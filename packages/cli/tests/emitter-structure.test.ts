@@ -23,7 +23,7 @@ function makeConfig(overrides: Partial<ResolvedConfig> = {}): ResolvedConfig {
   return {
     task: 'image-classification',
     engine: 'ort',
-    backend: 'auto',
+    backend: 'webnn-gpu',
     framework: 'html',
     input: 'file',
     mode: 'raw',
@@ -600,30 +600,28 @@ describe('emitOrtInferenceBlock', () => {
     expect(block.code).toContain("import * as ort from 'onnxruntime-web'");
   });
 
-  it('emits auto-selection EP chain when backend=auto', () => {
-    const block = emitOrtInferenceBlock(makeConfig({ backend: 'auto' }));
-    expect(block.code).toContain("'ml' in navigator");
-    expect(block.code).toContain("deviceType: 'npu'");
-    expect(block.code).toContain("deviceType: 'gpu'");
-    expect(block.code).toContain('navigator.gpu');
-    expect(block.code).toContain("'wasm'");
+  it('emits runtime backend selection from <select> element', () => {
+    const block = emitOrtInferenceBlock(makeConfig({ backend: 'webnn-gpu' }));
+    expect(block.code).toContain("getElementById('backend')");
+    expect(block.code).toContain("case 'webnn-npu'");
+    expect(block.code).toContain("case 'webnn-gpu'");
+    expect(block.code).toContain("case 'webgpu'");
+    expect(block.code).toContain("case 'wasm'");
   });
 
-  it('emits only wasm provider when backend=wasm', () => {
+  it('emits runtime backend switch for all ORT backends', () => {
     const block = emitOrtInferenceBlock(makeConfig({ backend: 'wasm' }));
-    expect(block.code).toContain("['wasm']");
-    expect(block.code).not.toContain("'ml' in navigator");
+    // All backend cases are present in runtime switch regardless of config.backend
+    expect(block.code).toContain("case 'wasm'");
+    expect(block.code).toContain("case 'webgpu'");
+    expect(block.code).toContain("case 'webnn-npu'");
+    expect(block.code).toContain("case 'webnn-gpu'");
+    expect(block.code).toContain("case 'webnn-cpu'");
   });
 
-  it('emits only webgpu provider when backend=webgpu', () => {
-    const block = emitOrtInferenceBlock(makeConfig({ backend: 'webgpu' }));
-    expect(block.code).toContain("['webgpu']");
-  });
-
-  it('emits webnn-npu provider when backend=webnn-npu', () => {
+  it('reads backend from runtime select element', () => {
     const block = emitOrtInferenceBlock(makeConfig({ backend: 'webnn-npu' }));
-    expect(block.code).toContain("deviceType: 'npu'");
-    expect(block.code).not.toContain("'ml' in navigator");
+    expect(block.code).toContain("getElementById('backend')");
   });
 
   it('uses dynamic input name from session and shape from metadata', () => {
@@ -767,21 +765,22 @@ describe('emitLiteRTInferenceBlock', () => {
     expect(block.exports).toEqual(['createSession', 'runInference', 'getBackendLabel']);
   });
 
-  it('uses @anthropic-ai/litert-web import', () => {
+  it('uses @litertjs/core import', () => {
     const block = emitLiteRTInferenceBlock(makeConfig({ engine: 'litert' }));
-    expect(block.imports).toContain('@anthropic-ai/litert-web');
-    expect(block.code).toContain("import * as litert from '@anthropic-ai/litert-web'");
+    expect(block.imports).toContain('@litertjs/core');
+    expect(block.code).toContain("import { loadLiteRt, loadAndCompile, Tensor } from '@litertjs/core'");
   });
 
-  it('includes GPU delegate when backend=webgpu', () => {
+  it('includes WebGPU accelerator option', () => {
     const block = emitLiteRTInferenceBlock(makeConfig({ engine: 'litert', backend: 'webgpu' }));
-    expect(block.code).toContain('createGpuDelegate');
-    expect(block.code).toContain('delegates');
+    expect(block.code).toContain('loadAndCompile');
+    expect(block.code).toContain('accelerator');
   });
 
-  it('omits GPU delegate when backend is not webgpu', () => {
+  it('reads backend from runtime select element', () => {
     const block = emitLiteRTInferenceBlock(makeConfig({ engine: 'litert', backend: 'wasm' }));
-    expect(block.code).not.toContain('createGpuDelegate');
+    expect(block.code).toContain("getElementById('backend')");
+    expect(block.code).toContain('accelerator'); // present in runtime switch
   });
 
   it('uses model input shape from metadata', () => {
@@ -791,7 +790,7 @@ describe('emitLiteRTInferenceBlock', () => {
 
   it('emits TypeScript annotations when lang=ts', () => {
     const block = emitLiteRTInferenceBlock(makeConfig({ engine: 'litert', lang: 'ts' }));
-    expect(block.code).toContain(': litert.TFLiteModel');
+    expect(block.code).toContain(': Promise<any>');
     expect(block.code).toContain(': Promise<Float32Array>');
   });
 
@@ -823,18 +822,18 @@ describe('emitWebNNInferenceBlock', () => {
     expect(block.code).toContain('createContext');
   });
 
-  it('uses npu device for webnn-npu backend', () => {
+  it('reads device from runtime backend select element', () => {
+    const block = emitWebNNInferenceBlock(makeConfig({ engine: 'webnn', backend: 'webnn-gpu' }));
+    expect(block.code).toContain("getElementById('backend')");
+    expect(block.code).toContain("'webnn-npu': 'npu'");
+    expect(block.code).toContain("'webnn-gpu': 'gpu'");
+    expect(block.code).toContain("'webnn-cpu': 'cpu'");
+  });
+
+  it('generates all WebNN device options in device map', () => {
     const block = emitWebNNInferenceBlock(makeConfig({ engine: 'webnn', backend: 'webnn-npu' }));
     expect(block.code).toContain("'npu'");
-  });
-
-  it('uses gpu device for webnn-gpu backend', () => {
-    const block = emitWebNNInferenceBlock(makeConfig({ engine: 'webnn', backend: 'webnn-gpu' }));
     expect(block.code).toContain("'gpu'");
-  });
-
-  it('uses cpu device for webnn-cpu backend', () => {
-    const block = emitWebNNInferenceBlock(makeConfig({ engine: 'webnn', backend: 'webnn-cpu' }));
     expect(block.code).toContain("'cpu'");
   });
 
@@ -920,7 +919,7 @@ describe('emitLayer1 with engine variations', () => {
     const blocks = emitLayer1(makeConfig({ engine: 'litert' }));
     const inference = blocks.find((b) => b.id === 'inference');
     expect(inference).toBeDefined();
-    expect(inference?.imports).toContain('@anthropic-ai/litert-web');
+    expect(inference?.imports).toContain('@litertjs/core');
   });
 
   it('uses webnn inference block when engine=webnn', () => {

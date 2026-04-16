@@ -1,28 +1,31 @@
 /**
  * Config panel: dropdown-based configuration mirroring CLI flags.
  *
- * Renders <select> elements for: task, engine, backend, framework, input, lang, theme.
+ * Renders <select> elements for: task, engine, framework, input, lang.
  * Also has a text input for model name.
  * Fires onChange callback whenever any value changes.
  * Supports URL parameter sync — reads initial values from URL, writes back on change.
+ *
+ * Backend selection is NOT in the config panel — it's embedded in the generated
+ * pages as a runtime <select> so users can switch backends directly while testing.
  */
 
-import { TASK_PROFILES, type TaskType, type InputMode } from '@webai/core';
-import type { Engine, Backend, Framework, OutputLang, Theme } from '@webai/core';
+import { TASK_PROFILES, classifyModelInput, type TaskType, type InputMode } from '@webai/core';
+import type { Engine, Framework, OutputLang } from '@webai/core';
 import { setupHfPicker, type HfPickerResult } from './hf-picker.js';
 
 export interface ConfigValues {
   task: TaskType;
   engine: Engine;
-  backend: Backend;
   framework: Framework;
   input: InputMode;
   lang: OutputLang;
-  theme: Theme;
   modelName: string;
   offline: boolean;
   modelUrl?: string;
   modelSource: 'local-path' | 'hf-model-id' | 'url';
+  /** HuggingFace repo ID (e.g., "webnn/mobilenet-v2") */
+  hfModelId?: string;
   /** Selected HF model filename (e.g., "onnx/model.onnx") */
   hfFile?: string;
 }
@@ -45,15 +48,6 @@ const ENGINES: SelectOption[] = [
   { value: 'webnn', label: 'WebNN API' },
 ];
 
-const BACKENDS: SelectOption[] = [
-  { value: 'auto', label: 'Auto', tooltip: 'Auto (WebNN NPU > WebNN GPU > WebGPU > Wasm)' },
-  { value: 'webnn-npu', label: 'WebNN NPU' },
-  { value: 'webnn-gpu', label: 'WebNN GPU' },
-  { value: 'webnn-cpu', label: 'WebNN CPU' },
-  { value: 'webgpu', label: 'WebGPU' },
-  { value: 'wasm', label: 'Wasm' },
-];
-
 const FRAMEWORKS: SelectOption[] = [
   { value: 'astro', label: 'Astro' },
   { value: 'html', label: 'HTML' },
@@ -69,11 +63,6 @@ const FRAMEWORKS: SelectOption[] = [
 const LANGS: SelectOption[] = [
   { value: 'js', label: 'JavaScript' },
   { value: 'ts', label: 'TypeScript' },
-];
-
-const THEMES: SelectOption[] = [
-  { value: 'dark', label: 'Dark' },
-  { value: 'light', label: 'Light' },
 ];
 
 // ---- SVG Icons ----
@@ -104,11 +93,10 @@ const URL_PARAM_MAP: Record<string, string> = {
   file: 'hfFile',
   task: 'task',
   engine: 'engine',
-  backend: 'backend',
   framework: 'framework',
   input: 'input',
   lang: 'lang',
-  uitheme: 'theme',
+
   offline: 'offline',
 };
 
@@ -130,14 +118,15 @@ export function readUrlParams(): Record<string, string> {
 export function updateUrlParams(values: ConfigValues, pageTheme: string): void {
   const params = new URLSearchParams();
   params.set('model', values.modelName);
-  if (values.hfFile) params.set('file', values.hfFile);
+  // Only include &file= when the model is a HuggingFace ID (not a URL or local name)
+  if (values.hfFile && values.modelSource === 'hf-model-id') {
+    params.set('file', values.hfFile);
+  }
   params.set('task', values.task);
   params.set('engine', values.engine);
-  params.set('backend', values.backend);
   params.set('framework', values.framework);
   params.set('input', values.input);
   params.set('lang', values.lang);
-  params.set('uitheme', values.theme);
   params.set('theme', pageTheme);
   if (values.offline) params.set('offline', 'true');
   const url = `${window.location.pathname}?${params.toString()}`;
@@ -292,12 +281,9 @@ const DEFAULTS: Record<string, string> = {
   model: 'webnn/mobilenet-v2',
   task: 'image-classification',
   engine: 'ort',
-  backend: 'auto',
   framework: 'html',
   input: 'file',
   lang: 'js',
-  uitheme: 'dark',
-  theme: 'dark',
   offline: '',
 };
 
@@ -324,7 +310,23 @@ export function setupConfigPanel(
   const defaultFramework = initial.framework;
   const defaultEngine = initial.engine;
 
-  container.appendChild(createTextInput('modelName', 'Model Name or HuggingFace ID', initial.model));
+  container.appendChild(createSelect('task', 'Task', TASKS, defaultTask));
+
+  const modelWrapper = createTextInput('modelName', 'Model', initial.model);
+  const modelHint = document.createElement('div');
+  modelHint.className = 'model-hint';
+  modelHint.innerHTML =
+    '<span class="hint-hf">user/repo</span> HuggingFace model ID<br>' +
+    '<span class="hint-url">https://…</span> Direct model URL<br>' +
+    '<span class="hint-local">model.onnx</span> Local file name';
+  modelWrapper.appendChild(modelHint);
+  container.appendChild(modelWrapper);
+
+  const modelNameInput = modelWrapper.querySelector('#modelName') as HTMLInputElement;
+  modelNameInput.addEventListener('mouseenter', () => modelHint.classList.add('is-visible'));
+  modelNameInput.addEventListener('mouseleave', () => modelHint.classList.remove('is-visible'));
+  modelNameInput.addEventListener('focus', () => modelHint.classList.add('is-visible'));
+  modelNameInput.addEventListener('blur', () => modelHint.classList.remove('is-visible'));
 
   // HF picker container (rendered below model name input)
   const hfPickerContainer = document.createElement('div');
@@ -332,13 +334,10 @@ export function setupConfigPanel(
   hfPickerContainer.hidden = true;
   container.appendChild(hfPickerContainer);
 
-  container.appendChild(createSelect('task', 'Task', TASKS, defaultTask));
   container.appendChild(createIconSelect('engine', 'Engine', ENGINES, defaultEngine, ENGINE_ICONS));
-  container.appendChild(createSelect('backend', 'Backend', BACKENDS, initial.backend));
   container.appendChild(createIconSelect('framework', 'Framework', FRAMEWORKS, defaultFramework, FRAMEWORK_ICONS));
   container.appendChild(createSelect('input', 'Input Mode', getInputOptions(defaultTask), initial.input));
   container.appendChild(createSelect('lang', 'Language', LANGS, initial.lang));
-  container.appendChild(createSelect('theme', 'Generated UI Theme', THEMES, initial.uitheme));
   container.appendChild(createCheckbox('offline', 'Offline (OPFS cache)', initial.offline === 'true'));
 
   // Track HF picker state
@@ -393,21 +392,25 @@ export function setupConfigPanel(
   }
 
   function getValues(): ConfigValues {
+    const modelText = modelInput.value || 'local-model';
+    const detectedSource = hfResult ? hfResult.modelSource : classifyModelInput(modelText);
     const values: ConfigValues = {
       task: taskSelect.value as TaskType,
       engine: (container.querySelector('#engine') as HTMLSelectElement).value as Engine,
-      backend: (container.querySelector('#backend') as HTMLSelectElement).value as Backend,
       framework: (container.querySelector('#framework') as HTMLSelectElement).value as Framework,
       input: inputSelect.value as InputMode,
       lang: (container.querySelector('#lang') as HTMLSelectElement).value as OutputLang,
-      theme: (container.querySelector('#theme') as HTMLSelectElement).value as Theme,
-      modelName: modelInput.value || 'model',
+      modelName: modelText,
       offline: (container.querySelector('#offline') as HTMLInputElement).checked,
-      modelSource: hfResult ? hfResult.modelSource : 'local-path',
+      modelSource: detectedSource,
     };
     if (hfResult) {
       values.modelUrl = hfResult.url;
+      values.hfModelId = hfResult.modelId;
       values.hfFile = hfResult.filename;
+    } else if (detectedSource === 'url') {
+      // Direct URL typed in — use it as modelUrl, extract filename for engine constraints
+      values.modelUrl = modelText;
     }
     return values;
   }
@@ -474,6 +477,14 @@ export function setupConfigPanel(
 
   container.addEventListener('input', (e) => {
     if ((e.target as HTMLElement).id === 'modelName') {
+      // For direct URLs (non-HF), constrain engines based on URL extension
+      const val = modelInput.value.trim();
+      const source = classifyModelInput(val);
+      if (source === 'url') {
+        updateEngineConstraints(val);
+      } else if (source === 'local-path') {
+        updateEngineConstraints(val);
+      }
       onChange(getValues());
     }
   });

@@ -8,6 +8,8 @@
   --border: #262626;
   --font-mono: ui-monospace, 'Cascadia Code', 'Source Code Pro', monospace;
   --font-sans: system-ui, -apple-system, sans-serif;
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --sidebar-width: 280px;
 }
 
 :root[data-theme="light"] {
@@ -36,7 +38,7 @@ body {
 }
 
 header {
-  padding: 16px 24px;
+  padding: 8px 24px;
   border-bottom: 1px solid var(--border);
 }
 
@@ -71,6 +73,43 @@ header h1 {
   border-color: var(--text-muted);
 }
 
+/* Header action button group */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Panel toggle buttons (sidebar, fullscreen) */
+.panel-toggle-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: color 150ms, border-color 150ms;
+}
+
+.panel-toggle-btn:hover {
+  color: var(--text);
+  border-color: var(--text-muted);
+}
+
+/* Toggle icon state management: show expand by default, hide collapse */
+.panel-toggle-btn .toggle-collapse { display: none; }
+.panel-toggle-btn .toggle-expand { display: flex; }
+
+/* Sidebar toggle: when sidebar is open, show collapse icon instead */
+#sidebarToggle .toggle-collapse { display: flex; }
+#sidebarToggle .toggle-expand { display: none; }
+#sidebarToggle.is-collapsed .toggle-collapse { display: none; }
+#sidebarToggle.is-collapsed .toggle-expand { display: flex; }
+
 /* Show moon in dark mode, sun in light mode */
 .theme-icon-light { display: none; }
 :root[data-theme="light"] .theme-icon-dark { display: none; }
@@ -79,10 +118,16 @@ header h1 {
 /* Layout: config panel left, editor center */
 .layout {
   display: grid;
-  grid-template-columns: 280px 1fr;
-  grid-template-rows: 1fr auto;
+  grid-template-columns: var(--sidebar-width) 1fr;
+  grid-template-rows: minmax(0, 1fr) auto;
   flex: 1;
   overflow: hidden;
+  transition: grid-template-columns 280ms var(--ease-out-quart);
+}
+
+/* Sidebar collapsed state */
+.layout.sidebar-collapsed {
+  grid-template-columns: 0px 1fr;
 }
 
 /* Config panel */
@@ -91,6 +136,26 @@ header h1 {
   border-right: 1px solid var(--border);
   overflow-y: auto;
   grid-row: 1 / 3;
+  min-width: 0;
+  transition: opacity 200ms var(--ease-out-quart),
+              padding 280ms var(--ease-out-quart),
+              border-color 200ms var(--ease-out-quart);
+}
+
+.config-panel>div {
+  margin-bottom: 6px;
+}
+
+.config-panel label:first-child {
+  margin-bottom: 6px;
+}
+
+.layout.sidebar-collapsed .config-panel {
+  opacity: 0;
+  padding: 0;
+  overflow: hidden;
+  pointer-events: none;
+  border-right-color: transparent;
 }
 
 .config-panel label {
@@ -118,6 +183,46 @@ header h1 {
   color: var(--text);
   font-size: 13px;
   font-family: var(--font-mono);
+}
+
+/* Model input hint tooltip */
+.model-hint {
+  margin-top: 6px;
+  padding: 8px 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  line-height: 1.6;
+  color: var(--text-muted);
+  opacity: 0;
+  max-height: 0;
+  overflow: hidden;
+  transform: translateY(-4px);
+  transition: opacity 180ms var(--ease-out-quart),
+              max-height 200ms var(--ease-out-quart),
+              transform 180ms var(--ease-out-quart),
+              margin 200ms var(--ease-out-quart),
+              padding 200ms var(--ease-out-quart);
+  margin-top: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  pointer-events: none;
+}
+
+.model-hint.is-visible {
+  opacity: 1;
+  max-height: 80px;
+  transform: translateY(0);
+  margin-top: 6px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+.model-hint span {
+  font-family: var(--font-mono);
+  color: var(--accent);
+  font-weight: 600;
+}
 }
 
 .config-panel input[type="checkbox"] {
@@ -160,6 +265,9 @@ header h1 {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  min-height: 0;
+  grid-row: 1;
+  grid-column: 2;
 }
 
 .code-toolbar {
@@ -226,7 +334,7 @@ header h1 {
   font-family: var(--font-mono);
   font-size: 12px;
   cursor: pointer;
-  border-bottom: 2px solid transparent;
+  border-bottom: 1px solid transparent;
   white-space: nowrap;
   max-width: 160px;
   overflow: hidden;
@@ -245,16 +353,26 @@ header h1 {
 /* Editor container */
 .editor-container {
   flex: 1;
-  min-height: 0;
+  height: 0;
+  overflow: hidden;
 }
 
 /* Try it section */
 .try-it-section {
+  grid-row: 2;
   grid-column: 2;
   border-top: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   max-height: 50vh;
+  transition: max-height 200ms var(--ease-out-quart),
+              border-color 200ms var(--ease-out-quart);
+}
+
+.try-it-section.is-closed {
+  max-height: 0;
+  overflow: hidden;
+  border-top-color: transparent;
 }
 
 .try-it-header {
@@ -355,6 +473,55 @@ footer a {
 .hf-picker-files select:focus {
   outline: 2px solid var(--accent);
   outline-offset: -1px;
+}
+
+/* ---- Fullscreen mode ---- */
+
+.fullscreen {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 1000 !important;
+  max-height: none !important;
+  background: var(--bg) !important;
+  border: none !important;
+  grid-column: auto !important;
+  animation: fullscreen-enter 200ms var(--ease-out-quart) both;
+}
+
+.try-it-section.fullscreen {
+  display: flex !important;
+}
+
+.try-it-section.fullscreen .try-it-frame {
+  min-height: 0;
+  flex: 1;
+}
+
+@keyframes fullscreen-enter {
+  from {
+    opacity: 0.85;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Swap icons when parent section is fullscreen */
+.fullscreen .toggle-expand { display: none !important; }
+.fullscreen .toggle-collapse { display: flex !important; }
+
+/* ---- Reduced motion ---- */
+@media (prefers-reduced-motion: reduce) {
+  .layout,
+  .config-panel,
+  .model-hint {
+    transition-duration: 0.01ms !important;
+  }
+  .fullscreen {
+    animation: none !important;
+  }
 }
 
 /* Responsive */

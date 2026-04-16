@@ -344,7 +344,7 @@ export function setupConfigPanel(
 
   container.appendChild(createSelect('task', 'Task', TASKS, defaultTask));
   container.appendChild(createSelect('engine', 'Engine', ENGINES, 'ort'));
-  container.appendChild(createSelect('backend', 'Backend', BACKENDS, 'auto'));
+  // Backend is NOT in config panel — it's in the generated pages as a runtime <select>
   container.appendChild(createSelect('framework', 'Framework', FRAMEWORKS, 'html'));
   container.appendChild(createSelect('input', 'Input Mode', getInputOptions(defaultTask), 'file'));
   container.appendChild(createSelect('lang', 'Language', LANGS, 'js'));

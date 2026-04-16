@@ -15,7 +15,7 @@ import type { ModelSourceType } from '../model-source/types.js';
 export type Engine = 'ort' | 'litert' | 'webnn';
 
 /** Hardware backend */
-export type Backend = 'auto' | 'wasm' | 'webgpu' | 'webnn-cpu' | 'webnn-gpu' | 'webnn-npu';
+export type Backend = 'wasm' | 'webgpu' | 'webnn-cpu' | 'webnn-gpu' | 'webnn-npu';
 
 /** Output framework template */
 export type Framework = 'html' | 'vanilla-vite' | 'react-vite' | 'nextjs' | 'svelte-vite' | 'sveltekit' | 'vue-vite' | 'nuxt' | 'astro';
@@ -51,6 +51,10 @@ export interface CliFlags {
   modelSource?: ModelSourceType;
   /** Set by CLI after resolving model URL (not a CLI flag) */
   modelUrl?: string;
+  /** HuggingFace repo ID (e.g. "webnn/mobilenet-v2") — set by web UI */
+  hfModelId?: string;
+  /** HuggingFace file path (e.g. "onnx/model_fp16.onnx") — set by web UI */
+  hfFile?: string;
 }
 
 /**
@@ -98,6 +102,10 @@ export interface ResolvedConfig {
   modelSource: ModelSourceType;
   /** Direct download URL (when modelSource is 'url' or 'hf-model-id') */
   modelUrl?: string;
+  /** HuggingFace repo ID (e.g. "webnn/mobilenet-v2") */
+  hfModelId?: string;
+  /** HuggingFace file path (e.g. "onnx/model_fp16.onnx") */
+  hfFile?: string;
 }
 
 /** A single step in the resolver trace (for --verbose output) */

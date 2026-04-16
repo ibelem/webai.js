@@ -2,54 +2,50 @@
  * ONNX Runtime Web inference emitter (Layer 1).
  *
  * Generates code that:
- * 1. Creates an ORT InferenceSession with backend auto-selection EP chain
+ * 1. Creates an ORT InferenceSession with backend selected from a runtime <select>
  * 2. Runs inference with proper tensor creation
  * 3. Returns raw output data for postprocessing
  *
- * Backend auto-selection order: WebNN NPU → WebNN GPU → WebGPU → WASM
- * When backend is explicitly set, only that provider is used.
+ * Available backends: WebNN NPU, WebNN GPU (default), WebNN CPU, WebGPU, Wasm
+ * The user switches backends via a <select id="backend"> in the generated page.
  */
 
 import type { ResolvedConfig } from '@webai/core';
 import type { CodeBlock } from '../types.js';
 
-/** Generate the execution provider list based on backend config */
-function emitProviders(config: ResolvedConfig, ts: boolean): string {
-  const t = ts;
-  const providerType = t ? ': (string | { name: string; deviceType?: string })[]' : '';
+/** Generate the execution provider list based on runtime backend selection */
+function emitProviders(ts: boolean): string {
+  const providerType = ts ? ': (string | { name: string; deviceType?: string })[]' : '';
 
-  if (config.backend === 'auto') {
-    return `  // Backend auto-selection: try best available, fall through to WASM
+  return `  // Read backend from the runtime <select> element
+  const backendSelect = document.getElementById('backend')${ts ? ' as HTMLSelectElement' : ''};
+  const backend = backendSelect ? backendSelect.value : 'webnn-gpu';
+
   const providers${providerType} = [];
-  if ('ml' in navigator) {
-    providers.push({ name: 'webnn', deviceType: 'npu' });
-    providers.push({ name: 'webnn', deviceType: 'gpu' });
-  }
-  if (navigator.gpu) providers.push('webgpu');
-  providers.push('wasm');`;
-  }
-
-  // Explicit backend
-  switch (config.backend) {
-    case 'wasm':
-      return `  const providers${providerType} = ['wasm'];`;
-    case 'webgpu':
-      return `  const providers${providerType} = ['webgpu'];`;
-    case 'webnn-cpu':
-      return `  const providers${providerType} = [{ name: 'webnn', deviceType: 'cpu' }];`;
-    case 'webnn-gpu':
-      return `  const providers${providerType} = [{ name: 'webnn', deviceType: 'gpu' }];`;
+  switch (backend) {
     case 'webnn-npu':
-      return `  const providers${providerType} = [{ name: 'webnn', deviceType: 'npu' }];`;
+      providers.push({ name: 'webnn', deviceType: 'npu' });
+      break;
+    case 'webnn-gpu':
+      providers.push({ name: 'webnn', deviceType: 'gpu' });
+      break;
+    case 'webnn-cpu':
+      providers.push({ name: 'webnn', deviceType: 'cpu' });
+      break;
+    case 'webgpu':
+      providers.push('webgpu');
+      break;
+    case 'wasm':
     default:
-      return `  const providers${providerType} = ['wasm'];`;
-  }
+      providers.push('wasm');
+      break;
+  }`;
 }
 
 /** Emit the createSession function */
 function emitCreateSession(config: ResolvedConfig, ts: boolean): string {
   const t = ts;
-  const providers = emitProviders(config, ts);
+  const providers = emitProviders(ts);
 
   // When offline, load model via OPFS cache (cachedFetch is in scope from opfs-cache block)
   const modelLoad = config.offline
@@ -110,12 +106,20 @@ function emitBackendStatus(ts: boolean): string {
   const t = ts;
   return `/**
  * Get a display string for the active backend.
- * Used by the status bar: "yolov8n · 8ms · WebNN (NPU)"
+ * Used by the status bar: "yolov8n · 8ms · ORT (WebNN GPU)"
  */
 function getBackendLabel(session${t ? ': ort.InferenceSession' : ''})${t ? ': string' : ''} {
-  // ONNX Runtime Web doesn't expose the selected EP directly in session.
-  // We infer from the handler metadata if available.
-  return 'ONNX Runtime Web';
+  void session;
+  const backendSelect = document.getElementById('backend')${t ? ' as HTMLSelectElement | null' : ''};
+  const backend = backendSelect ? backendSelect.value : 'webnn-gpu';
+  const labels = {
+    'webnn-npu': 'WebNN NPU',
+    'webnn-gpu': 'WebNN GPU',
+    'webnn-cpu': 'WebNN CPU',
+    'webgpu': 'WebGPU',
+    'wasm': 'Wasm',
+  };
+  return 'ORT (' + (labels[backend] || backend) + ')';
 }`;
 }
 

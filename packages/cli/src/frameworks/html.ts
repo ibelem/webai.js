@@ -26,7 +26,9 @@ import {
   getTaskLabel,
   getEngineLabel,
   getModelPath,
+  buildPageHeading,
 } from './shared.js';
+import { LITERT_CDN } from '../emitters/inference-litert.js';
 
 const ORT_CDN = 'https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.mjs';
 
@@ -49,6 +51,9 @@ function emitBlockCode(config: ResolvedConfig, blocks: CodeBlock[]): string {
   // Engine-specific import (only ORT needs a CDN import for HTML)
   if (config.engine === 'ort') {
     sections.push(`import * as ort from '${ORT_CDN}';`);
+  } else if (config.engine === 'litert') {
+    sections.push(`import { loadLiteRt, loadAndCompile, Tensor } from '${LITERT_CDN.replace('/wasm/', '/dist/litertjs-core.min.mjs')}';`);
+    sections.push(`const LITERT_WASM_PATH = '${LITERT_CDN}';`);
   }
 
   // OPFS caching utilities (when offline mode enabled)
@@ -92,174 +97,153 @@ function emitColorPalette(): string {
 ];`;
 }
 
-// ---- File + Classification script ----
+// ---- Source-aware helpers ----
 
-function emitFileClassificationScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
-  return `${emitBlockCode(config, blocks)}
+/** True when the model will be fetched from a URL (HF or generic) */
+function isRemoteModel(config: ResolvedConfig): boolean {
+  return config.modelSource !== 'local-path' && !!config.modelUrl;
+}
 
-// --- Application ---
-const MODEL_PATH = '${getModelPath(config, '.')}';
-let session = null;
+/** Progress bar + filename + stats HTML */
+function emitProgressBarHtml(): string {
+  return `<div id="progressBar" class="progress-container" hidden>
+        <div class="progress-label">
+          <span id="progressFilename" class="progress-filename"></span>
+          <span id="progressStats" class="progress-stats">0%</span>
+        </div>
+        <div class="progress-track">
+          <div id="progressFill" class="progress-fill" style="width: 0%"></div>
+        </div>
+      </div>`;
+}
 
-async function init() {
-  updateStatus('Loading model...');
+/** Reusable JS: formatBytes + fetchWithProgress + showProgress/updateProgress/completeProgress */
+function emitProgressHelpers(): string {
+  return `
+function formatBytes(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function showProgress(filename) {
+  const el = document.getElementById('progressBar');
+  el.hidden = false;
+  document.getElementById('progressFilename').textContent = filename;
+  document.getElementById('progressStats').textContent = '0%';
+  const fill = document.getElementById('progressFill');
+  fill.style.width = '0%';
+  fill.className = 'progress-fill';
+}
+
+function updateProgress(loaded, total) {
+  const fill = document.getElementById('progressFill');
+  const stats = document.getElementById('progressStats');
+  if (total && total > 0) {
+    fill.classList.remove('indeterminate');
+    const pct = Math.min(100, (loaded / total) * 100);
+    fill.style.width = pct.toFixed(1) + '%';
+    stats.textContent = formatBytes(loaded) + ' / ' + formatBytes(total) + '  \\u00b7  ' + pct.toFixed(0) + '%';
+  } else {
+    if (!fill.classList.contains('indeterminate')) fill.classList.add('indeterminate');
+    stats.textContent = formatBytes(loaded);
+  }
+}
+
+function completeProgress(finalSize) {
+  const fill = document.getElementById('progressFill');
+  fill.classList.remove('indeterminate');
+  fill.classList.add('done');
+  fill.style.width = '100%';
+  document.getElementById('progressStats').textContent = formatBytes(finalSize);
+}
+
+async function fetchWithProgress(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('HTTP ' + res.status + ': ' + res.statusText);
+  const contentLength = res.headers.get('Content-Length');
+  const total = contentLength ? parseInt(contentLength, 10) : null;
+  if (!res.body) {
+    const buf = await res.arrayBuffer();
+    updateProgress(buf.byteLength, buf.byteLength);
+    return buf;
+  }
+  const reader = res.body.getReader();
+  if (total && total > 0) {
+    const result = new Uint8Array(total);
+    let offset = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      result.set(value, offset);
+      offset += value.byteLength;
+      updateProgress(offset, total);
+    }
+    return result.buffer;
+  }
+  const chunks = [];
+  let loaded = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    loaded += value.byteLength;
+    updateProgress(loaded, null);
+  }
+  const result = new Uint8Array(loaded);
+  let off = 0;
+  for (const c of chunks) { result.set(c, off); off += c.byteLength; }
+  return result.buffer;
+}`;
+}
+
+/** Emit remote model init (fetchWithProgress → createSession → enable Run btn) */
+function emitRemoteInit(modelName: string, opts?: { tokenizer?: boolean; readyMsg?: string; enableRunBtn?: boolean }): string {
+  const { tokenizer = false, readyMsg = `${modelName} \\u00b7 Ready`, enableRunBtn = true } = opts ?? {};
+  const tokenizerLoad = tokenizer ? `\n    tokenizer = await loadTokenizer(TOKENIZER_PATH);` : '';
+  const enableBtn = enableRunBtn ? `\n    document.getElementById('runBtn').disabled = false;` : '';
+  return `async function init() {
+  const filename = MODEL_PATH.split('/').pop() || '${modelName}';
+  showProgress(filename);
+  updateStatus('Downloading model...');
   try {
-    session = await createSession(MODEL_PATH);
-    updateStatus('${config.modelName} \\u00b7 Ready');
+    const buf = await fetchWithProgress(MODEL_PATH);
+    completeProgress(buf.byteLength);
+    updateStatus('Creating session...');
+    session = await createSession(buf);${tokenizerLoad}
+    updateStatus('${readyMsg}');${enableBtn}
   } catch (e) {
     updateStatus('Failed to load model');
     console.error('Model load error:', e);
   }
+}`;
 }
 
-const dropZone = document.getElementById('dropZone');
-const fileInput = document.getElementById('fileInput');
-const preview = document.getElementById('preview');
-const previewImage = document.getElementById('previewImage');
-const resultsDiv = document.getElementById('results');
-const changeBtn = document.getElementById('changeBtn');
-
-dropZone.addEventListener('click', () => fileInput.click());
-dropZone.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' || e.key === ' ') {
-    e.preventDefault();
-    fileInput.click();
-  }
-});
-
-dropZone.addEventListener('dragover', (e) => {
-  e.preventDefault();
-  dropZone.classList.add('drag-over');
-});
-dropZone.addEventListener('dragleave', () => {
-  dropZone.classList.remove('drag-over');
-});
-dropZone.addEventListener('drop', (e) => {
-  e.preventDefault();
-  dropZone.classList.remove('drag-over');
-  const file = e.dataTransfer.files[0];
-  if (file) handleFile(file);
-});
-
-fileInput.addEventListener('change', () => {
-  const file = fileInput.files[0];
-  if (file) handleFile(file);
-});
-
-changeBtn.addEventListener('click', () => {
-  preview.hidden = true;
-  dropZone.hidden = false;
-  resultsDiv.innerHTML = '';
-  fileInput.value = '';
-});
-
-async function handleFile(file) {
-  if (!file.type.startsWith('image/')) {
-    resultsDiv.textContent = 'Unsupported file type. Try JPG, PNG, or WebP.';
-    return;
-  }
-
-  const url = URL.createObjectURL(file);
-  previewImage.src = url;
-  preview.hidden = false;
-  dropZone.hidden = true;
-
-  await new Promise((resolve) => { previewImage.onload = resolve; });
-
-  const canvas = document.createElement('canvas');
-  canvas.width = previewImage.naturalWidth;
-  canvas.height = previewImage.naturalHeight;
-  const ctx = canvas.getContext('2d');
-  ctx.drawImage(previewImage, 0, 0);
-  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-
-  if (!session) {
-    resultsDiv.textContent = 'Model not loaded yet. Please wait.';
-    return;
-  }
-
-  updateStatus('${config.modelName} \\u00b7 Processing...');
-  const start = performance.now();
-
-  const inputTensor = preprocessImage(imageData.data, canvas.width, canvas.height);
-  const output = await runInference(session, inputTensor);
-  const results = postprocessResults(output);
-
-  const elapsed = (performance.now() - start).toFixed(1);
-  updateStatus('${config.modelName} \\u00b7 ' + elapsed + 'ms \\u00b7 ' + getBackendLabel(session));
-
-  renderResults(results);
-  URL.revokeObjectURL(url);
-}
-
-function renderResults(results) {
-  resultsDiv.innerHTML = '';
-  const maxValue = results.values[0] || 1;
-
-  for (let i = 0; i < results.indices.length; i++) {
-    const pct = (results.values[i] * 100).toFixed(1);
-    if (results.values[i] < 0.01) continue;
-
-    const row = document.createElement('div');
-    row.className = 'result-row' + (i === 0 ? ' top-result' : '');
-    row.setAttribute('tabindex', '0');
-    row.setAttribute('aria-label', 'Class ' + results.indices[i] + ': ' + pct + ' percent');
-
-    row.innerHTML =
-      '<span class="result-label">Class ' + results.indices[i] + '</span>' +
-      '<div class="result-bar-container"><div class="result-bar" style="width:' +
-      ((results.values[i] / maxValue) * 100) + '%"></div></div>' +
-      '<span class="result-pct">' + pct + '%</span>';
-
-    resultsDiv.appendChild(row);
-  }
-}
-
-function updateStatus(text) {
-  document.getElementById('status').textContent = text;
-}
-
-init();`;
-}
-
-// ---- File + Detection script ----
-
-function emitFileDetectionScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
-  const outputShape = config.modelMeta.outputs[0]?.shape ?? [1, 84, 8400];
-  const numAttributes = outputShape[1] ?? 84;
-  const numAnchors = outputShape[2] ?? 8400;
-
-  return `${emitBlockCode(config, blocks)}
-
-// --- Application ---
-${emitColorPalette()}
-
-const MODEL_PATH = '${getModelPath(config, '.')}';
-const NUM_ATTRIBUTES = ${numAttributes};
-const NUM_ANCHORS = ${numAnchors};
-let session = null;
-
-function updateStatus(text) {
-  document.getElementById('status').textContent = text;
-}
-
-async function init() {
-  updateStatus('Loading model...');
+/** Emit local model init (createSession from path) */
+function emitLocalInit(modelName: string, opts?: { tokenizer?: boolean; readyMsg?: string }): string {
+  const { tokenizer = false, readyMsg = `${modelName} \\u00b7 Ready` } = opts ?? {};
+  const loadMsg = tokenizer ? 'Loading model and tokenizer...' : 'Loading model...';
+  const sessionLoad = tokenizer
+    ? `[session, tokenizer] = await Promise.all([
+      createSession(MODEL_PATH),
+      loadTokenizer(TOKENIZER_PATH),
+    ]);`
+    : `session = await createSession(MODEL_PATH);`;
+  return `async function init() {
+  updateStatus('${loadMsg}');
   try {
-    session = await createSession(MODEL_PATH);
-    updateStatus('${config.modelName} \\u00b7 Ready');
+    ${sessionLoad}
+    updateStatus('${readyMsg}');
   } catch (e) {
     updateStatus('Failed to load model');
     console.error('Model load error:', e);
   }
+}`;
 }
 
-const dropZone = document.getElementById('dropZone');
-const fileInput = document.getElementById('fileInput');
-const preview = document.getElementById('preview');
-const previewImage = document.getElementById('previewImage');
-const overlay = document.getElementById('overlay');
-const resultsDiv = document.getElementById('results');
+/** Emit drop zone event listeners for local model */
+function emitDropZoneListeners(extraReset = ''): string {
+  return `const dropZone = document.getElementById('dropZone');
 const changeBtn = document.getElementById('changeBtn');
 
 dropZone.addEventListener('click', () => fileInput.click());
@@ -276,49 +260,163 @@ dropZone.addEventListener('drop', (e) => {
 fileInput.addEventListener('change', () => { const file = fileInput.files[0]; if (file) handleFile(file); });
 changeBtn.addEventListener('click', () => {
   preview.hidden = true; dropZone.hidden = false; resultsDiv.innerHTML = '';
-  fileInput.value = '';
-  const ctx = overlay.getContext('2d');
-  ctx.clearRect(0, 0, overlay.width, overlay.height);
-});
+  fileInput.value = '';${extraReset}
+});`;
+}
 
+/** Emit remote Run button + file input listeners */
+function emitRunButtonListeners(): string {
+  return `const runBtn = document.getElementById('runBtn');
+runBtn.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', () => { const file = fileInput.files[0]; if (file) handleFile(file); });`;
+}
+
+// ---- File + Classification script ----
+
+function emitFileClassificationScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
+  const remote = isRemoteModel(config);
+  const modelPath = getModelPath(config, '.');
+  const modelName = config.modelName;
+
+  const sharedInfer = `
 async function handleFile(file) {
   if (!file.type.startsWith('image/')) {
     resultsDiv.textContent = 'Unsupported file type. Try JPG, PNG, or WebP.';
     return;
   }
-
   const url = URL.createObjectURL(file);
   previewImage.src = url;
-  preview.hidden = false;
-  dropZone.hidden = true;
-
+  preview.hidden = false;${!remote ? '\n  dropZone.hidden = true;' : ''}
   await new Promise((resolve) => { previewImage.onload = resolve; });
-
-  overlay.width = previewImage.naturalWidth;
-  overlay.height = previewImage.naturalHeight;
-
   const canvas = document.createElement('canvas');
   canvas.width = previewImage.naturalWidth;
   canvas.height = previewImage.naturalHeight;
   const ctx = canvas.getContext('2d');
   ctx.drawImage(previewImage, 0, 0);
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-
   if (!session) { resultsDiv.textContent = 'Model not loaded yet.'; return; }
-
-  updateStatus('${config.modelName} \\u00b7 Processing...');
+  updateStatus('${modelName} \\u00b7 Processing...');
   const start = performance.now();
+  const inputTensor = preprocessImage(imageData.data, canvas.width, canvas.height);
+  const output = await runInference(session, inputTensor);
+  const results = postprocessResults(output);
+  const elapsed = (performance.now() - start).toFixed(1);
+  updateStatus('${modelName} \\u00b7 ' + elapsed + 'ms \\u00b7 ' + getBackendLabel(session));
+  renderResults(results);
+  URL.revokeObjectURL(url);
+}`;
 
+  const renderFn = `
+function renderResults(results) {
+  resultsDiv.innerHTML = '';
+  const maxValue = results.values[0] || 1;
+  for (let i = 0; i < results.indices.length; i++) {
+    const pct = (results.values[i] * 100).toFixed(1);
+    if (results.values[i] < 0.01) continue;
+    const row = document.createElement('div');
+    row.className = 'result-row' + (i === 0 ? ' top-result' : '');
+    row.setAttribute('tabindex', '0');
+    row.setAttribute('aria-label', 'Class ' + results.indices[i] + ': ' + pct + ' percent');
+    row.innerHTML =
+      '<span class="result-label">Class ' + results.indices[i] + '</span>' +
+      '<div class="result-bar-container"><div class="result-bar" style="width:' +
+      ((results.values[i] / maxValue) * 100) + '%"></div></div>' +
+      '<span class="result-pct">' + pct + '%</span>';
+    resultsDiv.appendChild(row);
+  }
+}`;
+
+  return `${emitBlockCode(config, blocks)}
+${remote ? emitProgressHelpers() : ''}
+
+// --- Application ---
+const MODEL_PATH = '${modelPath}';
+let session = null;
+
+function updateStatus(text) {
+  document.getElementById('status').textContent = text;
+}
+
+const fileInput = document.getElementById('fileInput');
+const preview = document.getElementById('preview');
+const previewImage = document.getElementById('previewImage');
+const resultsDiv = document.getElementById('results');
+
+${remote ? emitRunButtonListeners() : emitDropZoneListeners()}
+
+${sharedInfer}
+${renderFn}
+
+${remote ? emitRemoteInit(modelName) : emitLocalInit(modelName)}
+
+init();`;
+}
+
+// ---- File + Detection script ----
+
+function emitFileDetectionScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
+  const remote = isRemoteModel(config);
+  const modelPath = getModelPath(config, '.');
+  const modelName = config.modelName;
+  const outputShape = config.modelMeta.outputs[0]?.shape ?? [1, 84, 8400];
+  const numAttributes = outputShape[1] ?? 84;
+  const numAnchors = outputShape[2] ?? 8400;
+  const overlayReset = `\n  const ctx = overlay.getContext('2d');\n  ctx.clearRect(0, 0, overlay.width, overlay.height);`;
+
+  const handleFile = `
+async function handleFile(file) {
+  if (!file.type.startsWith('image/')) {
+    resultsDiv.textContent = 'Unsupported file type. Try JPG, PNG, or WebP.';
+    return;
+  }
+  const url = URL.createObjectURL(file);
+  previewImage.src = url;
+  preview.hidden = false;${!remote ? '\n  dropZone.hidden = true;' : ''}
+  await new Promise((resolve) => { previewImage.onload = resolve; });
+  overlay.width = previewImage.naturalWidth;
+  overlay.height = previewImage.naturalHeight;
+  const canvas = document.createElement('canvas');
+  canvas.width = previewImage.naturalWidth;
+  canvas.height = previewImage.naturalHeight;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(previewImage, 0, 0);
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  if (!session) { resultsDiv.textContent = 'Model not loaded yet.'; return; }
+  updateStatus('${modelName} \\u00b7 Processing...');
+  const start = performance.now();
   const inputTensor = preprocessImage(imageData.data, canvas.width, canvas.height);
   const output = await runInference(session, inputTensor);
   const boxes = postprocessDetections(output, NUM_ANCHORS, NUM_ATTRIBUTES);
-
   const elapsed = (performance.now() - start).toFixed(1);
-  updateStatus('${config.modelName} \\u00b7 ' + elapsed + 'ms \\u00b7 ' + getBackendLabel(session));
-
+  updateStatus('${modelName} \\u00b7 ' + elapsed + 'ms \\u00b7 ' + getBackendLabel(session));
   renderDetections(boxes, previewImage.naturalWidth, previewImage.naturalHeight);
   URL.revokeObjectURL(url);
+}`;
+
+  return `${emitBlockCode(config, blocks)}
+${remote ? emitProgressHelpers() : ''}
+
+// --- Application ---
+${emitColorPalette()}
+
+const MODEL_PATH = '${modelPath}';
+const NUM_ATTRIBUTES = ${numAttributes};
+const NUM_ANCHORS = ${numAnchors};
+let session = null;
+
+function updateStatus(text) {
+  document.getElementById('status').textContent = text;
 }
+
+const fileInput = document.getElementById('fileInput');
+const preview = document.getElementById('preview');
+const previewImage = document.getElementById('previewImage');
+const overlay = document.getElementById('overlay');
+const resultsDiv = document.getElementById('results');
+
+${remote ? emitRunButtonListeners() : emitDropZoneListeners(overlayReset)}
+
+${handleFile}
 
 function renderDetections(boxes, imgW, imgH) {
   const modelSize = ${config.preprocess.imageSize};
@@ -364,23 +462,60 @@ function renderDetections(boxes, imgW, imgH) {
   }
 }
 
+${remote ? emitRemoteInit(modelName) : emitLocalInit(modelName)}
+
 init();`;
 }
 
 // ---- File + Segmentation script ----
 
 function emitFileSegmentationScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
+  const remote = isRemoteModel(config);
+  const modelPath = getModelPath(config, '.');
+  const modelName = config.modelName;
   const outputShape = config.modelMeta.outputs[0]?.shape ?? [1, 21, 512, 512];
   const numClasses = outputShape[1] ?? 21;
   const maskH = outputShape[2] ?? 512;
   const maskW = outputShape[3] ?? 512;
+  const overlayReset = `\n  const ctx = overlay.getContext('2d');\n  ctx.clearRect(0, 0, overlay.width, overlay.height);`;
+
+  const handleFile = `
+async function handleFile(file) {
+  if (!file.type.startsWith('image/')) {
+    resultsDiv.textContent = 'Unsupported file type. Try JPG, PNG, or WebP.';
+    return;
+  }
+  const url = URL.createObjectURL(file);
+  previewImage.src = url;
+  preview.hidden = false;${!remote ? '\n  dropZone.hidden = true;' : ''}
+  await new Promise((resolve) => { previewImage.onload = resolve; });
+  overlay.width = previewImage.naturalWidth;
+  overlay.height = previewImage.naturalHeight;
+  const canvas = document.createElement('canvas');
+  canvas.width = previewImage.naturalWidth;
+  canvas.height = previewImage.naturalHeight;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(previewImage, 0, 0);
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  if (!session) { resultsDiv.textContent = 'Model not loaded yet.'; return; }
+  updateStatus('${modelName} \\u00b7 Processing...');
+  const start = performance.now();
+  const inputTensor = preprocessImage(imageData.data, canvas.width, canvas.height);
+  const output = await runInference(session, inputTensor);
+  const mask = postprocessSegmentation(output, NUM_CLASSES, MASK_H, MASK_W);
+  const elapsed = (performance.now() - start).toFixed(1);
+  updateStatus('${modelName} \\u00b7 ' + elapsed + 'ms \\u00b7 ' + getBackendLabel(session));
+  renderMask(mask, previewImage.naturalWidth, previewImage.naturalHeight);
+  URL.revokeObjectURL(url);
+}`;
 
   return `${emitBlockCode(config, blocks)}
+${remote ? emitProgressHelpers() : ''}
 
 // --- Application ---
 ${emitColorPalette()}
 
-const MODEL_PATH = '${getModelPath(config, '.')}';
+const MODEL_PATH = '${modelPath}';
 const NUM_CLASSES = ${numClasses};
 const MASK_H = ${maskH};
 const MASK_W = ${maskW};
@@ -390,85 +525,17 @@ function updateStatus(text) {
   document.getElementById('status').textContent = text;
 }
 
-async function init() {
-  updateStatus('Loading model...');
-  try {
-    session = await createSession(MODEL_PATH);
-    updateStatus('${config.modelName} \\u00b7 Ready');
-  } catch (e) {
-    updateStatus('Failed to load model');
-    console.error('Model load error:', e);
-  }
-}
-
-const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
 const preview = document.getElementById('preview');
 const previewImage = document.getElementById('previewImage');
 const overlay = document.getElementById('overlay');
 const resultsDiv = document.getElementById('results');
-const changeBtn = document.getElementById('changeBtn');
 
-dropZone.addEventListener('click', () => fileInput.click());
-dropZone.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); }
-});
-dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
-dropZone.addEventListener('dragleave', () => { dropZone.classList.remove('drag-over'); });
-dropZone.addEventListener('drop', (e) => {
-  e.preventDefault(); dropZone.classList.remove('drag-over');
-  const file = e.dataTransfer.files[0];
-  if (file) handleFile(file);
-});
-fileInput.addEventListener('change', () => { const file = fileInput.files[0]; if (file) handleFile(file); });
-changeBtn.addEventListener('click', () => {
-  preview.hidden = true; dropZone.hidden = false; resultsDiv.innerHTML = '';
-  const ctx = overlay.getContext('2d');
-  ctx.clearRect(0, 0, overlay.width, overlay.height);
-  fileInput.value = '';
-});
+${remote ? emitRunButtonListeners() : emitDropZoneListeners(overlayReset)}
 
-async function handleFile(file) {
-  if (!file.type.startsWith('image/')) {
-    resultsDiv.textContent = 'Unsupported file type. Try JPG, PNG, or WebP.';
-    return;
-  }
-
-  const url = URL.createObjectURL(file);
-  previewImage.src = url;
-  preview.hidden = false;
-  dropZone.hidden = true;
-
-  await new Promise((resolve) => { previewImage.onload = resolve; });
-
-  overlay.width = previewImage.naturalWidth;
-  overlay.height = previewImage.naturalHeight;
-
-  const canvas = document.createElement('canvas');
-  canvas.width = previewImage.naturalWidth;
-  canvas.height = previewImage.naturalHeight;
-  const ctx = canvas.getContext('2d');
-  ctx.drawImage(previewImage, 0, 0);
-  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-
-  if (!session) { resultsDiv.textContent = 'Model not loaded yet.'; return; }
-
-  updateStatus('${config.modelName} \\u00b7 Processing...');
-  const start = performance.now();
-
-  const inputTensor = preprocessImage(imageData.data, canvas.width, canvas.height);
-  const output = await runInference(session, inputTensor);
-  const mask = postprocessSegmentation(output, NUM_CLASSES, MASK_H, MASK_W);
-
-  const elapsed = (performance.now() - start).toFixed(1);
-  updateStatus('${config.modelName} \\u00b7 ' + elapsed + 'ms \\u00b7 ' + getBackendLabel(session));
-
-  renderMask(mask, previewImage.naturalWidth, previewImage.naturalHeight);
-  URL.revokeObjectURL(url);
-}
+${handleFile}
 
 function renderMask(mask, displayW, displayH) {
-  // Draw mask at native resolution to offscreen canvas, then scale
   const maskCanvas = document.createElement('canvas');
   maskCanvas.width = MASK_W;
   maskCanvas.height = MASK_H;
@@ -483,7 +550,7 @@ function renderMask(mask, displayW, displayH) {
     maskImage.data[i * 4] = c[0];
     maskImage.data[i * 4 + 1] = c[1];
     maskImage.data[i * 4 + 2] = c[2];
-    maskImage.data[i * 4 + 3] = 128; // semi-transparent
+    maskImage.data[i * 4 + 3] = 128;
   }
   maskCtx.putImageData(maskImage, 0, 0);
 
@@ -503,92 +570,65 @@ function renderMask(mask, displayW, displayH) {
   }
 }
 
+${remote ? emitRemoteInit(modelName) : emitLocalInit(modelName)}
+
 init();`;
 }
 
 // ---- File + Feature Extraction script ----
 
 function emitFileFeatureExtractionScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
-  return `${emitBlockCode(config, blocks)}
+  const remote = isRemoteModel(config);
+  const modelPath = getModelPath(config, '.');
+  const modelName = config.modelName;
 
-// --- Application ---
-const MODEL_PATH = '${getModelPath(config, '.')}';
-let session = null;
-
-function updateStatus(text) {
-  document.getElementById('status').textContent = text;
-}
-
-async function init() {
-  updateStatus('Loading model...');
-  try {
-    session = await createSession(MODEL_PATH);
-    updateStatus('${config.modelName} \\u00b7 Ready');
-  } catch (e) {
-    updateStatus('Failed to load model');
-    console.error('Model load error:', e);
-  }
-}
-
-const dropZone = document.getElementById('dropZone');
-const fileInput = document.getElementById('fileInput');
-const preview = document.getElementById('preview');
-const previewImage = document.getElementById('previewImage');
-const resultsDiv = document.getElementById('results');
-const changeBtn = document.getElementById('changeBtn');
-
-dropZone.addEventListener('click', () => fileInput.click());
-dropZone.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); }
-});
-dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
-dropZone.addEventListener('dragleave', () => { dropZone.classList.remove('drag-over'); });
-dropZone.addEventListener('drop', (e) => {
-  e.preventDefault(); dropZone.classList.remove('drag-over');
-  const file = e.dataTransfer.files[0];
-  if (file) handleFile(file);
-});
-fileInput.addEventListener('change', () => { const file = fileInput.files[0]; if (file) handleFile(file); });
-changeBtn.addEventListener('click', () => {
-  preview.hidden = true; dropZone.hidden = false; resultsDiv.innerHTML = '';
-  fileInput.value = '';
-});
-
+  const handleFile = `
 async function handleFile(file) {
   if (!file.type.startsWith('image/')) {
     resultsDiv.textContent = 'Unsupported file type. Try JPG, PNG, or WebP.';
     return;
   }
-
   const url = URL.createObjectURL(file);
   previewImage.src = url;
-  preview.hidden = false;
-  dropZone.hidden = true;
-
+  preview.hidden = false;${!remote ? '\n  dropZone.hidden = true;' : ''}
   await new Promise((resolve) => { previewImage.onload = resolve; });
-
   const canvas = document.createElement('canvas');
   canvas.width = previewImage.naturalWidth;
   canvas.height = previewImage.naturalHeight;
   const ctx = canvas.getContext('2d');
   ctx.drawImage(previewImage, 0, 0);
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-
   if (!session) { resultsDiv.textContent = 'Model not loaded yet.'; return; }
-
-  updateStatus('${config.modelName} \\u00b7 Processing...');
+  updateStatus('${modelName} \\u00b7 Processing...');
   const start = performance.now();
-
   const inputTensor = preprocessImage(imageData.data, canvas.width, canvas.height);
   const output = await runInference(session, inputTensor);
   const embedding = postprocessEmbeddings(output);
-
   const elapsed = (performance.now() - start).toFixed(1);
-  updateStatus('${config.modelName} \\u00b7 ' + elapsed + 'ms \\u00b7 ' + getBackendLabel(session));
-
+  updateStatus('${modelName} \\u00b7 ' + elapsed + 'ms \\u00b7 ' + getBackendLabel(session));
   renderEmbedding(embedding);
   URL.revokeObjectURL(url);
+}`;
+
+  return `${emitBlockCode(config, blocks)}
+${remote ? emitProgressHelpers() : ''}
+
+// --- Application ---
+const MODEL_PATH = '${modelPath}';
+let session = null;
+
+function updateStatus(text) {
+  document.getElementById('status').textContent = text;
 }
+
+const fileInput = document.getElementById('fileInput');
+const preview = document.getElementById('preview');
+const previewImage = document.getElementById('previewImage');
+const resultsDiv = document.getElementById('results');
+
+${remote ? emitRunButtonListeners() : emitDropZoneListeners()}
+
+${handleFile}
 
 function renderEmbedding(embedding) {
   let norm = 0;
@@ -606,6 +646,8 @@ function renderEmbedding(embedding) {
     '<p><strong>First 5 values:</strong> [' + first5 + ', ...]</p>' +
     '</div>';
 }
+
+${remote ? emitRemoteInit(modelName) : emitLocalInit(modelName)}
 
 init();`;
 }
@@ -702,12 +744,17 @@ function renderMask(ctx, mask, displayW, displayH) {
     }
   }
 
+  const remote = isRemoteModel(config);
+  const modelPath = getModelPath(config, '.');
+  const modelName = config.modelName;
+
   return `${emitBlockCode(config, blocks)}
+${remote ? emitProgressHelpers() : ''}
 
 // --- Application ---
 ${extraCode}
 
-const MODEL_PATH = '${getModelPath(config, '.')}';
+const MODEL_PATH = '${modelPath}';
 let session = null;
 let currentStream = null;
 
@@ -715,16 +762,7 @@ function updateStatus(text) {
   document.getElementById('status').textContent = text;
 }
 
-async function init() {
-  updateStatus('Loading model...');
-  try {
-    session = await createSession(MODEL_PATH);
-    updateStatus('${config.modelName} \\u00b7 Ready \\u00b7 Tap Start');
-  } catch (e) {
-    updateStatus('Failed to load model');
-    console.error('Model load error:', e);
-  }
-}
+${remote ? emitRemoteInit(modelName, { readyMsg: `${modelName} \\u00b7 Ready \\u00b7 Tap Start`, enableRunBtn: false }) : emitLocalInit(modelName, { readyMsg: `${modelName} \\u00b7 Ready \\u00b7 Tap Start` })}
 
 const video = document.getElementById('video');
 const overlay = document.getElementById('overlay');
@@ -802,26 +840,22 @@ init();`;
 // ---- File + Audio Classification script ----
 
 function emitFileAudioClassificationScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
+  const remote = isRemoteModel(config);
+  const modelPath = getModelPath(config, '.');
+  const modelName = config.modelName;
+
   return `${emitBlockCode(config, blocks)}
+${remote ? emitProgressHelpers() : ''}
 
 // --- Application ---
-const MODEL_PATH = '${getModelPath(config, '.')}';
+const MODEL_PATH = '${modelPath}';
 let session = null;
 
 function updateStatus(text) {
   document.getElementById('status').textContent = text;
 }
 
-async function init() {
-  updateStatus('Loading model...');
-  try {
-    session = await createSession(MODEL_PATH);
-    updateStatus('${config.modelName} \\u00b7 Ready');
-  } catch (e) {
-    updateStatus('Failed to load model');
-    console.error('Model load error:', e);
-  }
-}
+${remote ? emitRemoteInit(modelName, { enableRunBtn: false }) : emitLocalInit(modelName)}
 
 const fileInput = document.getElementById('fileInput');
 const resultsDiv = document.getElementById('results');
@@ -893,10 +927,15 @@ init();`;
 // ---- File + Speech-to-Text script ----
 
 function emitFileSpeechToTextScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
+  const remote = isRemoteModel(config);
+  const modelPath = getModelPath(config, '.');
+  const modelName = config.modelName;
+
   return `${emitBlockCode(config, blocks)}
+${remote ? emitProgressHelpers() : ''}
 
 // --- Application ---
-const MODEL_PATH = '${getModelPath(config, '.')}';
+const MODEL_PATH = '${modelPath}';
 const VOCAB = [' ', ...'abcdefghijklmnopqrstuvwxyz'.split(''), "'"];
 let session = null;
 
@@ -904,16 +943,7 @@ function updateStatus(text) {
   document.getElementById('status').textContent = text;
 }
 
-async function init() {
-  updateStatus('Loading model...');
-  try {
-    session = await createSession(MODEL_PATH);
-    updateStatus('${config.modelName} \\u00b7 Ready');
-  } catch (e) {
-    updateStatus('Failed to load model');
-    console.error('Model load error:', e);
-  }
-}
+${remote ? emitRemoteInit(modelName, { enableRunBtn: false }) : emitLocalInit(modelName)}
 
 const fileInput = document.getElementById('fileInput');
 const transcript = document.getElementById('transcript');
@@ -963,10 +993,15 @@ init();`;
 // ---- Realtime (mic) + Speech-to-Text script ----
 
 function emitRealtimeSpeechToTextScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
+  const remote = isRemoteModel(config);
+  const modelPath = getModelPath(config, '.');
+  const modelName = config.modelName;
+
   return `${emitBlockCode(config, blocks)}
+${remote ? emitProgressHelpers() : ''}
 
 // --- Application ---
-const MODEL_PATH = '${getModelPath(config, '.')}';
+const MODEL_PATH = '${modelPath}';
 const VOCAB = [' ', ...'abcdefghijklmnopqrstuvwxyz'.split(''), "'"];
 let session = null;
 let capture = null;
@@ -976,16 +1011,7 @@ function updateStatus(text) {
   document.getElementById('status').textContent = text;
 }
 
-async function init() {
-  updateStatus('Loading model...');
-  try {
-    session = await createSession(MODEL_PATH);
-    updateStatus('${config.modelName} \\u00b7 Ready');
-  } catch (e) {
-    updateStatus('Failed to load model');
-    console.error('Model load error:', e);
-  }
-}
+${remote ? emitRemoteInit(modelName, { enableRunBtn: false }) : emitLocalInit(modelName)}
 
 async function processAudio(samples) {
   const mel = melSpectrogram(samples, 16000, 512, 160, 80);
@@ -1043,10 +1069,15 @@ init();`;
 // ---- Realtime (mic) + Audio Classification script ----
 
 function emitRealtimeAudioClassificationScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
+  const remote = isRemoteModel(config);
+  const modelPath = getModelPath(config, '.');
+  const modelName = config.modelName;
+
   return `${emitBlockCode(config, blocks)}
+${remote ? emitProgressHelpers() : ''}
 
 // --- Application ---
-const MODEL_PATH = '${getModelPath(config, '.')}';
+const MODEL_PATH = '${modelPath}';
 let session = null;
 let capture = null;
 let loop = null;
@@ -1055,16 +1086,7 @@ function updateStatus(text) {
   document.getElementById('status').textContent = text;
 }
 
-async function init() {
-  updateStatus('Loading model...');
-  try {
-    session = await createSession(MODEL_PATH);
-    updateStatus('${config.modelName} \\u00b7 Ready');
-  } catch (e) {
-    updateStatus('Failed to load model');
-    console.error('Model load error:', e);
-  }
-}
+${remote ? emitRemoteInit(modelName, { enableRunBtn: false }) : emitLocalInit(modelName)}
 
 async function processAudio(samples) {
   const mel = melSpectrogram(samples, 16000, 512, 160, 40);
@@ -1144,26 +1166,22 @@ init();`;
 // ---- Text-to-Speech script ----
 
 function emitTextToSpeechScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
+  const remote = isRemoteModel(config);
+  const modelPath = getModelPath(config, '.');
+  const modelName = config.modelName;
+
   return `${emitBlockCode(config, blocks)}
+${remote ? emitProgressHelpers() : ''}
 
 // --- Application ---
-const MODEL_PATH = '${getModelPath(config, '.')}';
+const MODEL_PATH = '${modelPath}';
 let session = null;
 
 function updateStatus(text) {
   document.getElementById('status').textContent = text;
 }
 
-async function init() {
-  updateStatus('Loading model...');
-  try {
-    session = await createSession(MODEL_PATH);
-    updateStatus('${config.modelName} \\u00b7 Ready');
-  } catch (e) {
-    updateStatus('Failed to load model');
-    console.error('Model load error:', e);
-  }
-}
+${remote ? emitRemoteInit(modelName, { enableRunBtn: false }) : emitLocalInit(modelName)}
 
 const textInput = document.getElementById('textInput');
 const synthesizeBtn = document.getElementById('synthesizeBtn');
@@ -1200,10 +1218,15 @@ init();`;
 // ---- Text Classification script ----
 
 function emitTextClassificationScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
+  const remote = isRemoteModel(config);
+  const modelPath = getModelPath(config, '.');
+  const modelName = config.modelName;
+
   return `${emitBlockCode(config, blocks)}
+${remote ? emitProgressHelpers() : ''}
 
 // --- Application ---
-const MODEL_PATH = '${getModelPath(config, '.')}';
+const MODEL_PATH = '${modelPath}';
 const TOKENIZER_PATH = MODEL_PATH.replace(/\\.onnx$/, '') + '/tokenizer.json';
 let session = null;
 let tokenizer = null;
@@ -1212,19 +1235,7 @@ function updateStatus(text) {
   document.getElementById('status').textContent = text;
 }
 
-async function init() {
-  updateStatus('Loading model and tokenizer...');
-  try {
-    [session, tokenizer] = await Promise.all([
-      createSession(MODEL_PATH),
-      loadTokenizer(TOKENIZER_PATH),
-    ]);
-    updateStatus('${config.modelName} \\u00b7 Ready');
-  } catch (e) {
-    updateStatus('Failed to load model');
-    console.error('Model load error:', e);
-  }
-}
+${remote ? emitRemoteInit(modelName, { tokenizer: true, enableRunBtn: false }) : emitLocalInit(modelName, { tokenizer: true })}
 
 const textInput = document.getElementById('textInput');
 const classifyBtn = document.getElementById('classifyBtn');
@@ -1281,10 +1292,15 @@ init();`;
 // ---- Zero-Shot Classification script ----
 
 function emitZeroShotScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
+  const remote = isRemoteModel(config);
+  const modelPath = getModelPath(config, '.');
+  const modelName = config.modelName;
+
   return `${emitBlockCode(config, blocks)}
+${remote ? emitProgressHelpers() : ''}
 
 // --- Application ---
-const MODEL_PATH = '${getModelPath(config, '.')}';
+const MODEL_PATH = '${modelPath}';
 const TOKENIZER_PATH = MODEL_PATH.replace(/\\.onnx$/, '') + '/tokenizer.json';
 let session = null;
 let tokenizer = null;
@@ -1293,19 +1309,7 @@ function updateStatus(text) {
   document.getElementById('status').textContent = text;
 }
 
-async function init() {
-  updateStatus('Loading model and tokenizer...');
-  try {
-    [session, tokenizer] = await Promise.all([
-      createSession(MODEL_PATH),
-      loadTokenizer(TOKENIZER_PATH),
-    ]);
-    updateStatus('${config.modelName} \\u00b7 Ready');
-  } catch (e) {
-    updateStatus('Failed to load model');
-    console.error('Model load error:', e);
-  }
-}
+${remote ? emitRemoteInit(modelName, { tokenizer: true, enableRunBtn: false }) : emitLocalInit(modelName, { tokenizer: true })}
 
 const textInput = document.getElementById('textInput');
 const labelsInput = document.getElementById('labelsInput');
@@ -1373,10 +1377,15 @@ init();`;
 // ---- Text Generation script ----
 
 function emitTextGenerationScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
+  const remote = isRemoteModel(config);
+  const modelPath = getModelPath(config, '.');
+  const modelName = config.modelName;
+
   return `${emitBlockCode(config, blocks)}
+${remote ? emitProgressHelpers() : ''}
 
 // --- Application ---
-const MODEL_PATH = '${getModelPath(config, '.')}';
+const MODEL_PATH = '${modelPath}';
 const TOKENIZER_PATH = MODEL_PATH.replace(/\\.onnx$/, '') + '/tokenizer.json';
 const MAX_NEW_TOKENS = 50;
 const EOS_TOKEN_ID = 2;
@@ -1387,19 +1396,7 @@ function updateStatus(text) {
   document.getElementById('status').textContent = text;
 }
 
-async function init() {
-  updateStatus('Loading model and tokenizer...');
-  try {
-    [session, tokenizer] = await Promise.all([
-      createSession(MODEL_PATH),
-      loadTokenizer(TOKENIZER_PATH),
-    ]);
-    updateStatus('${config.modelName} \\u00b7 Ready');
-  } catch (e) {
-    updateStatus('Failed to load model');
-    console.error('Model load error:', e);
-  }
-}
+${remote ? emitRemoteInit(modelName, { tokenizer: true, enableRunBtn: false }) : emitLocalInit(modelName, { tokenizer: true })}
 
 const textInput = document.getElementById('textInput');
 const generateBtn = document.getElementById('generateBtn');
@@ -1449,10 +1446,15 @@ init();`;
 // ---- Fill-Mask script ----
 
 function emitFillMaskScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
+  const remote = isRemoteModel(config);
+  const modelPath = getModelPath(config, '.');
+  const modelName = config.modelName;
+
   return `${emitBlockCode(config, blocks)}
+${remote ? emitProgressHelpers() : ''}
 
 // --- Application ---
-const MODEL_PATH = '${getModelPath(config, '.')}';
+const MODEL_PATH = '${modelPath}';
 const TOKENIZER_PATH = MODEL_PATH.replace(/\\.onnx$/, '') + '/tokenizer.json';
 let session = null;
 let tokenizer = null;
@@ -1461,19 +1463,7 @@ function updateStatus(text) {
   document.getElementById('status').textContent = text;
 }
 
-async function init() {
-  updateStatus('Loading model and tokenizer...');
-  try {
-    [session, tokenizer] = await Promise.all([
-      createSession(MODEL_PATH),
-      loadTokenizer(TOKENIZER_PATH),
-    ]);
-    updateStatus('${config.modelName} \\u00b7 Ready');
-  } catch (e) {
-    updateStatus('Failed to load model');
-    console.error('Model load error:', e);
-  }
-}
+${remote ? emitRemoteInit(modelName, { tokenizer: true, enableRunBtn: false }) : emitLocalInit(modelName, { tokenizer: true })}
 
 const textInput = document.getElementById('textInput');
 const predictBtn = document.getElementById('predictBtn');
@@ -1513,10 +1503,15 @@ init();`;
 // ---- Sentence Similarity script ----
 
 function emitSentenceSimilarityScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
+  const remote = isRemoteModel(config);
+  const modelPath = getModelPath(config, '.');
+  const modelName = config.modelName;
+
   return `${emitBlockCode(config, blocks)}
+${remote ? emitProgressHelpers() : ''}
 
 // --- Application ---
-const MODEL_PATH = '${getModelPath(config, '.')}';
+const MODEL_PATH = '${modelPath}';
 const TOKENIZER_PATH = MODEL_PATH.replace(/\\.onnx$/, '') + '/tokenizer.json';
 let session = null;
 let tokenizer = null;
@@ -1525,19 +1520,7 @@ function updateStatus(text) {
   document.getElementById('status').textContent = text;
 }
 
-async function init() {
-  updateStatus('Loading model and tokenizer...');
-  try {
-    [session, tokenizer] = await Promise.all([
-      createSession(MODEL_PATH),
-      loadTokenizer(TOKENIZER_PATH),
-    ]);
-    updateStatus('${config.modelName} \\u00b7 Ready');
-  } catch (e) {
-    updateStatus('Failed to load model');
-    console.error('Model load error:', e);
-  }
-}
+${remote ? emitRemoteInit(modelName, { tokenizer: true, enableRunBtn: false }) : emitLocalInit(modelName, { tokenizer: true })}
 
 const sourceInput = document.getElementById('sourceInput');
 const compareInput = document.getElementById('compareInput');
@@ -1582,46 +1565,42 @@ init();`;
 // ---- Depth Estimation script ----
 
 function emitDepthEstimationScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
+  const remote = isRemoteModel(config);
+  const modelPath = getModelPath(config, '.');
+  const modelName = config.modelName;
+
+  const handleFile = `
+function handleFile(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  const url = URL.createObjectURL(file);
+  previewImage.src = url;
+  previewImage.onload = () => processImage(previewImage);
+  preview.hidden = false;${!remote ? '\n  dropZone.hidden = true;' : ''}
+}`;
+
   return `${emitBlockCode(config, blocks)}
+${remote ? emitProgressHelpers() : ''}
 
 // --- Application ---
-const MODEL_PATH = '${getModelPath(config, '.')}';
+const MODEL_PATH = '${modelPath}';
 let session = null;
 
 function updateStatus(text) {
   document.getElementById('status').textContent = text;
 }
 
-async function init() {
-  updateStatus('Loading model...');
-  try {
-    session = await createSession(MODEL_PATH);
-    updateStatus('${config.modelName} \\u00b7 Ready');
-  } catch (e) {
-    updateStatus('Failed to load model');
-    console.error('Model load error:', e);
-  }
-}
-
-const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
 const preview = document.getElementById('preview');
 const previewImage = document.getElementById('previewImage');
 const depthCanvas = document.getElementById('depthCanvas');
-const changeBtn = document.getElementById('changeBtn');
 
-function handleFile(file) {
-  if (!file || !file.type.startsWith('image/')) return;
-  const url = URL.createObjectURL(file);
-  previewImage.src = url;
-  previewImage.onload = () => processImage(previewImage);
-  preview.hidden = false;
-  dropZone.hidden = true;
-}
+${remote ? emitRunButtonListeners() : emitDropZoneListeners()}
+
+${handleFile}
 
 async function processImage(img) {
   if (!session) return;
-  updateStatus('${config.modelName} \\u00b7 Processing...');
+  updateStatus('${modelName} \\u00b7 Processing...');
   const start = performance.now();
 
   const input = preprocessImage(img);
@@ -1642,16 +1621,10 @@ async function processImage(img) {
   ctx.putImageData(imgData, 0, 0);
 
   const elapsed = (performance.now() - start).toFixed(1);
-  updateStatus('${config.modelName} \\u00b7 ' + elapsed + 'ms \\u00b7 ' + getBackendLabel(session));
+  updateStatus('${modelName} \\u00b7 ' + elapsed + 'ms \\u00b7 ' + getBackendLabel(session));
 }
 
-dropZone.addEventListener('click', () => fileInput.click());
-dropZone.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') fileInput.click(); });
-dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
-dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('drag-over'); handleFile(e.dataTransfer.files[0]); });
-fileInput.addEventListener('change', () => handleFile(fileInput.files[0]));
-changeBtn.addEventListener('click', () => { preview.hidden = true; dropZone.hidden = false; });
+${remote ? emitRemoteInit(modelName) : emitLocalInit(modelName)}
 
 init();`;
 }
@@ -1659,10 +1632,15 @@ init();`;
 // ---- Token Classification (NER) script ----
 
 function emitTokenClassificationScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
+  const remote = isRemoteModel(config);
+  const modelPath = getModelPath(config, '.');
+  const modelName = config.modelName;
+
   return `${emitBlockCode(config, blocks)}
+${remote ? emitProgressHelpers() : ''}
 
 // --- Application ---
-const MODEL_PATH = '${getModelPath(config, '.')}';
+const MODEL_PATH = '${modelPath}';
 const TOKENIZER_PATH = MODEL_PATH.replace(/\\.onnx$/, '') + '/tokenizer.json';
 let session = null;
 let tokenizer = null;
@@ -1671,19 +1649,7 @@ function updateStatus(text) {
   document.getElementById('status').textContent = text;
 }
 
-async function init() {
-  updateStatus('Loading model and tokenizer...');
-  try {
-    [session, tokenizer] = await Promise.all([
-      createSession(MODEL_PATH),
-      loadTokenizer(TOKENIZER_PATH),
-    ]);
-    updateStatus('${config.modelName} \\u00b7 Ready');
-  } catch (e) {
-    updateStatus('Failed to load model');
-    console.error('Model load error:', e);
-  }
-}
+${remote ? emitRemoteInit(modelName, { tokenizer: true, enableRunBtn: false }) : emitLocalInit(modelName, { tokenizer: true })}
 
 const textInput = document.getElementById('textInput');
 const analyzeBtn = document.getElementById('analyzeBtn');
@@ -1725,10 +1691,15 @@ init();`;
 // ---- Question Answering script ----
 
 function emitQuestionAnsweringScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
+  const remote = isRemoteModel(config);
+  const modelPath = getModelPath(config, '.');
+  const modelName = config.modelName;
+
   return `${emitBlockCode(config, blocks)}
+${remote ? emitProgressHelpers() : ''}
 
 // --- Application ---
-const MODEL_PATH = '${getModelPath(config, '.')}';
+const MODEL_PATH = '${modelPath}';
 const TOKENIZER_PATH = MODEL_PATH.replace(/\\.onnx$/, '') + '/tokenizer.json';
 let session = null;
 let tokenizer = null;
@@ -1737,19 +1708,7 @@ function updateStatus(text) {
   document.getElementById('status').textContent = text;
 }
 
-async function init() {
-  updateStatus('Loading model and tokenizer...');
-  try {
-    [session, tokenizer] = await Promise.all([
-      createSession(MODEL_PATH),
-      loadTokenizer(TOKENIZER_PATH),
-    ]);
-    updateStatus('${config.modelName} \\u00b7 Ready');
-  } catch (e) {
-    updateStatus('Failed to load model');
-    console.error('Model load error:', e);
-  }
-}
+${remote ? emitRemoteInit(modelName, { tokenizer: true, enableRunBtn: false }) : emitLocalInit(modelName, { tokenizer: true })}
 
 const contextInput = document.getElementById('contextInput');
 const questionInput = document.getElementById('questionInput');
@@ -1786,10 +1745,15 @@ init();`;
 // ---- Summarization script ----
 
 function emitSummarizationScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
+  const remote = isRemoteModel(config);
+  const modelPath = getModelPath(config, '.');
+  const modelName = config.modelName;
+
   return `${emitBlockCode(config, blocks)}
+${remote ? emitProgressHelpers() : ''}
 
 // --- Application ---
-const MODEL_PATH = '${getModelPath(config, '.')}';
+const MODEL_PATH = '${modelPath}';
 const TOKENIZER_PATH = MODEL_PATH.replace(/\\.onnx$/, '') + '/tokenizer.json';
 const MAX_NEW_TOKENS = 128;
 const EOS_TOKEN_ID = 1;
@@ -1800,19 +1764,7 @@ function updateStatus(text) {
   document.getElementById('status').textContent = text;
 }
 
-async function init() {
-  updateStatus('Loading model and tokenizer...');
-  try {
-    [session, tokenizer] = await Promise.all([
-      createSession(MODEL_PATH),
-      loadTokenizer(TOKENIZER_PATH),
-    ]);
-    updateStatus('${config.modelName} \\u00b7 Ready');
-  } catch (e) {
-    updateStatus('Failed to load model');
-    console.error('Model load error:', e);
-  }
-}
+${remote ? emitRemoteInit(modelName, { tokenizer: true, enableRunBtn: false }) : emitLocalInit(modelName, { tokenizer: true })}
 
 const textInput = document.getElementById('textInput');
 const summarizeBtn = document.getElementById('summarizeBtn');
@@ -1848,10 +1800,15 @@ init();`;
 // ---- Translation script ----
 
 function emitTranslationScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
+  const remote = isRemoteModel(config);
+  const modelPath = getModelPath(config, '.');
+  const modelName = config.modelName;
+
   return `${emitBlockCode(config, blocks)}
+${remote ? emitProgressHelpers() : ''}
 
 // --- Application ---
-const MODEL_PATH = '${getModelPath(config, '.')}';
+const MODEL_PATH = '${modelPath}';
 const TOKENIZER_PATH = MODEL_PATH.replace(/\\.onnx$/, '') + '/tokenizer.json';
 const MAX_NEW_TOKENS = 128;
 const EOS_TOKEN_ID = 1;
@@ -1862,19 +1819,7 @@ function updateStatus(text) {
   document.getElementById('status').textContent = text;
 }
 
-async function init() {
-  updateStatus('Loading model and tokenizer...');
-  try {
-    [session, tokenizer] = await Promise.all([
-      createSession(MODEL_PATH),
-      loadTokenizer(TOKENIZER_PATH),
-    ]);
-    updateStatus('${config.modelName} \\u00b7 Ready');
-  } catch (e) {
-    updateStatus('Failed to load model');
-    console.error('Model load error:', e);
-  }
-}
+${remote ? emitRemoteInit(modelName, { tokenizer: true, enableRunBtn: false }) : emitLocalInit(modelName, { tokenizer: true })}
 
 const textInput = document.getElementById('textInput');
 const translateBtn = document.getElementById('translateBtn');
@@ -1910,10 +1855,15 @@ init();`;
 // ---- Text2Text Generation script ----
 
 function emitText2TextScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
+  const remote = isRemoteModel(config);
+  const modelPath = getModelPath(config, '.');
+  const modelName = config.modelName;
+
   return `${emitBlockCode(config, blocks)}
+${remote ? emitProgressHelpers() : ''}
 
 // --- Application ---
-const MODEL_PATH = '${getModelPath(config, '.')}';
+const MODEL_PATH = '${modelPath}';
 const TOKENIZER_PATH = MODEL_PATH.replace(/\\.onnx$/, '') + '/tokenizer.json';
 const MAX_NEW_TOKENS = 128;
 const EOS_TOKEN_ID = 1;
@@ -1924,19 +1874,7 @@ function updateStatus(text) {
   document.getElementById('status').textContent = text;
 }
 
-async function init() {
-  updateStatus('Loading model and tokenizer...');
-  try {
-    [session, tokenizer] = await Promise.all([
-      createSession(MODEL_PATH),
-      loadTokenizer(TOKENIZER_PATH),
-    ]);
-    updateStatus('${config.modelName} \\u00b7 Ready');
-  } catch (e) {
-    updateStatus('Failed to load model');
-    console.error('Model load error:', e);
-  }
-}
+${remote ? emitRemoteInit(modelName, { tokenizer: true, enableRunBtn: false }) : emitLocalInit(modelName, { tokenizer: true })}
 
 const textInput = document.getElementById('textInput');
 const runBtn = document.getElementById('runBtn');
@@ -1972,10 +1910,15 @@ init();`;
 // ---- Conversational script ----
 
 function emitConversationalScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
+  const remote = isRemoteModel(config);
+  const modelPath = getModelPath(config, '.');
+  const modelName = config.modelName;
+
   return `${emitBlockCode(config, blocks)}
+${remote ? emitProgressHelpers() : ''}
 
 // --- Application ---
-const MODEL_PATH = '${getModelPath(config, '.')}';
+const MODEL_PATH = '${modelPath}';
 const TOKENIZER_PATH = MODEL_PATH.replace(/\\.onnx$/, '') + '/tokenizer.json';
 const MAX_NEW_TOKENS = 50;
 const EOS_TOKEN_ID = 2;
@@ -1986,19 +1929,7 @@ function updateStatus(text) {
   document.getElementById('status').textContent = text;
 }
 
-async function init() {
-  updateStatus('Loading model and tokenizer...');
-  try {
-    [session, tokenizer] = await Promise.all([
-      createSession(MODEL_PATH),
-      loadTokenizer(TOKENIZER_PATH),
-    ]);
-    updateStatus('${config.modelName} \\u00b7 Ready');
-  } catch (e) {
-    updateStatus('Failed to load model');
-    console.error('Model load error:', e);
-  }
-}
+${remote ? emitRemoteInit(modelName, { tokenizer: true, enableRunBtn: false }) : emitLocalInit(modelName, { tokenizer: true })}
 
 const chatMessages = document.getElementById('chatMessages');
 const chatInput = document.getElementById('chatInput');
@@ -2064,10 +1995,15 @@ init();`;
 // ---- Table Question Answering script ----
 
 function emitTableQAScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
+  const remote = isRemoteModel(config);
+  const modelPath = getModelPath(config, '.');
+  const modelName = config.modelName;
+
   return `${emitBlockCode(config, blocks)}
+${remote ? emitProgressHelpers() : ''}
 
 // --- Application ---
-const MODEL_PATH = '${getModelPath(config, '.')}';
+const MODEL_PATH = '${modelPath}';
 const TOKENIZER_PATH = MODEL_PATH.replace(/\\.onnx$/, '') + '/tokenizer.json';
 let session = null;
 let tokenizer = null;
@@ -2076,19 +2012,7 @@ function updateStatus(text) {
   document.getElementById('status').textContent = text;
 }
 
-async function init() {
-  updateStatus('Loading model and tokenizer...');
-  try {
-    [session, tokenizer] = await Promise.all([
-      createSession(MODEL_PATH),
-      loadTokenizer(TOKENIZER_PATH),
-    ]);
-    updateStatus('${config.modelName} \\u00b7 Ready');
-  } catch (e) {
-    updateStatus('Failed to load model');
-    console.error('Model load error:', e);
-  }
-}
+${remote ? emitRemoteInit(modelName, { tokenizer: true, enableRunBtn: false }) : emitLocalInit(modelName, { tokenizer: true })}
 
 const tableInput = document.getElementById('tableInput');
 const questionInput = document.getElementById('questionInput');
@@ -2125,46 +2049,42 @@ init();`;
 // ---- Image-to-Text script ----
 
 function emitImageToTextScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
+  const remote = isRemoteModel(config);
+  const modelPath = getModelPath(config, '.');
+  const modelName = config.modelName;
+
+  const handleFile = `
+function handleFile(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  const url = URL.createObjectURL(file);
+  previewImage.src = url;
+  previewImage.onload = () => processImage(previewImage);
+  preview.hidden = false;${!remote ? '\n  dropZone.hidden = true;' : ''}
+}`;
+
   return `${emitBlockCode(config, blocks)}
+${remote ? emitProgressHelpers() : ''}
 
 // --- Application ---
-const MODEL_PATH = '${getModelPath(config, '.')}';
+const MODEL_PATH = '${modelPath}';
 let session = null;
 
 function updateStatus(text) {
   document.getElementById('status').textContent = text;
 }
 
-async function init() {
-  updateStatus('Loading model...');
-  try {
-    session = await createSession(MODEL_PATH);
-    updateStatus('${config.modelName} \\u00b7 Ready');
-  } catch (e) {
-    updateStatus('Failed to load model');
-    console.error('Model load error:', e);
-  }
-}
-
-const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
 const preview = document.getElementById('preview');
 const previewImage = document.getElementById('previewImage');
-const changeBtn = document.getElementById('changeBtn');
-const outputDiv = document.getElementById('output');
+const resultsDiv = document.getElementById('output');
 
-function handleFile(file) {
-  if (!file || !file.type.startsWith('image/')) return;
-  const url = URL.createObjectURL(file);
-  previewImage.src = url;
-  previewImage.onload = () => processImage(previewImage);
-  preview.hidden = false;
-  dropZone.hidden = true;
-}
+${remote ? emitRunButtonListeners() : emitDropZoneListeners()}
+
+${handleFile}
 
 async function processImage(img) {
   if (!session) return;
-  updateStatus('${config.modelName} \\u00b7 Generating caption...');
+  updateStatus('${modelName} \\u00b7 Generating caption...');
   const start = performance.now();
 
   const input = preprocessImage(img);
@@ -2172,18 +2092,12 @@ async function processImage(img) {
   const caption = postprocessImageToText(output);
 
   const elapsed = (performance.now() - start).toFixed(1);
-  updateStatus('${config.modelName} \\u00b7 ' + elapsed + 'ms \\u00b7 ' + getBackendLabel(session));
+  updateStatus('${modelName} \\u00b7 ' + elapsed + 'ms \\u00b7 ' + getBackendLabel(session));
 
-  outputDiv.textContent = caption;
+  resultsDiv.textContent = caption;
 }
 
-dropZone.addEventListener('click', () => fileInput.click());
-dropZone.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') fileInput.click(); });
-dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
-dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('drag-over'); handleFile(e.dataTransfer.files[0]); });
-fileInput.addEventListener('change', () => handleFile(fileInput.files[0]));
-changeBtn.addEventListener('click', () => { preview.hidden = true; dropZone.hidden = false; outputDiv.textContent = ''; });
+${remote ? emitRemoteInit(modelName) : emitLocalInit(modelName)}
 
 init();`;
 }
@@ -2191,10 +2105,24 @@ init();`;
 // ---- Visual Question Answering script ----
 
 function emitVQAScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
+  const remote = isRemoteModel(config);
+  const modelPath = getModelPath(config, '.');
+  const modelName = config.modelName;
+
+  const handleFile = `
+function handleFile(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  const url = URL.createObjectURL(file);
+  previewImage.src = url;
+  previewImage.onload = () => { currentImage = previewImage; };
+  preview.hidden = false;${!remote ? '\n  dropZone.hidden = true;' : ''}
+}`;
+
   return `${emitBlockCode(config, blocks)}
+${remote ? emitProgressHelpers() : ''}
 
 // --- Application ---
-const MODEL_PATH = '${getModelPath(config, '.')}';
+const MODEL_PATH = '${modelPath}';
 const TOKENIZER_PATH = MODEL_PATH.replace(/\\.onnx$/, '') + '/tokenizer.json';
 let session = null;
 let tokenizer = null;
@@ -2203,49 +2131,28 @@ function updateStatus(text) {
   document.getElementById('status').textContent = text;
 }
 
-async function init() {
-  updateStatus('Loading model and tokenizer...');
-  try {
-    [session, tokenizer] = await Promise.all([
-      createSession(MODEL_PATH),
-      loadTokenizer(TOKENIZER_PATH),
-    ]);
-    updateStatus('${config.modelName} \\u00b7 Ready');
-  } catch (e) {
-    updateStatus('Failed to load model');
-    console.error('Model load error:', e);
-  }
-}
-
-const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
 const preview = document.getElementById('preview');
 const previewImage = document.getElementById('previewImage');
-const changeBtn = document.getElementById('changeBtn');
 const questionInput = document.getElementById('questionInput');
 const askBtn = document.getElementById('askBtn');
-const answerDiv = document.getElementById('answer');
+const resultsDiv = document.getElementById('answer');
 let currentImage = null;
 
-function handleFile(file) {
-  if (!file || !file.type.startsWith('image/')) return;
-  const url = URL.createObjectURL(file);
-  previewImage.src = url;
-  previewImage.onload = () => { currentImage = previewImage; };
-  preview.hidden = false;
-  dropZone.hidden = true;
-}
+${remote ? emitRunButtonListeners() : emitDropZoneListeners('\n  currentImage = null;')}
+
+${handleFile}
 
 askBtn.addEventListener('click', async () => {
   const question = questionInput.value.trim();
   if (!question || !currentImage) return;
 
   if (!session || !tokenizer) {
-    answerDiv.textContent = 'Model not loaded yet. Please wait.';
+    resultsDiv.textContent = 'Model not loaded yet. Please wait.';
     return;
   }
 
-  updateStatus('${config.modelName} \\u00b7 Processing...');
+  updateStatus('${modelName} \\u00b7 Processing...');
   const start = performance.now();
 
   const imageInput = preprocessImage(currentImage);
@@ -2253,18 +2160,12 @@ askBtn.addEventListener('click', async () => {
   const answer = postprocessVQA(output, tokenizer);
 
   const elapsed = (performance.now() - start).toFixed(1);
-  updateStatus('${config.modelName} \\u00b7 ' + elapsed + 'ms \\u00b7 ' + getBackendLabel(session));
+  updateStatus('${modelName} \\u00b7 ' + elapsed + 'ms \\u00b7 ' + getBackendLabel(session));
 
-  answerDiv.textContent = answer;
+  resultsDiv.textContent = answer;
 });
 
-dropZone.addEventListener('click', () => fileInput.click());
-dropZone.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') fileInput.click(); });
-dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
-dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('drag-over'); handleFile(e.dataTransfer.files[0]); });
-fileInput.addEventListener('change', () => handleFile(fileInput.files[0]));
-changeBtn.addEventListener('click', () => { preview.hidden = true; dropZone.hidden = false; currentImage = null; answerDiv.textContent = ''; });
+${remote ? emitRemoteInit(modelName, { tokenizer: true }) : emitLocalInit(modelName, { tokenizer: true })}
 
 init();`;
 }
@@ -2272,10 +2173,24 @@ init();`;
 // ---- Document Question Answering script ----
 
 function emitDocQAScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
+  const remote = isRemoteModel(config);
+  const modelPath = getModelPath(config, '.');
+  const modelName = config.modelName;
+
+  const handleFile = `
+function handleFile(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  const url = URL.createObjectURL(file);
+  previewImage.src = url;
+  previewImage.onload = () => { currentImage = previewImage; };
+  preview.hidden = false;${!remote ? '\n  dropZone.hidden = true;' : ''}
+}`;
+
   return `${emitBlockCode(config, blocks)}
+${remote ? emitProgressHelpers() : ''}
 
 // --- Application ---
-const MODEL_PATH = '${getModelPath(config, '.')}';
+const MODEL_PATH = '${modelPath}';
 const TOKENIZER_PATH = MODEL_PATH.replace(/\\.onnx$/, '') + '/tokenizer.json';
 let session = null;
 let tokenizer = null;
@@ -2284,49 +2199,28 @@ function updateStatus(text) {
   document.getElementById('status').textContent = text;
 }
 
-async function init() {
-  updateStatus('Loading model and tokenizer...');
-  try {
-    [session, tokenizer] = await Promise.all([
-      createSession(MODEL_PATH),
-      loadTokenizer(TOKENIZER_PATH),
-    ]);
-    updateStatus('${config.modelName} \\u00b7 Ready');
-  } catch (e) {
-    updateStatus('Failed to load model');
-    console.error('Model load error:', e);
-  }
-}
-
-const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
 const preview = document.getElementById('preview');
 const previewImage = document.getElementById('previewImage');
-const changeBtn = document.getElementById('changeBtn');
 const questionInput = document.getElementById('questionInput');
 const askBtn = document.getElementById('askBtn');
-const answerDiv = document.getElementById('answer');
+const resultsDiv = document.getElementById('answer');
 let currentImage = null;
 
-function handleFile(file) {
-  if (!file || !file.type.startsWith('image/')) return;
-  const url = URL.createObjectURL(file);
-  previewImage.src = url;
-  previewImage.onload = () => { currentImage = previewImage; };
-  preview.hidden = false;
-  dropZone.hidden = true;
-}
+${remote ? emitRunButtonListeners() : emitDropZoneListeners('\n  currentImage = null;')}
+
+${handleFile}
 
 askBtn.addEventListener('click', async () => {
   const question = questionInput.value.trim();
   if (!question || !currentImage) return;
 
   if (!session || !tokenizer) {
-    answerDiv.textContent = 'Model not loaded yet. Please wait.';
+    resultsDiv.textContent = 'Model not loaded yet. Please wait.';
     return;
   }
 
-  updateStatus('${config.modelName} \\u00b7 Processing...');
+  updateStatus('${modelName} \\u00b7 Processing...');
   const start = performance.now();
 
   const imageInput = preprocessImage(currentImage);
@@ -2334,18 +2228,12 @@ askBtn.addEventListener('click', async () => {
   const answer = postprocessDocQA(output, tokenizer);
 
   const elapsed = (performance.now() - start).toFixed(1);
-  updateStatus('${config.modelName} \\u00b7 ' + elapsed + 'ms \\u00b7 ' + getBackendLabel(session));
+  updateStatus('${modelName} \\u00b7 ' + elapsed + 'ms \\u00b7 ' + getBackendLabel(session));
 
-  answerDiv.textContent = answer;
+  resultsDiv.textContent = answer;
 });
 
-dropZone.addEventListener('click', () => fileInput.click());
-dropZone.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') fileInput.click(); });
-dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
-dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('drag-over'); handleFile(e.dataTransfer.files[0]); });
-fileInput.addEventListener('change', () => handleFile(fileInput.files[0]));
-changeBtn.addEventListener('click', () => { preview.hidden = true; dropZone.hidden = false; currentImage = null; answerDiv.textContent = ''; });
+${remote ? emitRemoteInit(modelName, { tokenizer: true }) : emitLocalInit(modelName, { tokenizer: true })}
 
 init();`;
 }
@@ -2353,10 +2241,24 @@ init();`;
 // ---- Image-Text-to-Text script ----
 
 function emitImageTextToTextScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
+  const remote = isRemoteModel(config);
+  const modelPath = getModelPath(config, '.');
+  const modelName = config.modelName;
+
+  const handleFile = `
+function handleFile(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  const url = URL.createObjectURL(file);
+  previewImage.src = url;
+  previewImage.onload = () => { currentImage = previewImage; };
+  preview.hidden = false;${!remote ? '\n  dropZone.hidden = true;' : ''}
+}`;
+
   return `${emitBlockCode(config, blocks)}
+${remote ? emitProgressHelpers() : ''}
 
 // --- Application ---
-const MODEL_PATH = '${getModelPath(config, '.')}';
+const MODEL_PATH = '${modelPath}';
 const TOKENIZER_PATH = MODEL_PATH.replace(/\\.onnx$/, '') + '/tokenizer.json';
 let session = null;
 let tokenizer = null;
@@ -2365,50 +2267,29 @@ function updateStatus(text) {
   document.getElementById('status').textContent = text;
 }
 
-async function init() {
-  updateStatus('Loading model and tokenizer...');
-  try {
-    [session, tokenizer] = await Promise.all([
-      createSession(MODEL_PATH),
-      loadTokenizer(TOKENIZER_PATH),
-    ]);
-    updateStatus('${config.modelName} \\u00b7 Ready');
-  } catch (e) {
-    updateStatus('Failed to load model');
-    console.error('Model load error:', e);
-  }
-}
-
-const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
 const preview = document.getElementById('preview');
 const previewImage = document.getElementById('previewImage');
-const changeBtn = document.getElementById('changeBtn');
 const promptInput = document.getElementById('promptInput');
 const generateBtn = document.getElementById('generateBtn');
-const outputDiv = document.getElementById('output');
+const resultsDiv = document.getElementById('output');
 let currentImage = null;
 
-function handleFile(file) {
-  if (!file || !file.type.startsWith('image/')) return;
-  const url = URL.createObjectURL(file);
-  previewImage.src = url;
-  previewImage.onload = () => { currentImage = previewImage; };
-  preview.hidden = false;
-  dropZone.hidden = true;
-}
+${remote ? emitRunButtonListeners() : emitDropZoneListeners('\n  currentImage = null;')}
+
+${handleFile}
 
 generateBtn.addEventListener('click', async () => {
   const prompt = promptInput.value.trim();
   if (!currentImage) return;
 
   if (!session || !tokenizer) {
-    outputDiv.textContent = 'Model not loaded yet. Please wait.';
+    resultsDiv.textContent = 'Model not loaded yet. Please wait.';
     return;
   }
 
   generateBtn.disabled = true;
-  updateStatus('${config.modelName} \\u00b7 Generating...');
+  updateStatus('${modelName} \\u00b7 Generating...');
   const start = performance.now();
 
   const imageInput = preprocessImage(currentImage);
@@ -2416,19 +2297,13 @@ generateBtn.addEventListener('click', async () => {
   const result = postprocessImageTextToText(output, tokenizer);
 
   const elapsed = (performance.now() - start).toFixed(1);
-  updateStatus('${config.modelName} \\u00b7 ' + elapsed + 'ms \\u00b7 ' + getBackendLabel(session));
+  updateStatus('${modelName} \\u00b7 ' + elapsed + 'ms \\u00b7 ' + getBackendLabel(session));
 
-  outputDiv.textContent = result;
+  resultsDiv.textContent = result;
   generateBtn.disabled = false;
 });
 
-dropZone.addEventListener('click', () => fileInput.click());
-dropZone.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') fileInput.click(); });
-dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
-dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('drag-over'); handleFile(e.dataTransfer.files[0]); });
-fileInput.addEventListener('change', () => handleFile(fileInput.files[0]));
-changeBtn.addEventListener('click', () => { preview.hidden = true; dropZone.hidden = false; currentImage = null; outputDiv.textContent = ''; });
+${remote ? emitRemoteInit(modelName, { tokenizer: true }) : emitLocalInit(modelName, { tokenizer: true })}
 
 init();`;
 }
@@ -2436,26 +2311,22 @@ init();`;
 // ---- Audio-to-Audio script ----
 
 function emitAudioToAudioScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
+  const remote = isRemoteModel(config);
+  const modelPath = getModelPath(config, '.');
+  const modelName = config.modelName;
+
   return `${emitBlockCode(config, blocks)}
+${remote ? emitProgressHelpers() : ''}
 
 // --- Application ---
-const MODEL_PATH = '${getModelPath(config, '.')}';
+const MODEL_PATH = '${modelPath}';
 let session = null;
 
 function updateStatus(text) {
   document.getElementById('status').textContent = text;
 }
 
-async function init() {
-  updateStatus('Loading model...');
-  try {
-    session = await createSession(MODEL_PATH);
-    updateStatus('${config.modelName} \\u00b7 Ready');
-  } catch (e) {
-    updateStatus('Failed to load model');
-    console.error('Model load error:', e);
-  }
-}
+${remote ? emitRemoteInit(modelName, { enableRunBtn: false }) : emitLocalInit(modelName)}
 
 const fileInput = document.getElementById('fileInput');
 const outputDiv = document.getElementById('output');
@@ -2488,26 +2359,22 @@ init();`;
 // ---- Speaker Diarization script ----
 
 function emitSpeakerDiarizationScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
+  const remote = isRemoteModel(config);
+  const modelPath = getModelPath(config, '.');
+  const modelName = config.modelName;
+
   return `${emitBlockCode(config, blocks)}
+${remote ? emitProgressHelpers() : ''}
 
 // --- Application ---
-const MODEL_PATH = '${getModelPath(config, '.')}';
+const MODEL_PATH = '${modelPath}';
 let session = null;
 
 function updateStatus(text) {
   document.getElementById('status').textContent = text;
 }
 
-async function init() {
-  updateStatus('Loading model...');
-  try {
-    session = await createSession(MODEL_PATH);
-    updateStatus('${config.modelName} \\u00b7 Ready');
-  } catch (e) {
-    updateStatus('Failed to load model');
-    console.error('Model load error:', e);
-  }
-}
+${remote ? emitRemoteInit(modelName, { enableRunBtn: false }) : emitLocalInit(modelName)}
 
 const fileInput = document.getElementById('fileInput');
 const resultsDiv = document.getElementById('results');
@@ -2546,26 +2413,22 @@ init();`;
 // ---- Voice Activity Detection script ----
 
 function emitVADScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
+  const remote = isRemoteModel(config);
+  const modelPath = getModelPath(config, '.');
+  const modelName = config.modelName;
+
   return `${emitBlockCode(config, blocks)}
+${remote ? emitProgressHelpers() : ''}
 
 // --- Application ---
-const MODEL_PATH = '${getModelPath(config, '.')}';
+const MODEL_PATH = '${modelPath}';
 let session = null;
 
 function updateStatus(text) {
   document.getElementById('status').textContent = text;
 }
 
-async function init() {
-  updateStatus('Loading model...');
-  try {
-    session = await createSession(MODEL_PATH);
-    updateStatus('${config.modelName} \\u00b7 Ready');
-  } catch (e) {
-    updateStatus('Failed to load model');
-    console.error('Model load error:', e);
-  }
-}
+${remote ? emitRemoteInit(modelName, { enableRunBtn: false }) : emitLocalInit(modelName)}
 
 const fileInput = document.getElementById('fileInput');
 const resultsDiv = document.getElementById('results');
@@ -2679,12 +2542,21 @@ function emitAppScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
 
 // ---- HTML body content ----
 
-/** File input body (classification tasks: unchanged for snapshot compat) */
+/** File input body (classification tasks) — source-aware */
 function emitFileClassificationBody(config: ResolvedConfig): string {
   const taskLabel = getTaskLabel(config.task);
-  return `    <div class="container">
-      <div>
-        <div class="drop-zone" id="dropZone" role="button" tabindex="0"
+  const remote = isRemoteModel(config);
+
+  const inputArea = remote
+    ? `${emitProgressBarHtml()}
+
+        <div id="preview" class="preview" hidden>
+          <img id="previewImage" alt="Selected image for classification">
+        </div>
+
+        <button id="runBtn" class="run-model-btn" disabled>&#x25b6; Run Inference</button>
+        <input type="file" id="fileInput" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1">`
+    : `<div class="drop-zone" id="dropZone" role="button" tabindex="0"
              aria-label="Drop an image here or click to browse for ${taskLabel.toLowerCase()}">
           <p>Drop an image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
@@ -2694,7 +2566,11 @@ function emitFileClassificationBody(config: ResolvedConfig): string {
         <div id="preview" class="preview" hidden>
           <img id="previewImage" alt="Selected image for classification">
           <button id="changeBtn" class="change-btn">Choose another image</button>
-        </div>
+        </div>`;
+
+  return `    <div class="container">
+      <div>
+        ${inputArea}
       </div>
 
       <div id="results" class="results" role="status" aria-live="polite" aria-atomic="true">
@@ -2705,9 +2581,21 @@ function emitFileClassificationBody(config: ResolvedConfig): string {
 /** File input body with canvas overlay (detection/segmentation) */
 function emitFileOverlayBody(config: ResolvedConfig): string {
   const taskLabel = getTaskLabel(config.task);
-  return `    <div class="container">
-      <div>
-        <div class="drop-zone" id="dropZone" role="button" tabindex="0"
+  const remote = isRemoteModel(config);
+
+  const inputArea = remote
+    ? `${emitProgressBarHtml()}
+
+        <div id="preview" class="preview" hidden>
+          <div class="preview-wrapper">
+            <img id="previewImage" alt="Selected image for ${taskLabel.toLowerCase()}">
+            <canvas id="overlay"></canvas>
+          </div>
+        </div>
+
+        <button id="runBtn" class="run-model-btn" disabled>&#x25b6; Run Inference</button>
+        <input type="file" id="fileInput" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1">`
+    : `<div class="drop-zone" id="dropZone" role="button" tabindex="0"
              aria-label="Drop an image here or click to browse for ${taskLabel.toLowerCase()}">
           <p>Drop an image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
@@ -2720,7 +2608,11 @@ function emitFileOverlayBody(config: ResolvedConfig): string {
             <canvas id="overlay"></canvas>
           </div>
           <button id="changeBtn" class="change-btn">Choose another image</button>
-        </div>
+        </div>`;
+
+  return `    <div class="container">
+      <div>
+        ${inputArea}
       </div>
 
       <div id="results" class="results" role="status" aria-live="polite" aria-atomic="true">
@@ -2884,9 +2776,18 @@ I need to buy groceries.</textarea>
 /** Depth Estimation body */
 function emitDepthEstimationBody(config: ResolvedConfig): string {
   const taskLabel = getTaskLabel(config.task);
-  return `    <div class="container">
-      <div>
-        <div class="drop-zone" id="dropZone" role="button" tabindex="0"
+  const remote = isRemoteModel(config);
+
+  const inputArea = remote
+    ? `${emitProgressBarHtml()}
+
+        <div id="preview" class="preview" hidden>
+          <img id="previewImage" alt="Selected image for depth estimation">
+        </div>
+
+        <button id="runBtn" class="run-model-btn" disabled>&#x25b6; Run Inference</button>
+        <input type="file" id="fileInput" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1">`
+    : `<div class="drop-zone" id="dropZone" role="button" tabindex="0"
              aria-label="Drop an image here or click to browse for ${taskLabel.toLowerCase()}">
           <p>Drop an image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
@@ -2896,7 +2797,11 @@ function emitDepthEstimationBody(config: ResolvedConfig): string {
         <div id="preview" class="preview" hidden>
           <img id="previewImage" alt="Selected image for depth estimation">
           <button id="changeBtn" class="change-btn">Choose another image</button>
-        </div>
+        </div>`;
+
+  return `    <div class="container">
+      <div>
+        ${inputArea}
       </div>
 
       <div>
@@ -3384,12 +3289,46 @@ function needsAudioCSS(config: ResolvedConfig): boolean {
 }
 
 /**
+ * Generate the backend <select> HTML for the generated page.
+ * Options and defaults depend on the engine:
+ * - ORT: WebNN NPU, WebNN GPU (default), WebNN CPU, WebGPU, Wasm
+ * - LiteRT: WebGPU (default), Wasm; WebNN options disabled (coming later)
+ * - WebNN: WebNN NPU, WebNN GPU (default), WebNN CPU
+ */
+function emitBackendSelect(engine: string): string {
+  if (engine === 'litert') {
+    return `<select id="backend" class="backend-select" aria-label="Backend">
+      <option value="webnn-npu" disabled>WebNN NPU (coming soon)</option>
+      <option value="webnn-gpu" disabled>WebNN GPU (coming soon)</option>
+      <option value="webnn-cpu" disabled>WebNN CPU (coming soon)</option>
+      <option value="webgpu" selected>WebGPU</option>
+      <option value="wasm">Wasm</option>
+    </select>`;
+  }
+  if (engine === 'webnn') {
+    return `<select id="backend" class="backend-select" aria-label="Backend">
+      <option value="webnn-npu">WebNN NPU</option>
+      <option value="webnn-gpu" selected>WebNN GPU</option>
+      <option value="webnn-cpu">WebNN CPU</option>
+    </select>`;
+  }
+  // ORT (default)
+  return `<select id="backend" class="backend-select" aria-label="Backend">
+      <option value="webnn-npu">WebNN NPU</option>
+      <option value="webnn-gpu" selected>WebNN GPU</option>
+      <option value="webnn-cpu">WebNN CPU</option>
+      <option value="webgpu">WebGPU</option>
+      <option value="wasm">Wasm</option>
+    </select>`;
+}
+
+/**
  * Emit HTML framework files.
  */
 export function emitHtml(config: ResolvedConfig, blocks: CodeBlock[]): GeneratedFile[] {
-  const taskLabel = getTaskLabel(config.task);
   const engineLabel = getEngineLabel(config.engine);
   const theme = config.theme;
+  const { titleText, headingHtml } = buildPageHeading(config);
 
   const designCSS = emitDesignSystemCSS(config);
   const appCSS = emitAppCSS();
@@ -3397,13 +3336,14 @@ export function emitHtml(config: ResolvedConfig, blocks: CodeBlock[]): Generated
   const audioCSS = needsAudioCSS(config) ? emitAudioCSS() : '';
   const appScript = emitAppScript(config, blocks);
   const bodyContent = emitBodyContent(config);
+  const backendSelect = emitBackendSelect(config.engine);
 
   const html = `<!DOCTYPE html>
 <html lang="en" data-theme="${theme}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${config.modelName} — ${taskLabel}</title>
+  <title>${titleText}</title>
   <style>
 ${designCSS}
 ${appCSS}${extraCSS}${audioCSS}
@@ -3413,13 +3353,14 @@ ${appCSS}${extraCSS}${audioCSS}
   <a href="#results" class="skip-link">Skip to results</a>
 
   <main>
-    <h1>${config.modelName} — ${taskLabel}</h1>
+    ${headingHtml}
 
 ${bodyContent}
   </main>
 
   <aside class="status-bar">
     <span id="status">${config.modelName} · Loading...</span>
+    ${backendSelect}
   </aside>
 
   <div class="footer">Generated by webai.js · ${config.modelName} · ${engineLabel}</div>

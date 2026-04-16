@@ -54,6 +54,48 @@ export function getEngineLabel(engine: string): string {
 }
 
 /**
+ * Build the page heading for generated pages.
+ *
+ * Returns `{ titleText, headingHtml }` where:
+ * - `titleText` is plain text for `<title>`
+ * - `headingHtml` is the `<h1>` (+ optional `<h2>`) block
+ *
+ * Display rules:
+ * - HF model ID:  `<h1>Task · owner/repo</h1><h2>path/file.onnx</h2>`
+ * - HF URL:       same — parsed into repo ID + file
+ * - Non-HF URL:   `<h1>Task · filename.ext</h1>`
+ * - Local path:   `<h1>Task · modelName</h1>`
+ */
+export function buildPageHeading(config: ResolvedConfig): { titleText: string; headingHtml: string } {
+  const taskLabel = getTaskLabel(config.task);
+
+  // HF model ID or HF URL with repo info
+  if (config.hfModelId && config.hfFile) {
+    const titleText = `${taskLabel} · ${config.hfModelId}`;
+    const headingHtml = `<h1>${taskLabel}  ·  ${config.hfModelId}</h1>\n    <h2>${config.hfFile}</h2>`;
+    return { titleText, headingHtml };
+  }
+
+  // URL without HF info — extract filename from URL
+  if (config.modelSource === 'url') {
+    const urlPath = config.modelPath.split('?')[0].split('#')[0];
+    const lastSlash = urlPath.lastIndexOf('/');
+    const filename = lastSlash >= 0 ? urlPath.slice(lastSlash + 1) : urlPath;
+    const display = filename || config.modelName;
+    return {
+      titleText: `${taskLabel} · ${display}`,
+      headingHtml: `<h1>${taskLabel}  ·  ${display}</h1>`,
+    };
+  }
+
+  // Local path — use modelName (already basename without ext)
+  return {
+    titleText: `${taskLabel} · ${config.modelName}`,
+    headingHtml: `<h1>${taskLabel}  ·  ${config.modelName}</h1>`,
+  };
+}
+
+/**
  * Get the MODEL_PATH value for generated code.
  *
  * When the model came from a URL or HuggingFace model ID, the generated code
@@ -141,6 +183,18 @@ main {
 h1 {
   font-size: 20px;
   font-weight: 600;
+  margin-bottom: var(--webai-space-6);
+}
+
+h1:has(+ h2) {
+  margin-bottom: var(--webai-space-1);
+}
+
+h2 {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--webai-text-muted);
+  font-family: var(--webai-font-mono);
   margin-bottom: var(--webai-space-6);
 }
 
@@ -277,9 +331,30 @@ h1 {
   border-top: 1px solid var(--webai-border);
   display: flex;
   align-items: center;
+  justify-content: space-between;
   padding: 0 var(--webai-space-4);
   font-family: var(--webai-font-mono);
   font-size: var(--webai-font-size-sm);
+  color: var(--webai-text-muted);
+}
+
+.backend-select {
+  background: var(--webai-bg);
+  color: var(--webai-text);
+  border: 1px solid var(--webai-border);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  cursor: pointer;
+}
+
+.backend-select:focus {
+  outline: 2px solid var(--webai-accent);
+  outline-offset: -1px;
+}
+
+.backend-select option:disabled {
   color: var(--webai-text-muted);
 }
 
@@ -596,7 +671,113 @@ h1 {
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .result-bar { transition: none; }
-}`;
+  .progress-fill { transition: none; }
+  .progress-fill::after { animation: none; }
+}
+
+/* Progress bar */
+.progress-container {
+  width: 100%;
+  margin-bottom: var(--webai-space-4);
+}
+
+.progress-label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: var(--webai-space-1);
+  font-size: var(--webai-font-size-sm);
+  color: var(--webai-text-muted);
+  gap: var(--webai-space-2);
+}
+
+.progress-filename {
+  font-weight: 600;
+  color: var(--webai-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.progress-stats {
+  flex-shrink: 0;
+  font-family: var(--webai-font-mono);
+  font-size: var(--webai-font-size-sm);
+  color: var(--webai-text-muted);
+}
+
+.progress-track {
+  position: relative;
+  width: 100%;
+  height: 6px;
+  background: var(--webai-surface);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  min-width: 0;
+  background: linear-gradient(90deg, var(--webai-accent), #60a5fa);
+  border-radius: 3px;
+  transition: width 0.25s ease;
+  will-change: width;
+}
+
+.progress-fill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.25) 50%, transparent 100%);
+  animation: progressShimmer 1.5s ease-in-out infinite;
+}
+
+.progress-fill.done {
+  background: linear-gradient(90deg, var(--webai-success), #16a34a);
+  transition: width 0.3s ease, background 0.4s;
+}
+
+.progress-fill.done::after {
+  animation: none;
+  opacity: 0;
+}
+
+@keyframes progressShimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+
+.progress-fill.indeterminate {
+  width: 30% !important;
+  animation: progressIndeterminate 1.2s ease infinite;
+}
+
+@keyframes progressIndeterminate {
+  0%   { left: -30%; }
+  100% { left: 100%; }
+}
+
+/* Run button (online models) */
+.run-model-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--webai-space-2);
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-3) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  font-size: var(--webai-font-size-base);
+  cursor: pointer;
+  margin-bottom: var(--webai-space-4);
+}
+
+.run-model-btn:hover { opacity: 0.9; }
+.run-model-btn:disabled { opacity: 0.5; cursor: not-allowed; }`;
 }
 
 // ---- Audio Task Helpers ----
@@ -714,7 +895,7 @@ ${quickStart}
 
 1. **Preprocessing**: Image is resized to ${imageSize}x${imageSize}px, normalized with
    mean=[${mean.join(', ')}] and std=[${std.join(', ')}], then transposed to ${config.preprocess.layout.toUpperCase()} layout.
-2. **Inference**: Model runs via ${engineLabel}${config.backend === 'auto' ? ' with automatic backend selection (WebNN NPU > WebNN GPU > WebGPU > WASM)' : ` with ${config.backend} backend`}.
+2. **Inference**: Model runs via ${engineLabel} with ${config.backend} backend. You can switch backends at runtime using the dropdown in the status bar.
 3. **Postprocessing**: Raw logits are converted to probabilities (softmax), then top-5 results are extracted.
 
 ## Configuration

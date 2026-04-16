@@ -4,7 +4,7 @@
  * Resolution order:
  * 1. Task: explicit --task flag, or auto-detect from model shapes
  * 2. Engine: explicit --engine flag, or default 'ort'
- * 3. Backend: explicit --backend flag, or 'auto'
+ * 3. Backend: explicit --backend flag, or engine default (webnn-gpu for ort/webnn, webgpu for litert)
  * 4. Framework: explicit --framework flag, or 'html'
  * 5. Input: explicit --input flag, or task default
  * 6. Preprocessing: from task profile (ImageNet defaults for image tasks)
@@ -29,7 +29,7 @@ import type {
 import { ConfigValidationError, validateTaskInput, validateTaskEngine } from './compatibility.js';
 
 const VALID_ENGINES = new Set<Engine>(['ort', 'litert', 'webnn']);
-const VALID_BACKENDS = new Set<Backend>(['auto', 'wasm', 'webgpu', 'webnn-cpu', 'webnn-gpu', 'webnn-npu']);
+const VALID_BACKENDS = new Set<Backend>(['wasm', 'webgpu', 'webnn-cpu', 'webnn-gpu', 'webnn-npu']);
 const VALID_FRAMEWORKS = new Set<Framework>(['html', 'vanilla-vite', 'react-vite', 'nextjs', 'svelte-vite', 'sveltekit', 'vue-vite', 'nuxt', 'astro']);
 const VALID_MODES = new Set<CodeMode>(['raw', 'compact']);
 const VALID_LANGS = new Set<OutputLang>(['js', 'ts']);
@@ -60,7 +60,7 @@ function assertValid<T extends string>(value: string, validSet: Set<T>, label: s
 
 /** Normalize backend shorthand for -e webnn: "npu" → "webnn-npu" */
 function normalizeBackend(backend: string, engine: Engine): string {
-  if (engine === 'webnn' && !backend.startsWith('webnn-') && backend !== 'auto') {
+  if (engine === 'webnn' && !backend.startsWith('webnn-')) {
     const expanded = `webnn-${backend}`;
     if (VALID_BACKENDS.has(expanded as Backend)) {
       return expanded;
@@ -138,7 +138,9 @@ export function resolveConfig(flags: CliFlags, metadata: ModelMetadata): Resolve
   step('engine', engine, flags.engine ? 'cli' : 'global-default');
 
   // 3. Backend (normalize shorthand for webnn)
-  const rawBackend = flags.backend ? normalizeBackend(flags.backend, engine) : 'auto';
+  // Default depends on engine: webnn-gpu for ort/webnn, webgpu for litert
+  const engineDefaultBackend: Backend = engine === 'litert' ? 'webgpu' : 'webnn-gpu';
+  const rawBackend = flags.backend ? normalizeBackend(flags.backend, engine) : engineDefaultBackend;
   const backend: Backend = assertValid(rawBackend, VALID_BACKENDS, 'backend');
   step('backend', backend, flags.backend ? 'cli' : 'global-default');
 
@@ -192,6 +194,8 @@ export function resolveConfig(flags: CliFlags, metadata: ModelMetadata): Resolve
   const modelName = extractModelName(flags.model);
   const modelSource = flags.modelSource ?? 'local-path';
   const modelUrl = flags.modelUrl;
+  const hfModelId = flags.hfModelId;
+  const hfFile = flags.hfFile;
 
   return {
     config: {
@@ -214,6 +218,8 @@ export function resolveConfig(flags: CliFlags, metadata: ModelMetadata): Resolve
       modelName,
       modelSource,
       modelUrl,
+      hfModelId,
+      hfFile,
     },
     steps,
   };

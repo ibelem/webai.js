@@ -12,15 +12,15 @@ import { assemble } from 'webai';
 import type { GeneratedFile } from 'webai';
 import { zipSync, strToU8 } from 'fflate';
 import { setupConfigPanel, updateUrlParams, readUrlParams, type ConfigValues } from './config-panel.js';
-import { setupCodePreview, updateCodePreview, getActiveFileContent, setEditorTheme } from './code-preview.js';
-import { setupTryIt } from './try-it.js';
+import { setupCodePreview, updateCodePreview, getActiveFileContent, setEditorTheme, relayoutEditor } from './code-preview.js';
+import { setupTryIt, canTryIt, runInIframe } from './try-it.js';
 import { createMockMetadata } from './mock-metadata.js';
 
 let currentFramework = 'html';
 let currentFiles: GeneratedFile[] = [];
 let latestConfigValues: ConfigValues | null = null;
 
-function generateCode(values: ConfigValues): GeneratedFile[] {
+function generateCode(values: ConfigValues, pageTheme: string): GeneratedFile[] {
   const metadata = createMockMetadata(values.task, values.engine === 'litert' ? 'tflite' : 'onnx');
 
   const ext = values.engine === 'litert' ? '.tflite' : '.onnx';
@@ -28,16 +28,17 @@ function generateCode(values: ConfigValues): GeneratedFile[] {
     model: values.modelUrl ?? `./${values.modelName}${ext}`,
     task: values.task,
     engine: values.engine,
-    backend: values.backend,
     framework: values.framework,
     input: values.input,
     lang: values.lang,
     mode: 'raw',
     output: './output/',
     offline: values.offline,
-    theme: values.theme,
+    theme: pageTheme,
     modelSource: values.modelSource,
     modelUrl: values.modelUrl,
+    hfModelId: values.hfModelId,
+    hfFile: values.hfFile,
   };
 
   try {
@@ -58,7 +59,7 @@ function getPageTheme(): 'dark' | 'light' {
   return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
 }
 
-function setupThemeToggle(btn: HTMLButtonElement): void {
+function setupThemeToggle(btn: HTMLButtonElement, onThemeChange: (theme: string) => void): void {
   // URL param takes precedence, then localStorage
   const urlParams = readUrlParams();
   const themeSource = urlParams.theme ?? localStorage.getItem('webai-theme');
@@ -73,10 +74,7 @@ function setupThemeToggle(btn: HTMLButtonElement): void {
     document.documentElement.setAttribute('data-theme', next);
     localStorage.setItem('webai-theme', next);
     setEditorTheme(next);
-    // Update URL param for page theme
-    if (latestConfigValues) {
-      updateUrlParams(latestConfigValues, next);
-    }
+    onThemeChange(next);
   });
 }
 
@@ -134,6 +132,42 @@ function setupDownloadZip(btn: HTMLButtonElement): void {
   });
 }
 
+// ---- Panel toggles ----
+
+function setupSidebarToggle(btn: HTMLButtonElement, layout: HTMLElement): void {
+  btn.addEventListener('click', () => {
+    layout.classList.toggle('sidebar-collapsed');
+    btn.classList.toggle('is-collapsed');
+    const collapsed = layout.classList.contains('sidebar-collapsed');
+    btn.setAttribute('aria-expanded', String(!collapsed));
+    btn.title = collapsed ? 'Show sidebar' : 'Hide sidebar';
+    // Re-measure Monaco after grid column transition
+    setTimeout(() => relayoutEditor(), 300);
+  });
+}
+
+function setupFullscreenToggle(btn: HTMLButtonElement, section: HTMLElement): void {
+  btn.addEventListener('click', () => {
+    const entering = !section.classList.contains('fullscreen');
+    section.classList.toggle('fullscreen');
+    btn.title = entering ? 'Exit fullscreen' : 'Enter fullscreen';
+    // Double rAF ensures browser has completed reflow before Monaco re-measures
+    requestAnimationFrame(() => requestAnimationFrame(() => relayoutEditor()));
+  });
+}
+
+function setupEscapeKey(codeSection: HTMLElement, tryItSection: HTMLElement): void {
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    if (tryItSection.classList.contains('fullscreen')) {
+      tryItSection.classList.remove('fullscreen');
+    } else if (codeSection.classList.contains('fullscreen')) {
+      codeSection.classList.remove('fullscreen');
+    }
+    requestAnimationFrame(() => requestAnimationFrame(() => relayoutEditor()));
+  });
+}
+
 // ---- Init ----
 
 async function init(): Promise<void> {
@@ -144,18 +178,18 @@ async function init(): Promise<void> {
       file: 'onnx/model_fp16.onnx',
       task: 'image-classification',
       engine: 'ort',
-      backend: 'auto',
       framework: 'html',
       input: 'file',
       lang: 'js',
-      uitheme: 'dark',
       theme: 'dark',
     });
     const url = `${window.location.pathname}?${defaults.toString()}`;
     window.history.replaceState(null, '', url);
   }
 
+  const layout = document.querySelector('.layout') as HTMLElement;
   const configPanel = document.getElementById('configPanel') as HTMLElement;
+  const codeSection = document.querySelector('.code-section') as HTMLElement;
   const editorContainer = document.getElementById('editor') as HTMLElement;
   const tabContainer = document.getElementById('fileTabs') as HTMLElement;
   const tryItSection = document.getElementById('tryItSection') as HTMLElement;
@@ -165,10 +199,26 @@ async function init(): Promise<void> {
   const themeToggle = document.getElementById('themeToggle') as HTMLButtonElement;
   const copyBtn = document.getElementById('copyBtn') as HTMLButtonElement;
   const downloadZipBtn = document.getElementById('downloadZipBtn') as HTMLButtonElement;
+  const sidebarToggle = document.getElementById('sidebarToggle') as HTMLButtonElement;
+  const codeFullscreenBtn = document.getElementById('codeFullscreenBtn') as HTMLButtonElement;
+  const previewFullscreenBtn = document.getElementById('previewFullscreenBtn') as HTMLButtonElement;
 
-  setupThemeToggle(themeToggle);
+  setupThemeToggle(themeToggle, (next) => {
+    if (latestConfigValues) {
+      currentFiles = generateCode(latestConfigValues, next);
+      updateCodePreview(currentFiles, tabContainer);
+      updateUrlParams(latestConfigValues, next);
+      if (!tryItSection.classList.contains('is-closed') && canTryIt(latestConfigValues.framework)) {
+        runInIframe(tryItFrame, currentFiles);
+      }
+    }
+  });
   setupCopyButton(copyBtn);
   setupDownloadZip(downloadZipBtn);
+  setupSidebarToggle(sidebarToggle, layout);
+  setupFullscreenToggle(codeFullscreenBtn, codeSection);
+  setupFullscreenToggle(previewFullscreenBtn, tryItSection);
+  setupEscapeKey(codeSection, tryItSection);
 
   await setupCodePreview(editorContainer, tabContainer);
 
@@ -184,9 +234,16 @@ async function init(): Promise<void> {
   setupConfigPanel(configPanel, (values) => {
     currentFramework = values.framework;
     latestConfigValues = values;
-    currentFiles = generateCode(values);
+    currentFiles = generateCode(values, getPageTheme());
     updateCodePreview(currentFiles, tabContainer);
     updateUrlParams(values, getPageTheme());
+
+    // Auto-run preview if it's open
+    if (!tryItSection.classList.contains('is-closed')) {
+      if (canTryIt(values.framework)) {
+        runInIframe(tryItFrame, currentFiles);
+      }
+    }
   });
 }
 
