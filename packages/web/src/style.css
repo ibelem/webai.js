@@ -223,7 +223,6 @@ header h1 {
   color: var(--accent);
   font-weight: 600;
 }
-}
 
 .config-panel input[type="checkbox"] {
   width: auto;
