@@ -31,12 +31,43 @@ export interface HfPickerResult {
   url: string;
   pipelineTag: string | null;
   modelSource: ModelSourceType;
+  /** External data file names (e.g. ["model.onnx_data", "model.onnx_data_1"]) */
+  externalDataFiles: string[];
 }
 
 /** Parsed HuggingFace URL */
 interface ParsedHfUrl {
   modelId: string;
   filename: string | null;
+}
+
+/**
+ * Find external data files for an ONNX model by scanning siblings.
+ *
+ * ONNX models may store weights in external files named:
+ * - model.onnx_data
+ * - model.onnx_data_1, model.onnx_data_2, ...
+ * - model.onnx.data (less common)
+ *
+ * The returned names are just filenames (not full paths) — used as
+ * the `path` field in ORT's `externalData` session option.
+ */
+function findExternalDataFiles(modelFilename: string, allSiblings: string[]): string[] {
+  // Get the directory prefix (e.g., "onnx/" for "onnx/model_fp16.onnx")
+  const lastSlash = modelFilename.lastIndexOf('/');
+  const dir = lastSlash >= 0 ? modelFilename.substring(0, lastSlash + 1) : '';
+  const baseName = lastSlash >= 0 ? modelFilename.substring(lastSlash + 1) : modelFilename;
+
+  // Match patterns: {base}_data, {base}_data_N, {base}.data
+  const dataPrefix = `${dir}${baseName}_data`;
+  const dataDot = `${dir}${baseName}.data`;
+
+  const matches = allSiblings
+    .filter((s) => s === dataPrefix || s.startsWith(dataPrefix + '_') || s === dataDot)
+    .map((s) => s.substring(dir.length)) // strip directory prefix → just filename
+    .sort();
+
+  return matches;
 }
 
 /**
@@ -79,7 +110,7 @@ function parseHfUrl(url: string): ParsedHfUrl | null {
 }
 
 /** Cached API responses */
-const apiCache = new Map<string, { files: HfFileInfo[]; pipelineTag: string | null }>();
+const apiCache = new Map<string, { files: HfFileInfo[]; allSiblings: string[]; pipelineTag: string | null }>();
 
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -91,7 +122,7 @@ function formatFileSize(bytes: number): string {
  * Fetch model file list from HuggingFace API.
  * Returns only .onnx and .tflite files.
  */
-async function fetchModelFiles(modelId: string): Promise<{ files: HfFileInfo[]; pipelineTag: string | null }> {
+async function fetchModelFiles(modelId: string): Promise<{ files: HfFileInfo[]; allSiblings: string[]; pipelineTag: string | null }> {
   const cached = apiCache.get(modelId);
   if (cached) return cached;
 
@@ -114,6 +145,8 @@ async function fetchModelFiles(modelId: string): Promise<{ files: HfFileInfo[]; 
     throw new Error(`No files found for "${modelId}"`);
   }
 
+  const allSiblings = data.siblings.map((s) => s.rfilename);
+
   const modelExts = ['.onnx', '.tflite'];
   const files: HfFileInfo[] = data.siblings
     .filter((s) => modelExts.some((ext) => s.rfilename.toLowerCase().endsWith(ext)))
@@ -123,7 +156,7 @@ async function fetchModelFiles(modelId: string): Promise<{ files: HfFileInfo[]; 
       url: buildHfFileUrl(modelId, s.rfilename),
     }));
 
-  const result = { files, pipelineTag: data.pipeline_tag ?? null };
+  const result = { files, allSiblings, pipelineTag: data.pipeline_tag ?? null };
   apiCache.set(modelId, result);
   return result;
 }
@@ -148,6 +181,7 @@ export function setupHfPicker(
 
   function render(state: 'idle' | 'loading' | 'error' | 'files', data?: {
     files?: HfFileInfo[];
+    allSiblings?: string[];
     pipelineTag?: string | null;
     bestFile?: string | null;
     error?: string;
@@ -220,6 +254,7 @@ export function setupHfPicker(
             url: selectedFile.url,
             pipelineTag: data.pipelineTag ?? null,
             modelSource: data.modelSource ?? 'hf-model-id',
+            externalDataFiles: findExternalDataFiles(selectedFile.filename, data.allSiblings ?? []),
           });
         }
       };
@@ -241,7 +276,7 @@ export function setupHfPicker(
       render('loading');
 
       try {
-        const { files, pipelineTag } = await fetchModelFiles(value);
+        const { files, allSiblings, pipelineTag } = await fetchModelFiles(value);
         if (input.value.trim() !== value) return;
 
         const siblings = files.map((f) => ({ rfilename: f.filename }));
@@ -250,7 +285,7 @@ export function setupHfPicker(
           ? preferFile
           : pickBestModelFile(siblings, getPreferTflite());
 
-        render('files', { files, pipelineTag, bestFile, modelId: value, modelSource: 'hf-model-id' });
+        render('files', { files, allSiblings, pipelineTag, bestFile, modelId: value, modelSource: 'hf-model-id' });
       } catch (e) {
         if (input.value.trim() !== value) return;
         render('error', { error: e instanceof Error ? e.message : String(e) });
@@ -275,7 +310,7 @@ export function setupHfPicker(
       render('loading');
 
       try {
-        const { files, pipelineTag } = await fetchModelFiles(parsed.modelId);
+        const { files, allSiblings, pipelineTag } = await fetchModelFiles(parsed.modelId);
         if (input.value.trim() !== value) return;
 
         // If the URL points to a specific file, pre-select it
@@ -285,7 +320,7 @@ export function setupHfPicker(
             ? preferFile
             : pickBestModelFile(files.map((f) => ({ rfilename: f.filename })), getPreferTflite());
 
-        render('files', { files, pipelineTag, bestFile, modelId: parsed.modelId, modelSource: 'url' });
+        render('files', { files, allSiblings, pipelineTag, bestFile, modelId: parsed.modelId, modelSource: 'url' });
       } catch (e) {
         if (input.value.trim() !== value) return;
 
@@ -304,6 +339,7 @@ export function setupHfPicker(
             url: directUrl,
             pipelineTag: null,
             modelSource: 'url',
+            externalDataFiles: [],
           });
           return;
         }

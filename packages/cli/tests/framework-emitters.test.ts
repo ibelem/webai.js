@@ -299,7 +299,7 @@ describe('emitHtml', () => {
     it('includes quick start instructions', () => {
       const { files } = generateHtml();
       const readme = getFile(files, 'README.md');
-      expect(readme).toContain('local server');
+      expect(readme).toContain('local HTTPS server');
     });
 
     it('includes how it works section', () => {
@@ -1203,7 +1203,7 @@ describe('Offline mode — OPFS caching', () => {
   it('ORT createSession uses cachedFetch for model loading when offline', () => {
     const { files } = generateHtml(offlineOverrides);
     const html = getFile(files, 'index.html');
-    expect(html).toContain('modelBuffer = await cachedFetch(modelPath');
+    expect(html).toContain('cachedFetch(modelPath');
     expect(html).toContain('ort.InferenceSession.create(modelBuffer');
   });
 

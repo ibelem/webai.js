@@ -196,6 +196,7 @@ export function resolveConfig(flags: CliFlags, metadata: ModelMetadata): Resolve
   const modelUrl = flags.modelUrl;
   const hfModelId = flags.hfModelId;
   const hfFile = flags.hfFile;
+  const externalDataFiles = flags.externalDataFiles;
 
   return {
     config: {
@@ -220,6 +221,7 @@ export function resolveConfig(flags: CliFlags, metadata: ModelMetadata): Resolve
       modelUrl,
       hfModelId,
       hfFile,
+      externalDataFiles,
     },
     steps,
   };

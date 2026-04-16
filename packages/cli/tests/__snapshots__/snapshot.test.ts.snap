@@ -65,7 +65,6 @@ body {
 }
 
 main {
-  max-width: 960px;
   margin: 0 auto;
   padding: var(--webai-space-8) var(--webai-space-4);
 }
@@ -126,6 +125,21 @@ h2 {
   color: var(--webai-text-muted);
   font-size: var(--webai-font-size-sm);
   margin-top: var(--webai-space-2);
+}
+
+/* Model upload drop zone */
+.model-drop-zone {
+  border-color: var(--webai-accent);
+  border-style: dashed;
+  background: color-mix(in srgb, var(--webai-accent) 5%, transparent);
+  margin-bottom: var(--webai-space-4);
+}
+
+.model-drop-zone:hover,
+.model-drop-zone:focus-visible,
+.model-drop-zone.drag-over {
+  border-color: var(--webai-accent);
+  background: color-mix(in srgb, var(--webai-accent) 10%, transparent);
 }
 
 /* Preview */
@@ -668,6 +682,23 @@ h2 {
 
 .run-model-btn:hover { opacity: 0.9; }
 .run-model-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Load Model button (remote models — two-step flow) */
+.load-model-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--webai-space-2);
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-3) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  font-size: var(--webai-font-size-lg);
+  cursor: pointer;
+  margin-bottom: var(--webai-space-4);
+}
+
+.load-model-btn:hover { opacity: 0.9; }
   </style>
 </head>
 <body>
@@ -678,7 +709,14 @@ h2 {
 
     <div class="container">
       <div>
-        <div class="drop-zone" id="dropZone" role="button" tabindex="0"
+        <div class="drop-zone model-drop-zone" id="modelDropZone" role="button" tabindex="0"
+             aria-label="Drop model files here or click to browse">
+          <p>Drop model files (.onnx + data) here or click to browse</p>
+          <p class="hint">Supports .onnx model files (+ external data)</p>
+          <input type="file" id="modelFileInput" accept=".onnx,.onnx_data,.bin" multiple style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1">
+        </div>
+
+        <div class="drop-zone" id="dropZone" role="button" tabindex="0" hidden
              aria-label="Drop an image here or click to browse for image classification">
           <p>Drop an image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
@@ -833,7 +871,7 @@ function preprocessImage(
  * Create an ONNX Runtime Web inference session with backend selection.
  * The execution provider list determines hardware acceleration priority.
  */
-async function createSession(modelPath) {
+async function createSession(modelPath, externalData) {
   // Read backend from the runtime <select> element
   const backendSelect = document.getElementById('backend');
   const backend = backendSelect ? backendSelect.value : 'webnn-gpu';
@@ -858,9 +896,11 @@ async function createSession(modelPath) {
       break;
   }
 
-  const session = await ort.InferenceSession.create(modelPath, {
-    executionProviders: providers,
-  });
+  const opts = { executionProviders: providers };
+  if (externalData && externalData.length > 0) {
+    opts.externalData = externalData;
+  }
+  const session = await ort.InferenceSession.create(modelPath, opts);
 
   // Log which backend was selected
   console.log('Inference session created');
@@ -961,6 +1001,81 @@ function postprocessResults(output) {
   return topK(probs, 5);
 }
 
+function formatBytes(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function showProgress(filename) {
+  const el = document.getElementById('progressBar');
+  el.hidden = false;
+  document.getElementById('progressFilename').textContent = filename;
+  document.getElementById('progressStats').textContent = '0%';
+  const fill = document.getElementById('progressFill');
+  fill.style.width = '0%';
+  fill.className = 'progress-fill';
+}
+
+function updateProgress(loaded, total) {
+  const fill = document.getElementById('progressFill');
+  const stats = document.getElementById('progressStats');
+  if (total && total > 0) {
+    fill.classList.remove('indeterminate');
+    const pct = Math.min(100, (loaded / total) * 100);
+    fill.style.width = pct.toFixed(1) + '%';
+    stats.textContent = formatBytes(loaded) + ' / ' + formatBytes(total) + '  \\u00b7  ' + pct.toFixed(0) + '%';
+  } else {
+    if (!fill.classList.contains('indeterminate')) fill.classList.add('indeterminate');
+    stats.textContent = formatBytes(loaded);
+  }
+}
+
+function completeProgress(finalSize) {
+  const fill = document.getElementById('progressFill');
+  fill.classList.remove('indeterminate');
+  fill.classList.add('done');
+  fill.style.width = '100%';
+  document.getElementById('progressStats').textContent = formatBytes(finalSize);
+}
+
+async function fetchWithProgress(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('HTTP ' + res.status + ': ' + res.statusText);
+  const contentLength = res.headers.get('Content-Length');
+  const total = contentLength ? parseInt(contentLength, 10) : null;
+  if (!res.body) {
+    const buf = await res.arrayBuffer();
+    updateProgress(buf.byteLength, buf.byteLength);
+    return buf;
+  }
+  const reader = res.body.getReader();
+  if (total && total > 0) {
+    const result = new Uint8Array(total);
+    let offset = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      result.set(value, offset);
+      offset += value.byteLength;
+      updateProgress(offset, total);
+    }
+    return result.buffer;
+  }
+  const chunks = [];
+  let loaded = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    loaded += value.byteLength;
+    updateProgress(loaded, null);
+  }
+  const result = new Uint8Array(loaded);
+  let off = 0;
+  for (const c of chunks) { result.set(c, off); off += c.byteLength; }
+  return result.buffer;
+}
 
 // --- Application ---
 const MODEL_PATH = './mobilenet.onnx';
@@ -1043,18 +1158,59 @@ function renderResults(results) {
   }
 }
 
-async function init() {
+const modelDropZone = document.getElementById('modelDropZone');
+const modelFileInput = document.getElementById('modelFileInput');
+
+modelDropZone.addEventListener('click', () => modelFileInput.click());
+modelDropZone.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); modelFileInput.click(); }
+});
+modelDropZone.addEventListener('dragover', (e) => { e.preventDefault(); modelDropZone.classList.add('drag-over'); });
+modelDropZone.addEventListener('dragleave', () => { modelDropZone.classList.remove('drag-over'); });
+modelDropZone.addEventListener('drop', (e) => {
+  e.preventDefault(); modelDropZone.classList.remove('drag-over');
+  const files = Array.from(e.dataTransfer.files);
+  if (files.length > 0) handleModelFiles(files);
+});
+modelFileInput.addEventListener('change', () => { const files = Array.from(modelFileInput.files); if (files.length > 0) handleModelFiles(files); });
+
+async function handleModelFiles(files) {
+  // Separate model file from external data files
+  const modelFile = files.find(f => f.name.endsWith('.onnx') || f.name.endsWith('.tflite'));
+  if (!modelFile) {
+    updateStatus('No .onnx or .tflite model file found');
+    return;
+  }
+  const dataFiles = files.filter(f => f !== modelFile);
+
+  modelDropZone.hidden = true;
+  showProgress(modelFile.name);
   updateStatus('Loading model...');
   try {
-    session = await createSession(MODEL_PATH);
+    const buf = await modelFile.arrayBuffer();
+    completeProgress(buf.byteLength);
+
+    // Load external data files if present
+    const externalData = [];
+    for (const df of dataFiles) {
+      showProgress(df.name);
+      const dataBuf = await df.arrayBuffer();
+      completeProgress(dataBuf.byteLength);
+      externalData.push({ path: df.name, data: new Uint8Array(dataBuf) });
+    }
+
+    updateStatus('Creating session...');
+    session = await createSession(buf, externalData.length > 0 ? externalData : undefined);
     updateStatus('mobilenet \\u00b7 Ready');
+    document.getElementById('dropZone').hidden = false;
   } catch (e) {
     updateStatus('Failed to load model');
     console.error('Model load error:', e);
+    modelDropZone.hidden = false;
   }
 }
 
-init();
+
   </script>
 </body>
 </html>
@@ -1067,8 +1223,10 @@ Generated by [webai.js](https://github.com/ibelem/webai.js)
 ## Quick Start
 
 1. Copy your model file (\`mobilenet.onnx\`) into this directory
-2. Start a local server: \`npx serve .\` (or any static file server)
+2. Start a local HTTPS server: \`npx serve --ssl .\` (or any static file server with HTTPS)
 3. Open \`index.html\` in your browser
+
+> **Note:** WebGPU and WebNN require a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts) (HTTPS) to run. Use HTTPS even for localhost.
 
 ## How It Works
 
@@ -1354,7 +1512,6 @@ body {
 }
 
 main {
-  max-width: 960px;
   margin: 0 auto;
   padding: var(--webai-space-8) var(--webai-space-4);
 }
@@ -1415,6 +1572,21 @@ h2 {
   color: var(--webai-text-muted);
   font-size: var(--webai-font-size-sm);
   margin-top: var(--webai-space-2);
+}
+
+/* Model upload drop zone */
+.model-drop-zone {
+  border-color: var(--webai-accent);
+  border-style: dashed;
+  background: color-mix(in srgb, var(--webai-accent) 5%, transparent);
+  margin-bottom: var(--webai-space-4);
+}
+
+.model-drop-zone:hover,
+.model-drop-zone:focus-visible,
+.model-drop-zone.drag-over {
+  border-color: var(--webai-accent);
+  background: color-mix(in srgb, var(--webai-accent) 10%, transparent);
 }
 
 /* Preview */
@@ -1957,6 +2129,23 @@ h2 {
 
 .run-model-btn:hover { opacity: 0.9; }
 .run-model-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Load Model button (remote models — two-step flow) */
+.load-model-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--webai-space-2);
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-3) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  font-size: var(--webai-font-size-lg);
+  cursor: pointer;
+  margin-bottom: var(--webai-space-4);
+}
+
+.load-model-btn:hover { opacity: 0.9; }
 
 === src/lib/preprocess.js ===
 /**
@@ -2083,7 +2272,7 @@ import * as ort from 'onnxruntime-web';
  * Create an ONNX Runtime Web inference session with backend selection.
  * The execution provider list determines hardware acceleration priority.
  */
-export async function createSession(modelPath) {
+export async function createSession(modelPath, externalData) {
   // Read backend from the runtime <select> element
   const backendSelect = document.getElementById('backend');
   const backend = backendSelect ? backendSelect.value : 'webnn-gpu';
@@ -2108,9 +2297,11 @@ export async function createSession(modelPath) {
       break;
   }
 
-  const session = await ort.InferenceSession.create(modelPath, {
-    executionProviders: providers,
-  });
+  const opts = { executionProviders: providers };
+  if (externalData && externalData.length > 0) {
+    opts.externalData = externalData;
+  }
+  const session = await ort.InferenceSession.create(modelPath, opts);
 
   // Log which backend was selected
   console.log('Inference session created');
@@ -2225,6 +2416,8 @@ cp /path/to/mobilenet.onnx public/
 npm run dev
 \`\`\`
 
+> **Note:** WebGPU and WebNN require a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts) (HTTPS). Vite dev server supports HTTPS via \`--https\` flag or \`@vitejs/plugin-basic-ssl\`.
+
 ## How It Works
 
 1. **Preprocessing**: Image is resized to 224x224px, normalized with
@@ -2323,7 +2516,6 @@ body {
 }
 
 main {
-  max-width: 960px;
   margin: 0 auto;
   padding: var(--webai-space-8) var(--webai-space-4);
 }
@@ -2384,6 +2576,21 @@ h2 {
   color: var(--webai-text-muted);
   font-size: var(--webai-font-size-sm);
   margin-top: var(--webai-space-2);
+}
+
+/* Model upload drop zone */
+.model-drop-zone {
+  border-color: var(--webai-accent);
+  border-style: dashed;
+  background: color-mix(in srgb, var(--webai-accent) 5%, transparent);
+  margin-bottom: var(--webai-space-4);
+}
+
+.model-drop-zone:hover,
+.model-drop-zone:focus-visible,
+.model-drop-zone.drag-over {
+  border-color: var(--webai-accent);
+  background: color-mix(in srgb, var(--webai-accent) 10%, transparent);
 }
 
 /* Preview */
@@ -2926,6 +3133,23 @@ h2 {
 
 .run-model-btn:hover { opacity: 0.9; }
 .run-model-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Load Model button (remote models — two-step flow) */
+.load-model-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--webai-space-2);
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-3) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  font-size: var(--webai-font-size-lg);
+  cursor: pointer;
+  margin-bottom: var(--webai-space-4);
+}
+
+.load-model-btn:hover { opacity: 0.9; }
   </style>
 </head>
 <body>
@@ -2936,7 +3160,14 @@ h2 {
 
     <div class="container">
       <div>
-        <div class="drop-zone" id="dropZone" role="button" tabindex="0"
+        <div class="drop-zone model-drop-zone" id="modelDropZone" role="button" tabindex="0"
+             aria-label="Drop model files here or click to browse">
+          <p>Drop model files (.onnx + data) here or click to browse</p>
+          <p class="hint">Supports .onnx model files (+ external data)</p>
+          <input type="file" id="modelFileInput" accept=".onnx,.onnx_data,.bin" multiple style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1">
+        </div>
+
+        <div class="drop-zone" id="dropZone" role="button" tabindex="0" hidden
              aria-label="Drop an image here or click to browse for image classification">
           <p>Drop an image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
@@ -3091,7 +3322,7 @@ function preprocessImage(
  * Create an ONNX Runtime Web inference session with backend selection.
  * The execution provider list determines hardware acceleration priority.
  */
-async function createSession(modelPath) {
+async function createSession(modelPath, externalData) {
   // Read backend from the runtime <select> element
   const backendSelect = document.getElementById('backend');
   const backend = backendSelect ? backendSelect.value : 'webnn-gpu';
@@ -3116,9 +3347,11 @@ async function createSession(modelPath) {
       break;
   }
 
-  const session = await ort.InferenceSession.create(modelPath, {
-    executionProviders: providers,
-  });
+  const opts = { executionProviders: providers };
+  if (externalData && externalData.length > 0) {
+    opts.externalData = externalData;
+  }
+  const session = await ort.InferenceSession.create(modelPath, opts);
 
   // Log which backend was selected
   console.log('Inference session created');
@@ -3219,6 +3452,81 @@ function postprocessResults(output) {
   return topK(probs, 5);
 }
 
+function formatBytes(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function showProgress(filename) {
+  const el = document.getElementById('progressBar');
+  el.hidden = false;
+  document.getElementById('progressFilename').textContent = filename;
+  document.getElementById('progressStats').textContent = '0%';
+  const fill = document.getElementById('progressFill');
+  fill.style.width = '0%';
+  fill.className = 'progress-fill';
+}
+
+function updateProgress(loaded, total) {
+  const fill = document.getElementById('progressFill');
+  const stats = document.getElementById('progressStats');
+  if (total && total > 0) {
+    fill.classList.remove('indeterminate');
+    const pct = Math.min(100, (loaded / total) * 100);
+    fill.style.width = pct.toFixed(1) + '%';
+    stats.textContent = formatBytes(loaded) + ' / ' + formatBytes(total) + '  \\u00b7  ' + pct.toFixed(0) + '%';
+  } else {
+    if (!fill.classList.contains('indeterminate')) fill.classList.add('indeterminate');
+    stats.textContent = formatBytes(loaded);
+  }
+}
+
+function completeProgress(finalSize) {
+  const fill = document.getElementById('progressFill');
+  fill.classList.remove('indeterminate');
+  fill.classList.add('done');
+  fill.style.width = '100%';
+  document.getElementById('progressStats').textContent = formatBytes(finalSize);
+}
+
+async function fetchWithProgress(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('HTTP ' + res.status + ': ' + res.statusText);
+  const contentLength = res.headers.get('Content-Length');
+  const total = contentLength ? parseInt(contentLength, 10) : null;
+  if (!res.body) {
+    const buf = await res.arrayBuffer();
+    updateProgress(buf.byteLength, buf.byteLength);
+    return buf;
+  }
+  const reader = res.body.getReader();
+  if (total && total > 0) {
+    const result = new Uint8Array(total);
+    let offset = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      result.set(value, offset);
+      offset += value.byteLength;
+      updateProgress(offset, total);
+    }
+    return result.buffer;
+  }
+  const chunks = [];
+  let loaded = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    loaded += value.byteLength;
+    updateProgress(loaded, null);
+  }
+  const result = new Uint8Array(loaded);
+  let off = 0;
+  for (const c of chunks) { result.set(c, off); off += c.byteLength; }
+  return result.buffer;
+}
 
 // --- Application ---
 const MODEL_PATH = './mobilenet.onnx';
@@ -3301,18 +3609,59 @@ function renderResults(results) {
   }
 }
 
-async function init() {
+const modelDropZone = document.getElementById('modelDropZone');
+const modelFileInput = document.getElementById('modelFileInput');
+
+modelDropZone.addEventListener('click', () => modelFileInput.click());
+modelDropZone.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); modelFileInput.click(); }
+});
+modelDropZone.addEventListener('dragover', (e) => { e.preventDefault(); modelDropZone.classList.add('drag-over'); });
+modelDropZone.addEventListener('dragleave', () => { modelDropZone.classList.remove('drag-over'); });
+modelDropZone.addEventListener('drop', (e) => {
+  e.preventDefault(); modelDropZone.classList.remove('drag-over');
+  const files = Array.from(e.dataTransfer.files);
+  if (files.length > 0) handleModelFiles(files);
+});
+modelFileInput.addEventListener('change', () => { const files = Array.from(modelFileInput.files); if (files.length > 0) handleModelFiles(files); });
+
+async function handleModelFiles(files) {
+  // Separate model file from external data files
+  const modelFile = files.find(f => f.name.endsWith('.onnx') || f.name.endsWith('.tflite'));
+  if (!modelFile) {
+    updateStatus('No .onnx or .tflite model file found');
+    return;
+  }
+  const dataFiles = files.filter(f => f !== modelFile);
+
+  modelDropZone.hidden = true;
+  showProgress(modelFile.name);
   updateStatus('Loading model...');
   try {
-    session = await createSession(MODEL_PATH);
+    const buf = await modelFile.arrayBuffer();
+    completeProgress(buf.byteLength);
+
+    // Load external data files if present
+    const externalData = [];
+    for (const df of dataFiles) {
+      showProgress(df.name);
+      const dataBuf = await df.arrayBuffer();
+      completeProgress(dataBuf.byteLength);
+      externalData.push({ path: df.name, data: new Uint8Array(dataBuf) });
+    }
+
+    updateStatus('Creating session...');
+    session = await createSession(buf, externalData.length > 0 ? externalData : undefined);
     updateStatus('mobilenet \\u00b7 Ready');
+    document.getElementById('dropZone').hidden = false;
   } catch (e) {
     updateStatus('Failed to load model');
     console.error('Model load error:', e);
+    modelDropZone.hidden = false;
   }
 }
 
-init();
+
   </script>
 </body>
 </html>
@@ -3325,8 +3674,10 @@ Generated by [webai.js](https://github.com/ibelem/webai.js)
 ## Quick Start
 
 1. Copy your model file (\`mobilenet.onnx\`) into this directory
-2. Start a local server: \`npx serve .\` (or any static file server)
+2. Start a local HTTPS server: \`npx serve --ssl .\` (or any static file server with HTTPS)
 3. Open \`index.html\` in your browser
+
+> **Note:** WebGPU and WebNN require a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts) (HTTPS) to run. Use HTTPS even for localhost.
 
 ## How It Works
 
@@ -3418,7 +3769,6 @@ body {
 }
 
 main {
-  max-width: 960px;
   margin: 0 auto;
   padding: var(--webai-space-8) var(--webai-space-4);
 }
@@ -3479,6 +3829,21 @@ h2 {
   color: var(--webai-text-muted);
   font-size: var(--webai-font-size-sm);
   margin-top: var(--webai-space-2);
+}
+
+/* Model upload drop zone */
+.model-drop-zone {
+  border-color: var(--webai-accent);
+  border-style: dashed;
+  background: color-mix(in srgb, var(--webai-accent) 5%, transparent);
+  margin-bottom: var(--webai-space-4);
+}
+
+.model-drop-zone:hover,
+.model-drop-zone:focus-visible,
+.model-drop-zone.drag-over {
+  border-color: var(--webai-accent);
+  background: color-mix(in srgb, var(--webai-accent) 10%, transparent);
 }
 
 /* Preview */
@@ -4021,6 +4386,23 @@ h2 {
 
 .run-model-btn:hover { opacity: 0.9; }
 .run-model-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Load Model button (remote models — two-step flow) */
+.load-model-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--webai-space-2);
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-3) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  font-size: var(--webai-font-size-lg);
+  cursor: pointer;
+  margin-bottom: var(--webai-space-4);
+}
+
+.load-model-btn:hover { opacity: 0.9; }
   </style>
 </head>
 <body>
@@ -4031,7 +4413,14 @@ h2 {
 
     <div class="container">
       <div>
-        <div class="drop-zone" id="dropZone" role="button" tabindex="0"
+        <div class="drop-zone model-drop-zone" id="modelDropZone" role="button" tabindex="0"
+             aria-label="Drop model files here or click to browse">
+          <p>Drop model files (.onnx + data) here or click to browse</p>
+          <p class="hint">Supports .onnx model files (+ external data)</p>
+          <input type="file" id="modelFileInput" accept=".onnx,.onnx_data,.bin" multiple style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1">
+        </div>
+
+        <div class="drop-zone" id="dropZone" role="button" tabindex="0" hidden
              aria-label="Drop an image here or click to browse for image classification">
           <p>Drop an image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
@@ -4186,7 +4575,7 @@ function preprocessImage(
  * Create an ONNX Runtime Web inference session with backend selection.
  * The execution provider list determines hardware acceleration priority.
  */
-async function createSession(modelPath: string): Promise<ort.InferenceSession> {
+async function createSession(modelPath: string | ArrayBuffer | Uint8Array, externalData?: Array<{ path: string; data: Uint8Array }>): Promise<ort.InferenceSession> {
   // Read backend from the runtime <select> element
   const backendSelect = document.getElementById('backend') as HTMLSelectElement;
   const backend = backendSelect ? backendSelect.value : 'webnn-gpu';
@@ -4211,9 +4600,11 @@ async function createSession(modelPath: string): Promise<ort.InferenceSession> {
       break;
   }
 
-  const session = await ort.InferenceSession.create(modelPath, {
-    executionProviders: providers,
-  });
+  const opts: any = { executionProviders: providers };
+  if (externalData && externalData.length > 0) {
+    opts.externalData = externalData;
+  }
+  const session = await ort.InferenceSession.create(modelPath, opts);
 
   // Log which backend was selected
   console.log('Inference session created');
@@ -4314,6 +4705,81 @@ function postprocessResults(output: ArrayLike<number>): { indices: number[]; val
   return topK(probs, 5);
 }
 
+function formatBytes(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function showProgress(filename) {
+  const el = document.getElementById('progressBar');
+  el.hidden = false;
+  document.getElementById('progressFilename').textContent = filename;
+  document.getElementById('progressStats').textContent = '0%';
+  const fill = document.getElementById('progressFill');
+  fill.style.width = '0%';
+  fill.className = 'progress-fill';
+}
+
+function updateProgress(loaded, total) {
+  const fill = document.getElementById('progressFill');
+  const stats = document.getElementById('progressStats');
+  if (total && total > 0) {
+    fill.classList.remove('indeterminate');
+    const pct = Math.min(100, (loaded / total) * 100);
+    fill.style.width = pct.toFixed(1) + '%';
+    stats.textContent = formatBytes(loaded) + ' / ' + formatBytes(total) + '  \\u00b7  ' + pct.toFixed(0) + '%';
+  } else {
+    if (!fill.classList.contains('indeterminate')) fill.classList.add('indeterminate');
+    stats.textContent = formatBytes(loaded);
+  }
+}
+
+function completeProgress(finalSize) {
+  const fill = document.getElementById('progressFill');
+  fill.classList.remove('indeterminate');
+  fill.classList.add('done');
+  fill.style.width = '100%';
+  document.getElementById('progressStats').textContent = formatBytes(finalSize);
+}
+
+async function fetchWithProgress(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('HTTP ' + res.status + ': ' + res.statusText);
+  const contentLength = res.headers.get('Content-Length');
+  const total = contentLength ? parseInt(contentLength, 10) : null;
+  if (!res.body) {
+    const buf = await res.arrayBuffer();
+    updateProgress(buf.byteLength, buf.byteLength);
+    return buf;
+  }
+  const reader = res.body.getReader();
+  if (total && total > 0) {
+    const result = new Uint8Array(total);
+    let offset = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      result.set(value, offset);
+      offset += value.byteLength;
+      updateProgress(offset, total);
+    }
+    return result.buffer;
+  }
+  const chunks = [];
+  let loaded = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    loaded += value.byteLength;
+    updateProgress(loaded, null);
+  }
+  const result = new Uint8Array(loaded);
+  let off = 0;
+  for (const c of chunks) { result.set(c, off); off += c.byteLength; }
+  return result.buffer;
+}
 
 // --- Application ---
 const MODEL_PATH = './mobilenet.onnx';
@@ -4396,18 +4862,59 @@ function renderResults(results) {
   }
 }
 
-async function init() {
+const modelDropZone = document.getElementById('modelDropZone');
+const modelFileInput = document.getElementById('modelFileInput');
+
+modelDropZone.addEventListener('click', () => modelFileInput.click());
+modelDropZone.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); modelFileInput.click(); }
+});
+modelDropZone.addEventListener('dragover', (e) => { e.preventDefault(); modelDropZone.classList.add('drag-over'); });
+modelDropZone.addEventListener('dragleave', () => { modelDropZone.classList.remove('drag-over'); });
+modelDropZone.addEventListener('drop', (e) => {
+  e.preventDefault(); modelDropZone.classList.remove('drag-over');
+  const files = Array.from(e.dataTransfer.files);
+  if (files.length > 0) handleModelFiles(files);
+});
+modelFileInput.addEventListener('change', () => { const files = Array.from(modelFileInput.files); if (files.length > 0) handleModelFiles(files); });
+
+async function handleModelFiles(files) {
+  // Separate model file from external data files
+  const modelFile = files.find(f => f.name.endsWith('.onnx') || f.name.endsWith('.tflite'));
+  if (!modelFile) {
+    updateStatus('No .onnx or .tflite model file found');
+    return;
+  }
+  const dataFiles = files.filter(f => f !== modelFile);
+
+  modelDropZone.hidden = true;
+  showProgress(modelFile.name);
   updateStatus('Loading model...');
   try {
-    session = await createSession(MODEL_PATH);
+    const buf = await modelFile.arrayBuffer();
+    completeProgress(buf.byteLength);
+
+    // Load external data files if present
+    const externalData = [];
+    for (const df of dataFiles) {
+      showProgress(df.name);
+      const dataBuf = await df.arrayBuffer();
+      completeProgress(dataBuf.byteLength);
+      externalData.push({ path: df.name, data: new Uint8Array(dataBuf) });
+    }
+
+    updateStatus('Creating session...');
+    session = await createSession(buf, externalData.length > 0 ? externalData : undefined);
     updateStatus('mobilenet \\u00b7 Ready');
+    document.getElementById('dropZone').hidden = false;
   } catch (e) {
     updateStatus('Failed to load model');
     console.error('Model load error:', e);
+    modelDropZone.hidden = false;
   }
 }
 
-init();
+
   </script>
 </body>
 </html>
@@ -4420,8 +4927,10 @@ Generated by [webai.js](https://github.com/ibelem/webai.js)
 ## Quick Start
 
 1. Copy your model file (\`mobilenet.onnx\`) into this directory
-2. Start a local server: \`npx serve .\` (or any static file server)
+2. Start a local HTTPS server: \`npx serve --ssl .\` (or any static file server with HTTPS)
 3. Open \`index.html\` in your browser
+
+> **Note:** WebGPU and WebNN require a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts) (HTTPS) to run. Use HTTPS even for localhost.
 
 ## How It Works
 
@@ -4513,7 +5022,6 @@ body {
 }
 
 main {
-  max-width: 960px;
   margin: 0 auto;
   padding: var(--webai-space-8) var(--webai-space-4);
 }
@@ -4574,6 +5082,21 @@ h2 {
   color: var(--webai-text-muted);
   font-size: var(--webai-font-size-sm);
   margin-top: var(--webai-space-2);
+}
+
+/* Model upload drop zone */
+.model-drop-zone {
+  border-color: var(--webai-accent);
+  border-style: dashed;
+  background: color-mix(in srgb, var(--webai-accent) 5%, transparent);
+  margin-bottom: var(--webai-space-4);
+}
+
+.model-drop-zone:hover,
+.model-drop-zone:focus-visible,
+.model-drop-zone.drag-over {
+  border-color: var(--webai-accent);
+  background: color-mix(in srgb, var(--webai-accent) 10%, transparent);
 }
 
 /* Preview */
@@ -5116,6 +5639,23 @@ h2 {
 
 .run-model-btn:hover { opacity: 0.9; }
 .run-model-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Load Model button (remote models — two-step flow) */
+.load-model-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--webai-space-2);
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-3) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  font-size: var(--webai-font-size-lg);
+  cursor: pointer;
+  margin-bottom: var(--webai-space-4);
+}
+
+.load-model-btn:hover { opacity: 0.9; }
   </style>
 </head>
 <body>
@@ -5126,7 +5666,14 @@ h2 {
 
     <div class="container">
       <div>
-        <div class="drop-zone" id="dropZone" role="button" tabindex="0"
+        <div class="drop-zone model-drop-zone" id="modelDropZone" role="button" tabindex="0"
+             aria-label="Drop model files here or click to browse">
+          <p>Drop model files (.onnx + data) here or click to browse</p>
+          <p class="hint">Supports .onnx model files (+ external data)</p>
+          <input type="file" id="modelFileInput" accept=".onnx,.onnx_data,.bin" multiple style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1">
+        </div>
+
+        <div class="drop-zone" id="dropZone" role="button" tabindex="0" hidden
              aria-label="Drop an image here or click to browse for image classification">
           <p>Drop an image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
@@ -5281,7 +5828,7 @@ function preprocessImage(
  * Create an ONNX Runtime Web inference session with backend selection.
  * The execution provider list determines hardware acceleration priority.
  */
-async function createSession(modelPath) {
+async function createSession(modelPath, externalData) {
   // Read backend from the runtime <select> element
   const backendSelect = document.getElementById('backend');
   const backend = backendSelect ? backendSelect.value : 'webnn-gpu';
@@ -5306,9 +5853,11 @@ async function createSession(modelPath) {
       break;
   }
 
-  const session = await ort.InferenceSession.create(modelPath, {
-    executionProviders: providers,
-  });
+  const opts = { executionProviders: providers };
+  if (externalData && externalData.length > 0) {
+    opts.externalData = externalData;
+  }
+  const session = await ort.InferenceSession.create(modelPath, opts);
 
   // Log which backend was selected
   console.log('Inference session created');
@@ -5409,6 +5958,81 @@ function postprocessResults(output) {
   return topK(probs, 5);
 }
 
+function formatBytes(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function showProgress(filename) {
+  const el = document.getElementById('progressBar');
+  el.hidden = false;
+  document.getElementById('progressFilename').textContent = filename;
+  document.getElementById('progressStats').textContent = '0%';
+  const fill = document.getElementById('progressFill');
+  fill.style.width = '0%';
+  fill.className = 'progress-fill';
+}
+
+function updateProgress(loaded, total) {
+  const fill = document.getElementById('progressFill');
+  const stats = document.getElementById('progressStats');
+  if (total && total > 0) {
+    fill.classList.remove('indeterminate');
+    const pct = Math.min(100, (loaded / total) * 100);
+    fill.style.width = pct.toFixed(1) + '%';
+    stats.textContent = formatBytes(loaded) + ' / ' + formatBytes(total) + '  \\u00b7  ' + pct.toFixed(0) + '%';
+  } else {
+    if (!fill.classList.contains('indeterminate')) fill.classList.add('indeterminate');
+    stats.textContent = formatBytes(loaded);
+  }
+}
+
+function completeProgress(finalSize) {
+  const fill = document.getElementById('progressFill');
+  fill.classList.remove('indeterminate');
+  fill.classList.add('done');
+  fill.style.width = '100%';
+  document.getElementById('progressStats').textContent = formatBytes(finalSize);
+}
+
+async function fetchWithProgress(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('HTTP ' + res.status + ': ' + res.statusText);
+  const contentLength = res.headers.get('Content-Length');
+  const total = contentLength ? parseInt(contentLength, 10) : null;
+  if (!res.body) {
+    const buf = await res.arrayBuffer();
+    updateProgress(buf.byteLength, buf.byteLength);
+    return buf;
+  }
+  const reader = res.body.getReader();
+  if (total && total > 0) {
+    const result = new Uint8Array(total);
+    let offset = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      result.set(value, offset);
+      offset += value.byteLength;
+      updateProgress(offset, total);
+    }
+    return result.buffer;
+  }
+  const chunks = [];
+  let loaded = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    loaded += value.byteLength;
+    updateProgress(loaded, null);
+  }
+  const result = new Uint8Array(loaded);
+  let off = 0;
+  for (const c of chunks) { result.set(c, off); off += c.byteLength; }
+  return result.buffer;
+}
 
 // --- Application ---
 const MODEL_PATH = './mobilenet.onnx';
@@ -5491,18 +6115,59 @@ function renderResults(results) {
   }
 }
 
-async function init() {
+const modelDropZone = document.getElementById('modelDropZone');
+const modelFileInput = document.getElementById('modelFileInput');
+
+modelDropZone.addEventListener('click', () => modelFileInput.click());
+modelDropZone.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); modelFileInput.click(); }
+});
+modelDropZone.addEventListener('dragover', (e) => { e.preventDefault(); modelDropZone.classList.add('drag-over'); });
+modelDropZone.addEventListener('dragleave', () => { modelDropZone.classList.remove('drag-over'); });
+modelDropZone.addEventListener('drop', (e) => {
+  e.preventDefault(); modelDropZone.classList.remove('drag-over');
+  const files = Array.from(e.dataTransfer.files);
+  if (files.length > 0) handleModelFiles(files);
+});
+modelFileInput.addEventListener('change', () => { const files = Array.from(modelFileInput.files); if (files.length > 0) handleModelFiles(files); });
+
+async function handleModelFiles(files) {
+  // Separate model file from external data files
+  const modelFile = files.find(f => f.name.endsWith('.onnx') || f.name.endsWith('.tflite'));
+  if (!modelFile) {
+    updateStatus('No .onnx or .tflite model file found');
+    return;
+  }
+  const dataFiles = files.filter(f => f !== modelFile);
+
+  modelDropZone.hidden = true;
+  showProgress(modelFile.name);
   updateStatus('Loading model...');
   try {
-    session = await createSession(MODEL_PATH);
+    const buf = await modelFile.arrayBuffer();
+    completeProgress(buf.byteLength);
+
+    // Load external data files if present
+    const externalData = [];
+    for (const df of dataFiles) {
+      showProgress(df.name);
+      const dataBuf = await df.arrayBuffer();
+      completeProgress(dataBuf.byteLength);
+      externalData.push({ path: df.name, data: new Uint8Array(dataBuf) });
+    }
+
+    updateStatus('Creating session...');
+    session = await createSession(buf, externalData.length > 0 ? externalData : undefined);
     updateStatus('mobilenet \\u00b7 Ready');
+    document.getElementById('dropZone').hidden = false;
   } catch (e) {
     updateStatus('Failed to load model');
     console.error('Model load error:', e);
+    modelDropZone.hidden = false;
   }
 }
 
-init();
+
   </script>
 </body>
 </html>
@@ -5515,8 +6180,10 @@ Generated by [webai.js](https://github.com/ibelem/webai.js)
 ## Quick Start
 
 1. Copy your model file (\`mobilenet.onnx\`) into this directory
-2. Start a local server: \`npx serve .\` (or any static file server)
+2. Start a local HTTPS server: \`npx serve --ssl .\` (or any static file server with HTTPS)
 3. Open \`index.html\` in your browser
+
+> **Note:** WebGPU and WebNN require a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts) (HTTPS) to run. Use HTTPS even for localhost.
 
 ## How It Works
 
@@ -5608,7 +6275,6 @@ body {
 }
 
 main {
-  max-width: 960px;
   margin: 0 auto;
   padding: var(--webai-space-8) var(--webai-space-4);
 }
@@ -5669,6 +6335,21 @@ h2 {
   color: var(--webai-text-muted);
   font-size: var(--webai-font-size-sm);
   margin-top: var(--webai-space-2);
+}
+
+/* Model upload drop zone */
+.model-drop-zone {
+  border-color: var(--webai-accent);
+  border-style: dashed;
+  background: color-mix(in srgb, var(--webai-accent) 5%, transparent);
+  margin-bottom: var(--webai-space-4);
+}
+
+.model-drop-zone:hover,
+.model-drop-zone:focus-visible,
+.model-drop-zone.drag-over {
+  border-color: var(--webai-accent);
+  background: color-mix(in srgb, var(--webai-accent) 10%, transparent);
 }
 
 /* Preview */
@@ -6211,6 +6892,23 @@ h2 {
 
 .run-model-btn:hover { opacity: 0.9; }
 .run-model-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Load Model button (remote models — two-step flow) */
+.load-model-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--webai-space-2);
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-3) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  font-size: var(--webai-font-size-lg);
+  cursor: pointer;
+  margin-bottom: var(--webai-space-4);
+}
+
+.load-model-btn:hover { opacity: 0.9; }
 /* Transcript display */
 .transcript {
   background: var(--webai-surface);
@@ -6575,7 +7273,7 @@ function mfcc(
  * Create an ONNX Runtime Web inference session with backend selection.
  * The execution provider list determines hardware acceleration priority.
  */
-async function createSession(modelPath) {
+async function createSession(modelPath, externalData) {
   // Read backend from the runtime <select> element
   const backendSelect = document.getElementById('backend');
   const backend = backendSelect ? backendSelect.value : 'webnn-gpu';
@@ -6600,11 +7298,13 @@ async function createSession(modelPath) {
       break;
   }
 
-  const cacheKey = modelPath.split('/').pop() || 'model.onnx';
-  const modelBuffer = await cachedFetch(modelPath, cacheKey);
-  const session = await ort.InferenceSession.create(modelBuffer, {
-    executionProviders: providers,
-  });
+  const cacheKey = (typeof modelPath === 'string' ? modelPath.split('/').pop() : null) || 'model.onnx';
+  const modelBuffer = typeof modelPath === 'string' ? await cachedFetch(modelPath, cacheKey) : modelPath;
+  const opts = { executionProviders: providers };
+  if (externalData && externalData.length > 0) {
+    opts.externalData = externalData;
+  }
+  const session = await ort.InferenceSession.create(modelBuffer, opts);
 
   // Log which backend was selected
   console.log('Inference session created');
@@ -6802,8 +7502,10 @@ Generated by [webai.js](https://github.com/ibelem/webai.js)
 ## Quick Start
 
 1. Copy your model file (\`yamnet.onnx\`) into this directory
-2. Start a local server: \`npx serve .\` (or any static file server)
+2. Start a local HTTPS server: \`npx serve --ssl .\` (or any static file server with HTTPS)
 3. Open \`index.html\` in your browser
+
+> **Note:** WebGPU and WebNN require a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts) (HTTPS) to run. Use HTTPS even for localhost.
 
 ## How It Works
 
@@ -6895,7 +7597,6 @@ body {
 }
 
 main {
-  max-width: 960px;
   margin: 0 auto;
   padding: var(--webai-space-8) var(--webai-space-4);
 }
@@ -6956,6 +7657,21 @@ h2 {
   color: var(--webai-text-muted);
   font-size: var(--webai-font-size-sm);
   margin-top: var(--webai-space-2);
+}
+
+/* Model upload drop zone */
+.model-drop-zone {
+  border-color: var(--webai-accent);
+  border-style: dashed;
+  background: color-mix(in srgb, var(--webai-accent) 5%, transparent);
+  margin-bottom: var(--webai-space-4);
+}
+
+.model-drop-zone:hover,
+.model-drop-zone:focus-visible,
+.model-drop-zone.drag-over {
+  border-color: var(--webai-accent);
+  background: color-mix(in srgb, var(--webai-accent) 10%, transparent);
 }
 
 /* Preview */
@@ -7498,6 +8214,23 @@ h2 {
 
 .run-model-btn:hover { opacity: 0.9; }
 .run-model-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Load Model button (remote models — two-step flow) */
+.load-model-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--webai-space-2);
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-3) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  font-size: var(--webai-font-size-lg);
+  cursor: pointer;
+  margin-bottom: var(--webai-space-4);
+}
+
+.load-model-btn:hover { opacity: 0.9; }
 /* Transcript display */
 .transcript {
   background: var(--webai-surface);
@@ -7792,7 +8525,7 @@ function mfcc(
  * Create an ONNX Runtime Web inference session with backend selection.
  * The execution provider list determines hardware acceleration priority.
  */
-async function createSession(modelPath) {
+async function createSession(modelPath, externalData) {
   // Read backend from the runtime <select> element
   const backendSelect = document.getElementById('backend');
   const backend = backendSelect ? backendSelect.value : 'webnn-gpu';
@@ -7817,9 +8550,11 @@ async function createSession(modelPath) {
       break;
   }
 
-  const session = await ort.InferenceSession.create(modelPath, {
-    executionProviders: providers,
-  });
+  const opts = { executionProviders: providers };
+  if (externalData && externalData.length > 0) {
+    opts.externalData = externalData;
+  }
+  const session = await ort.InferenceSession.create(modelPath, opts);
 
   // Log which backend was selected
   console.log('Inference session created');
@@ -8017,8 +8752,10 @@ Generated by [webai.js](https://github.com/ibelem/webai.js)
 ## Quick Start
 
 1. Copy your model file (\`yamnet.onnx\`) into this directory
-2. Start a local server: \`npx serve .\` (or any static file server)
+2. Start a local HTTPS server: \`npx serve --ssl .\` (or any static file server with HTTPS)
 3. Open \`index.html\` in your browser
+
+> **Note:** WebGPU and WebNN require a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts) (HTTPS) to run. Use HTTPS even for localhost.
 
 ## How It Works
 
@@ -8110,7 +8847,6 @@ body {
 }
 
 main {
-  max-width: 960px;
   margin: 0 auto;
   padding: var(--webai-space-8) var(--webai-space-4);
 }
@@ -8171,6 +8907,21 @@ h2 {
   color: var(--webai-text-muted);
   font-size: var(--webai-font-size-sm);
   margin-top: var(--webai-space-2);
+}
+
+/* Model upload drop zone */
+.model-drop-zone {
+  border-color: var(--webai-accent);
+  border-style: dashed;
+  background: color-mix(in srgb, var(--webai-accent) 5%, transparent);
+  margin-bottom: var(--webai-space-4);
+}
+
+.model-drop-zone:hover,
+.model-drop-zone:focus-visible,
+.model-drop-zone.drag-over {
+  border-color: var(--webai-accent);
+  background: color-mix(in srgb, var(--webai-accent) 10%, transparent);
 }
 
 /* Preview */
@@ -8713,6 +9464,23 @@ h2 {
 
 .run-model-btn:hover { opacity: 0.9; }
 .run-model-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Load Model button (remote models — two-step flow) */
+.load-model-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--webai-space-2);
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-3) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  font-size: var(--webai-font-size-lg);
+  cursor: pointer;
+  margin-bottom: var(--webai-space-4);
+}
+
+.load-model-btn:hover { opacity: 0.9; }
 /* Transcript display */
 .transcript {
   background: var(--webai-surface);
@@ -9110,7 +9878,7 @@ function mfcc(
  * Create an ONNX Runtime Web inference session with backend selection.
  * The execution provider list determines hardware acceleration priority.
  */
-async function createSession(modelPath) {
+async function createSession(modelPath, externalData) {
   // Read backend from the runtime <select> element
   const backendSelect = document.getElementById('backend');
   const backend = backendSelect ? backendSelect.value : 'webnn-gpu';
@@ -9135,9 +9903,11 @@ async function createSession(modelPath) {
       break;
   }
 
-  const session = await ort.InferenceSession.create(modelPath, {
-    executionProviders: providers,
-  });
+  const opts = { executionProviders: providers };
+  if (externalData && externalData.length > 0) {
+    opts.externalData = externalData;
+  }
+  const session = await ort.InferenceSession.create(modelPath, opts);
 
   // Log which backend was selected
   console.log('Inference session created');
@@ -9345,8 +10115,10 @@ Generated by [webai.js](https://github.com/ibelem/webai.js)
 ## Quick Start
 
 1. Copy your model file (\`yamnet.onnx\`) into this directory
-2. Start a local server: \`npx serve .\` (or any static file server)
+2. Start a local HTTPS server: \`npx serve --ssl .\` (or any static file server with HTTPS)
 3. Open \`index.html\` in your browser
+
+> **Note:** WebGPU and WebNN require a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts) (HTTPS) to run. Use HTTPS even for localhost.
 
 ## How It Works
 
@@ -9588,7 +10360,6 @@ body {
 }
 
 main {
-  max-width: 960px;
   margin: 0 auto;
   padding: var(--webai-space-8) var(--webai-space-4);
 }
@@ -9649,6 +10420,21 @@ h2 {
   color: var(--webai-text-muted);
   font-size: var(--webai-font-size-sm);
   margin-top: var(--webai-space-2);
+}
+
+/* Model upload drop zone */
+.model-drop-zone {
+  border-color: var(--webai-accent);
+  border-style: dashed;
+  background: color-mix(in srgb, var(--webai-accent) 5%, transparent);
+  margin-bottom: var(--webai-space-4);
+}
+
+.model-drop-zone:hover,
+.model-drop-zone:focus-visible,
+.model-drop-zone.drag-over {
+  border-color: var(--webai-accent);
+  background: color-mix(in srgb, var(--webai-accent) 10%, transparent);
 }
 
 /* Preview */
@@ -10191,6 +10977,23 @@ h2 {
 
 .run-model-btn:hover { opacity: 0.9; }
 .run-model-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Load Model button (remote models — two-step flow) */
+.load-model-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--webai-space-2);
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-3) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  font-size: var(--webai-font-size-lg);
+  cursor: pointer;
+  margin-bottom: var(--webai-space-4);
+}
+
+.load-model-btn:hover { opacity: 0.9; }
 
 === src/lib/preprocess.js ===
 /**
@@ -10404,7 +11207,7 @@ import * as ort from 'onnxruntime-web';
  * Create an ONNX Runtime Web inference session with backend selection.
  * The execution provider list determines hardware acceleration priority.
  */
-export async function createSession(modelPath) {
+export async function createSession(modelPath, externalData) {
   // Read backend from the runtime <select> element
   const backendSelect = document.getElementById('backend');
   const backend = backendSelect ? backendSelect.value : 'webnn-gpu';
@@ -10429,9 +11232,11 @@ export async function createSession(modelPath) {
       break;
   }
 
-  const session = await ort.InferenceSession.create(modelPath, {
-    executionProviders: providers,
-  });
+  const opts = { executionProviders: providers };
+  if (externalData && externalData.length > 0) {
+    opts.externalData = externalData;
+  }
+  const session = await ort.InferenceSession.create(modelPath, opts);
 
   // Log which backend was selected
   console.log('Inference session created');
@@ -10546,6 +11351,8 @@ cp /path/to/yamnet.onnx public/
 npm run dev
 \`\`\`
 
+> **Note:** WebGPU and WebNN require a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts) (HTTPS). Vite dev server supports HTTPS via \`--https\` flag or \`@vitejs/plugin-basic-ssl\`.
+
 ## How It Works
 
 1. **Preprocessing**: Image is resized to 224x224px, normalized with
@@ -10644,7 +11451,6 @@ body {
 }
 
 main {
-  max-width: 960px;
   margin: 0 auto;
   padding: var(--webai-space-8) var(--webai-space-4);
 }
@@ -10705,6 +11511,21 @@ h2 {
   color: var(--webai-text-muted);
   font-size: var(--webai-font-size-sm);
   margin-top: var(--webai-space-2);
+}
+
+/* Model upload drop zone */
+.model-drop-zone {
+  border-color: var(--webai-accent);
+  border-style: dashed;
+  background: color-mix(in srgb, var(--webai-accent) 5%, transparent);
+  margin-bottom: var(--webai-space-4);
+}
+
+.model-drop-zone:hover,
+.model-drop-zone:focus-visible,
+.model-drop-zone.drag-over {
+  border-color: var(--webai-accent);
+  background: color-mix(in srgb, var(--webai-accent) 10%, transparent);
 }
 
 /* Preview */
@@ -11247,6 +12068,23 @@ h2 {
 
 .run-model-btn:hover { opacity: 0.9; }
 .run-model-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Load Model button (remote models — two-step flow) */
+.load-model-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--webai-space-2);
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-3) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  font-size: var(--webai-font-size-lg);
+  cursor: pointer;
+  margin-bottom: var(--webai-space-4);
+}
+
+.load-model-btn:hover { opacity: 0.9; }
 /* Transcript display */
 .transcript {
   background: var(--webai-surface);
@@ -11510,7 +12348,7 @@ function melSpectrogram(
  * Create an ONNX Runtime Web inference session with backend selection.
  * The execution provider list determines hardware acceleration priority.
  */
-async function createSession(modelPath) {
+async function createSession(modelPath, externalData) {
   // Read backend from the runtime <select> element
   const backendSelect = document.getElementById('backend');
   const backend = backendSelect ? backendSelect.value : 'webnn-gpu';
@@ -11535,9 +12373,11 @@ async function createSession(modelPath) {
       break;
   }
 
-  const session = await ort.InferenceSession.create(modelPath, {
-    executionProviders: providers,
-  });
+  const opts = { executionProviders: providers };
+  if (externalData && externalData.length > 0) {
+    opts.externalData = externalData;
+  }
+  const session = await ort.InferenceSession.create(modelPath, opts);
 
   // Log which backend was selected
   console.log('Inference session created');
@@ -11719,8 +12559,10 @@ Generated by [webai.js](https://github.com/ibelem/webai.js)
 ## Quick Start
 
 1. Copy your model file (\`whisper-tiny.onnx\`) into this directory
-2. Start a local server: \`npx serve .\` (or any static file server)
+2. Start a local HTTPS server: \`npx serve --ssl .\` (or any static file server with HTTPS)
 3. Open \`index.html\` in your browser
+
+> **Note:** WebGPU and WebNN require a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts) (HTTPS) to run. Use HTTPS even for localhost.
 
 ## How It Works
 
@@ -11812,7 +12654,6 @@ body {
 }
 
 main {
-  max-width: 960px;
   margin: 0 auto;
   padding: var(--webai-space-8) var(--webai-space-4);
 }
@@ -11873,6 +12714,21 @@ h2 {
   color: var(--webai-text-muted);
   font-size: var(--webai-font-size-sm);
   margin-top: var(--webai-space-2);
+}
+
+/* Model upload drop zone */
+.model-drop-zone {
+  border-color: var(--webai-accent);
+  border-style: dashed;
+  background: color-mix(in srgb, var(--webai-accent) 5%, transparent);
+  margin-bottom: var(--webai-space-4);
+}
+
+.model-drop-zone:hover,
+.model-drop-zone:focus-visible,
+.model-drop-zone.drag-over {
+  border-color: var(--webai-accent);
+  background: color-mix(in srgb, var(--webai-accent) 10%, transparent);
 }
 
 /* Preview */
@@ -12415,6 +13271,23 @@ h2 {
 
 .run-model-btn:hover { opacity: 0.9; }
 .run-model-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Load Model button (remote models — two-step flow) */
+.load-model-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--webai-space-2);
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-3) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  font-size: var(--webai-font-size-lg);
+  cursor: pointer;
+  margin-bottom: var(--webai-space-4);
+}
+
+.load-model-btn:hover { opacity: 0.9; }
 /* Transcript display */
 .transcript {
   background: var(--webai-surface);
@@ -12781,7 +13654,7 @@ function melSpectrogram(
  * Create an ONNX Runtime Web inference session with backend selection.
  * The execution provider list determines hardware acceleration priority.
  */
-async function createSession(modelPath) {
+async function createSession(modelPath, externalData) {
   // Read backend from the runtime <select> element
   const backendSelect = document.getElementById('backend');
   const backend = backendSelect ? backendSelect.value : 'webnn-gpu';
@@ -12806,9 +13679,11 @@ async function createSession(modelPath) {
       break;
   }
 
-  const session = await ort.InferenceSession.create(modelPath, {
-    executionProviders: providers,
-  });
+  const opts = { executionProviders: providers };
+  if (externalData && externalData.length > 0) {
+    opts.externalData = externalData;
+  }
+  const session = await ort.InferenceSession.create(modelPath, opts);
 
   // Log which backend was selected
   console.log('Inference session created');
@@ -13000,8 +13875,10 @@ Generated by [webai.js](https://github.com/ibelem/webai.js)
 ## Quick Start
 
 1. Copy your model file (\`whisper-tiny.onnx\`) into this directory
-2. Start a local server: \`npx serve .\` (or any static file server)
+2. Start a local HTTPS server: \`npx serve --ssl .\` (or any static file server with HTTPS)
 3. Open \`index.html\` in your browser
+
+> **Note:** WebGPU and WebNN require a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts) (HTTPS) to run. Use HTTPS even for localhost.
 
 ## How It Works
 
@@ -13221,7 +14098,6 @@ body {
 }
 
 main {
-  max-width: 960px;
   margin: 0 auto;
   padding: var(--webai-space-8) var(--webai-space-4);
 }
@@ -13282,6 +14158,21 @@ h2 {
   color: var(--webai-text-muted);
   font-size: var(--webai-font-size-sm);
   margin-top: var(--webai-space-2);
+}
+
+/* Model upload drop zone */
+.model-drop-zone {
+  border-color: var(--webai-accent);
+  border-style: dashed;
+  background: color-mix(in srgb, var(--webai-accent) 5%, transparent);
+  margin-bottom: var(--webai-space-4);
+}
+
+.model-drop-zone:hover,
+.model-drop-zone:focus-visible,
+.model-drop-zone.drag-over {
+  border-color: var(--webai-accent);
+  background: color-mix(in srgb, var(--webai-accent) 10%, transparent);
 }
 
 /* Preview */
@@ -13824,6 +14715,23 @@ h2 {
 
 .run-model-btn:hover { opacity: 0.9; }
 .run-model-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Load Model button (remote models — two-step flow) */
+.load-model-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--webai-space-2);
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-3) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  font-size: var(--webai-font-size-lg);
+  cursor: pointer;
+  margin-bottom: var(--webai-space-4);
+}
+
+.load-model-btn:hover { opacity: 0.9; }
 
 === src/lib/input.ts ===
 /**
@@ -14121,7 +15029,7 @@ import * as ort from 'onnxruntime-web';
  * Create an ONNX Runtime Web inference session with backend selection.
  * The execution provider list determines hardware acceleration priority.
  */
-export async function createSession(modelPath: string): Promise<ort.InferenceSession> {
+export async function createSession(modelPath: string | ArrayBuffer | Uint8Array, externalData?: Array<{ path: string; data: Uint8Array }>): Promise<ort.InferenceSession> {
   // Read backend from the runtime <select> element
   const backendSelect = document.getElementById('backend') as HTMLSelectElement;
   const backend = backendSelect ? backendSelect.value : 'webnn-gpu';
@@ -14146,9 +15054,11 @@ export async function createSession(modelPath: string): Promise<ort.InferenceSes
       break;
   }
 
-  const session = await ort.InferenceSession.create(modelPath, {
-    executionProviders: providers,
-  });
+  const opts: any = { executionProviders: providers };
+  if (externalData && externalData.length > 0) {
+    opts.externalData = externalData;
+  }
+  const session = await ort.InferenceSession.create(modelPath, opts);
 
   // Log which backend was selected
   console.log('Inference session created');
@@ -14266,6 +15176,8 @@ npm install
 npm run dev
 \`\`\`
 
+> **Note:** WebGPU and WebNN require a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts) (HTTPS). Use HTTPS even for localhost.
+
 ## How It Works
 
 1. **Preprocessing**: Image is resized to 224x224px, normalized with
@@ -14376,7 +15288,6 @@ body {
 }
 
 main {
-  max-width: 960px;
   margin: 0 auto;
   padding: var(--webai-space-8) var(--webai-space-4);
 }
@@ -14437,6 +15348,21 @@ h2 {
   color: var(--webai-text-muted);
   font-size: var(--webai-font-size-sm);
   margin-top: var(--webai-space-2);
+}
+
+/* Model upload drop zone */
+.model-drop-zone {
+  border-color: var(--webai-accent);
+  border-style: dashed;
+  background: color-mix(in srgb, var(--webai-accent) 5%, transparent);
+  margin-bottom: var(--webai-space-4);
+}
+
+.model-drop-zone:hover,
+.model-drop-zone:focus-visible,
+.model-drop-zone.drag-over {
+  border-color: var(--webai-accent);
+  background: color-mix(in srgb, var(--webai-accent) 10%, transparent);
 }
 
 /* Preview */
@@ -14979,6 +15905,23 @@ h2 {
 
 .run-model-btn:hover { opacity: 0.9; }
 .run-model-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Load Model button (remote models — two-step flow) */
+.load-model-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--webai-space-2);
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-3) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  font-size: var(--webai-font-size-lg);
+  cursor: pointer;
+  margin-bottom: var(--webai-space-4);
+}
+
+.load-model-btn:hover { opacity: 0.9; }
 /* Transcript display */
 .transcript {
   background: var(--webai-surface);
@@ -15069,7 +16012,7 @@ import * as ort from 'https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.
  * Create an ONNX Runtime Web inference session with backend selection.
  * The execution provider list determines hardware acceleration priority.
  */
-async function createSession(modelPath) {
+async function createSession(modelPath, externalData) {
   // Read backend from the runtime <select> element
   const backendSelect = document.getElementById('backend');
   const backend = backendSelect ? backendSelect.value : 'webnn-gpu';
@@ -15094,9 +16037,11 @@ async function createSession(modelPath) {
       break;
   }
 
-  const session = await ort.InferenceSession.create(modelPath, {
-    executionProviders: providers,
-  });
+  const opts = { executionProviders: providers };
+  if (externalData && externalData.length > 0) {
+    opts.externalData = externalData;
+  }
+  const session = await ort.InferenceSession.create(modelPath, opts);
 
   // Log which backend was selected
   console.log('Inference session created');
@@ -15244,8 +16189,10 @@ Generated by [webai.js](https://github.com/ibelem/webai.js)
 ## Quick Start
 
 1. Copy your model file (\`tts-model.onnx\`) into this directory
-2. Start a local server: \`npx serve .\` (or any static file server)
+2. Start a local HTTPS server: \`npx serve --ssl .\` (or any static file server with HTTPS)
 3. Open \`index.html\` in your browser
+
+> **Note:** WebGPU and WebNN require a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts) (HTTPS) to run. Use HTTPS even for localhost.
 
 ## How It Works
 
@@ -15489,7 +16436,6 @@ body {
 }
 
 main {
-  max-width: 960px;
   margin: 0 auto;
   padding: var(--webai-space-8) var(--webai-space-4);
 }
@@ -15550,6 +16496,21 @@ h2 {
   color: var(--webai-text-muted);
   font-size: var(--webai-font-size-sm);
   margin-top: var(--webai-space-2);
+}
+
+/* Model upload drop zone */
+.model-drop-zone {
+  border-color: var(--webai-accent);
+  border-style: dashed;
+  background: color-mix(in srgb, var(--webai-accent) 5%, transparent);
+  margin-bottom: var(--webai-space-4);
+}
+
+.model-drop-zone:hover,
+.model-drop-zone:focus-visible,
+.model-drop-zone.drag-over {
+  border-color: var(--webai-accent);
+  background: color-mix(in srgb, var(--webai-accent) 10%, transparent);
 }
 
 /* Preview */
@@ -16093,6 +17054,23 @@ h2 {
 .run-model-btn:hover { opacity: 0.9; }
 .run-model-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
+/* Load Model button (remote models — two-step flow) */
+.load-model-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--webai-space-2);
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-3) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  font-size: var(--webai-font-size-lg);
+  cursor: pointer;
+  margin-bottom: var(--webai-space-4);
+}
+
+.load-model-btn:hover { opacity: 0.9; }
+
 === lib/preprocess.ts ===
 
 
@@ -16105,7 +17083,7 @@ import * as ort from 'onnxruntime-web';
  * Create an ONNX Runtime Web inference session with backend selection.
  * The execution provider list determines hardware acceleration priority.
  */
-export async function createSession(modelPath: string): Promise<ort.InferenceSession> {
+export async function createSession(modelPath: string | ArrayBuffer | Uint8Array, externalData?: Array<{ path: string; data: Uint8Array }>): Promise<ort.InferenceSession> {
   // Read backend from the runtime <select> element
   const backendSelect = document.getElementById('backend') as HTMLSelectElement;
   const backend = backendSelect ? backendSelect.value : 'webnn-gpu';
@@ -16130,9 +17108,11 @@ export async function createSession(modelPath: string): Promise<ort.InferenceSes
       break;
   }
 
-  const session = await ort.InferenceSession.create(modelPath, {
-    executionProviders: providers,
-  });
+  const opts: any = { executionProviders: providers };
+  if (externalData && externalData.length > 0) {
+    opts.externalData = externalData;
+  }
+  const session = await ort.InferenceSession.create(modelPath, opts);
 
   // Log which backend was selected
   console.log('Inference session created');
@@ -16229,6 +17209,8 @@ Generated by [webai.js](https://github.com/ibelem/webai.js)
 npm install
 npm run dev
 \`\`\`
+
+> **Note:** WebGPU and WebNN require a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts) (HTTPS). Use HTTPS even for localhost.
 
 ## How It Works
 
@@ -16507,7 +17489,6 @@ body {
 }
 
 main {
-  max-width: 960px;
   margin: 0 auto;
   padding: var(--webai-space-8) var(--webai-space-4);
 }
@@ -16568,6 +17549,21 @@ h2 {
   color: var(--webai-text-muted);
   font-size: var(--webai-font-size-sm);
   margin-top: var(--webai-space-2);
+}
+
+/* Model upload drop zone */
+.model-drop-zone {
+  border-color: var(--webai-accent);
+  border-style: dashed;
+  background: color-mix(in srgb, var(--webai-accent) 5%, transparent);
+  margin-bottom: var(--webai-space-4);
+}
+
+.model-drop-zone:hover,
+.model-drop-zone:focus-visible,
+.model-drop-zone.drag-over {
+  border-color: var(--webai-accent);
+  background: color-mix(in srgb, var(--webai-accent) 10%, transparent);
 }
 
 /* Preview */
@@ -17111,6 +18107,23 @@ h2 {
 .run-model-btn:hover { opacity: 0.9; }
 .run-model-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
+/* Load Model button (remote models — two-step flow) */
+.load-model-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--webai-space-2);
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-3) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  font-size: var(--webai-font-size-lg);
+  cursor: pointer;
+  margin-bottom: var(--webai-space-4);
+}
+
+.load-model-btn:hover { opacity: 0.9; }
+
 === src/lib/preprocess.js ===
 /**
  * Resize image using bilinear interpolation.
@@ -17236,7 +18249,7 @@ import * as ort from 'onnxruntime-web';
  * Create an ONNX Runtime Web inference session with backend selection.
  * The execution provider list determines hardware acceleration priority.
  */
-export async function createSession(modelPath) {
+export async function createSession(modelPath, externalData) {
   // Read backend from the runtime <select> element
   const backendSelect = document.getElementById('backend');
   const backend = backendSelect ? backendSelect.value : 'webnn-gpu';
@@ -17261,9 +18274,11 @@ export async function createSession(modelPath) {
       break;
   }
 
-  const session = await ort.InferenceSession.create(modelPath, {
-    executionProviders: providers,
-  });
+  const opts = { executionProviders: providers };
+  if (externalData && externalData.length > 0) {
+    opts.externalData = externalData;
+  }
+  const session = await ort.InferenceSession.create(modelPath, opts);
 
   // Log which backend was selected
   console.log('Inference session created');
@@ -17377,6 +18392,8 @@ npm install
 cp /path/to/mobilenet.onnx public/
 npm run dev
 \`\`\`
+
+> **Note:** WebGPU and WebNN require a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts) (HTTPS). Vite dev server supports HTTPS via \`--https\` flag or \`@vitejs/plugin-basic-ssl\`.
 
 ## How It Works
 
@@ -17608,7 +18625,6 @@ body {
 }
 
 main {
-  max-width: 960px;
   margin: 0 auto;
   padding: var(--webai-space-8) var(--webai-space-4);
 }
@@ -17669,6 +18685,21 @@ h2 {
   color: var(--webai-text-muted);
   font-size: var(--webai-font-size-sm);
   margin-top: var(--webai-space-2);
+}
+
+/* Model upload drop zone */
+.model-drop-zone {
+  border-color: var(--webai-accent);
+  border-style: dashed;
+  background: color-mix(in srgb, var(--webai-accent) 5%, transparent);
+  margin-bottom: var(--webai-space-4);
+}
+
+.model-drop-zone:hover,
+.model-drop-zone:focus-visible,
+.model-drop-zone.drag-over {
+  border-color: var(--webai-accent);
+  background: color-mix(in srgb, var(--webai-accent) 10%, transparent);
 }
 
 /* Preview */
@@ -18212,6 +19243,23 @@ h2 {
 .run-model-btn:hover { opacity: 0.9; }
 .run-model-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
+/* Load Model button (remote models — two-step flow) */
+.load-model-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--webai-space-2);
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-3) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  font-size: var(--webai-font-size-lg);
+  cursor: pointer;
+  margin-bottom: var(--webai-space-4);
+}
+
+.load-model-btn:hover { opacity: 0.9; }
+
 === src/lib/preprocess.ts ===
 /**
  * BPE Tokenizer: loads tokenizer.json and encodes text to token IDs.
@@ -18320,7 +19368,7 @@ import * as ort from 'onnxruntime-web';
  * Create an ONNX Runtime Web inference session with backend selection.
  * The execution provider list determines hardware acceleration priority.
  */
-export async function createSession(modelPath: string): Promise<ort.InferenceSession> {
+export async function createSession(modelPath: string | ArrayBuffer | Uint8Array, externalData?: Array<{ path: string; data: Uint8Array }>): Promise<ort.InferenceSession> {
   // Read backend from the runtime <select> element
   const backendSelect = document.getElementById('backend') as HTMLSelectElement;
   const backend = backendSelect ? backendSelect.value : 'webnn-gpu';
@@ -18345,9 +19393,11 @@ export async function createSession(modelPath: string): Promise<ort.InferenceSes
       break;
   }
 
-  const session = await ort.InferenceSession.create(modelPath, {
-    executionProviders: providers,
-  });
+  const opts: any = { executionProviders: providers };
+  if (externalData && externalData.length > 0) {
+    opts.externalData = externalData;
+  }
+  const session = await ort.InferenceSession.create(modelPath, opts);
 
   // Log which backend was selected
   console.log('Inference session created');
@@ -18462,6 +19512,8 @@ cp /path/to/bert-sentiment.onnx public/
 npm run dev
 \`\`\`
 
+> **Note:** WebGPU and WebNN require a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts) (HTTPS). Vite dev server supports HTTPS via \`--https\` flag or \`@vitejs/plugin-basic-ssl\`.
+
 ## How It Works
 
 1. **Preprocessing**: Image is resized to 224x224px, normalized with
@@ -18559,7 +19611,6 @@ body {
 }
 
 main {
-  max-width: 960px;
   margin: 0 auto;
   padding: var(--webai-space-8) var(--webai-space-4);
 }
@@ -18620,6 +19671,21 @@ h2 {
   color: var(--webai-text-muted);
   font-size: var(--webai-font-size-sm);
   margin-top: var(--webai-space-2);
+}
+
+/* Model upload drop zone */
+.model-drop-zone {
+  border-color: var(--webai-accent);
+  border-style: dashed;
+  background: color-mix(in srgb, var(--webai-accent) 5%, transparent);
+  margin-bottom: var(--webai-space-4);
+}
+
+.model-drop-zone:hover,
+.model-drop-zone:focus-visible,
+.model-drop-zone.drag-over {
+  border-color: var(--webai-accent);
+  background: color-mix(in srgb, var(--webai-accent) 10%, transparent);
 }
 
 /* Preview */
@@ -19162,6 +20228,23 @@ h2 {
 
 .run-model-btn:hover { opacity: 0.9; }
 .run-model-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Load Model button (remote models — two-step flow) */
+.load-model-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--webai-space-2);
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-3) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  font-size: var(--webai-font-size-lg);
+  cursor: pointer;
+  margin-bottom: var(--webai-space-4);
+}
+
+.load-model-btn:hover { opacity: 0.9; }
   </style>
 </head>
 <body>
@@ -19172,7 +20255,14 @@ h2 {
 
     <div class="container">
       <div>
-        <div class="drop-zone" id="dropZone" role="button" tabindex="0"
+        <div class="drop-zone model-drop-zone" id="modelDropZone" role="button" tabindex="0"
+             aria-label="Drop model files here or click to browse">
+          <p>Drop model files (.tflite + data) here or click to browse</p>
+          <p class="hint">Supports .tflite model files</p>
+          <input type="file" id="modelFileInput" accept=".tflite,.bin" multiple style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1">
+        </div>
+
+        <div class="drop-zone" id="dropZone" role="button" tabindex="0" hidden
              aria-label="Drop an image here or click to browse for image classification">
           <p>Drop an image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
@@ -19449,6 +20539,81 @@ function postprocessResults(output) {
   return topK(probs, 5);
 }
 
+function formatBytes(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function showProgress(filename) {
+  const el = document.getElementById('progressBar');
+  el.hidden = false;
+  document.getElementById('progressFilename').textContent = filename;
+  document.getElementById('progressStats').textContent = '0%';
+  const fill = document.getElementById('progressFill');
+  fill.style.width = '0%';
+  fill.className = 'progress-fill';
+}
+
+function updateProgress(loaded, total) {
+  const fill = document.getElementById('progressFill');
+  const stats = document.getElementById('progressStats');
+  if (total && total > 0) {
+    fill.classList.remove('indeterminate');
+    const pct = Math.min(100, (loaded / total) * 100);
+    fill.style.width = pct.toFixed(1) + '%';
+    stats.textContent = formatBytes(loaded) + ' / ' + formatBytes(total) + '  \\u00b7  ' + pct.toFixed(0) + '%';
+  } else {
+    if (!fill.classList.contains('indeterminate')) fill.classList.add('indeterminate');
+    stats.textContent = formatBytes(loaded);
+  }
+}
+
+function completeProgress(finalSize) {
+  const fill = document.getElementById('progressFill');
+  fill.classList.remove('indeterminate');
+  fill.classList.add('done');
+  fill.style.width = '100%';
+  document.getElementById('progressStats').textContent = formatBytes(finalSize);
+}
+
+async function fetchWithProgress(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('HTTP ' + res.status + ': ' + res.statusText);
+  const contentLength = res.headers.get('Content-Length');
+  const total = contentLength ? parseInt(contentLength, 10) : null;
+  if (!res.body) {
+    const buf = await res.arrayBuffer();
+    updateProgress(buf.byteLength, buf.byteLength);
+    return buf;
+  }
+  const reader = res.body.getReader();
+  if (total && total > 0) {
+    const result = new Uint8Array(total);
+    let offset = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      result.set(value, offset);
+      offset += value.byteLength;
+      updateProgress(offset, total);
+    }
+    return result.buffer;
+  }
+  const chunks = [];
+  let loaded = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    loaded += value.byteLength;
+    updateProgress(loaded, null);
+  }
+  const result = new Uint8Array(loaded);
+  let off = 0;
+  for (const c of chunks) { result.set(c, off); off += c.byteLength; }
+  return result.buffer;
+}
 
 // --- Application ---
 const MODEL_PATH = './mobilenet-tflite.onnx';
@@ -19531,18 +20696,59 @@ function renderResults(results) {
   }
 }
 
-async function init() {
+const modelDropZone = document.getElementById('modelDropZone');
+const modelFileInput = document.getElementById('modelFileInput');
+
+modelDropZone.addEventListener('click', () => modelFileInput.click());
+modelDropZone.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); modelFileInput.click(); }
+});
+modelDropZone.addEventListener('dragover', (e) => { e.preventDefault(); modelDropZone.classList.add('drag-over'); });
+modelDropZone.addEventListener('dragleave', () => { modelDropZone.classList.remove('drag-over'); });
+modelDropZone.addEventListener('drop', (e) => {
+  e.preventDefault(); modelDropZone.classList.remove('drag-over');
+  const files = Array.from(e.dataTransfer.files);
+  if (files.length > 0) handleModelFiles(files);
+});
+modelFileInput.addEventListener('change', () => { const files = Array.from(modelFileInput.files); if (files.length > 0) handleModelFiles(files); });
+
+async function handleModelFiles(files) {
+  // Separate model file from external data files
+  const modelFile = files.find(f => f.name.endsWith('.onnx') || f.name.endsWith('.tflite'));
+  if (!modelFile) {
+    updateStatus('No .onnx or .tflite model file found');
+    return;
+  }
+  const dataFiles = files.filter(f => f !== modelFile);
+
+  modelDropZone.hidden = true;
+  showProgress(modelFile.name);
   updateStatus('Loading model...');
   try {
-    session = await createSession(MODEL_PATH);
+    const buf = await modelFile.arrayBuffer();
+    completeProgress(buf.byteLength);
+
+    // Load external data files if present
+    const externalData = [];
+    for (const df of dataFiles) {
+      showProgress(df.name);
+      const dataBuf = await df.arrayBuffer();
+      completeProgress(dataBuf.byteLength);
+      externalData.push({ path: df.name, data: new Uint8Array(dataBuf) });
+    }
+
+    updateStatus('Creating session...');
+    session = await createSession(buf, externalData.length > 0 ? externalData : undefined);
     updateStatus('mobilenet-tflite \\u00b7 Ready');
+    document.getElementById('dropZone').hidden = false;
   } catch (e) {
     updateStatus('Failed to load model');
     console.error('Model load error:', e);
+    modelDropZone.hidden = false;
   }
 }
 
-init();
+
   </script>
 </body>
 </html>
@@ -19555,8 +20761,10 @@ Generated by [webai.js](https://github.com/ibelem/webai.js)
 ## Quick Start
 
 1. Copy your model file (\`mobilenet-tflite.onnx\`) into this directory
-2. Start a local server: \`npx serve .\` (or any static file server)
+2. Start a local HTTPS server: \`npx serve --ssl .\` (or any static file server with HTTPS)
 3. Open \`index.html\` in your browser
+
+> **Note:** WebGPU and WebNN require a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts) (HTTPS) to run. Use HTTPS even for localhost.
 
 ## How It Works
 
@@ -19842,7 +21050,6 @@ body {
 }
 
 main {
-  max-width: 960px;
   margin: 0 auto;
   padding: var(--webai-space-8) var(--webai-space-4);
 }
@@ -19903,6 +21110,21 @@ h2 {
   color: var(--webai-text-muted);
   font-size: var(--webai-font-size-sm);
   margin-top: var(--webai-space-2);
+}
+
+/* Model upload drop zone */
+.model-drop-zone {
+  border-color: var(--webai-accent);
+  border-style: dashed;
+  background: color-mix(in srgb, var(--webai-accent) 5%, transparent);
+  margin-bottom: var(--webai-space-4);
+}
+
+.model-drop-zone:hover,
+.model-drop-zone:focus-visible,
+.model-drop-zone.drag-over {
+  border-color: var(--webai-accent);
+  background: color-mix(in srgb, var(--webai-accent) 10%, transparent);
 }
 
 /* Preview */
@@ -20445,6 +21667,23 @@ h2 {
 
 .run-model-btn:hover { opacity: 0.9; }
 .run-model-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Load Model button (remote models — two-step flow) */
+.load-model-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--webai-space-2);
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-3) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  font-size: var(--webai-font-size-lg);
+  cursor: pointer;
+  margin-bottom: var(--webai-space-4);
+}
+
+.load-model-btn:hover { opacity: 0.9; }
 
 === src/lib/preprocess.js ===
 /**
@@ -20703,6 +21942,8 @@ cp /path/to/mobilenet-tflite.onnx public/
 npm run dev
 \`\`\`
 
+> **Note:** WebGPU and WebNN require a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts) (HTTPS). Vite dev server supports HTTPS via \`--https\` flag or \`@vitejs/plugin-basic-ssl\`.
+
 ## How It Works
 
 1. **Preprocessing**: Image is resized to 224x224px, normalized with
@@ -20801,7 +22042,6 @@ body {
 }
 
 main {
-  max-width: 960px;
   margin: 0 auto;
   padding: var(--webai-space-8) var(--webai-space-4);
 }
@@ -20862,6 +22102,21 @@ h2 {
   color: var(--webai-text-muted);
   font-size: var(--webai-font-size-sm);
   margin-top: var(--webai-space-2);
+}
+
+/* Model upload drop zone */
+.model-drop-zone {
+  border-color: var(--webai-accent);
+  border-style: dashed;
+  background: color-mix(in srgb, var(--webai-accent) 5%, transparent);
+  margin-bottom: var(--webai-space-4);
+}
+
+.model-drop-zone:hover,
+.model-drop-zone:focus-visible,
+.model-drop-zone.drag-over {
+  border-color: var(--webai-accent);
+  background: color-mix(in srgb, var(--webai-accent) 10%, transparent);
 }
 
 /* Preview */
@@ -21404,6 +22659,23 @@ h2 {
 
 .run-model-btn:hover { opacity: 0.9; }
 .run-model-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Load Model button (remote models — two-step flow) */
+.load-model-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--webai-space-2);
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-3) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  font-size: var(--webai-font-size-lg);
+  cursor: pointer;
+  margin-bottom: var(--webai-space-4);
+}
+
+.load-model-btn:hover { opacity: 0.9; }
   </style>
 </head>
 <body>
@@ -21414,7 +22686,14 @@ h2 {
 
     <div class="container">
       <div>
-        <div class="drop-zone" id="dropZone" role="button" tabindex="0"
+        <div class="drop-zone model-drop-zone" id="modelDropZone" role="button" tabindex="0"
+             aria-label="Drop model files here or click to browse">
+          <p>Drop model files (.onnx + data) here or click to browse</p>
+          <p class="hint">Supports .onnx model files (+ external data)</p>
+          <input type="file" id="modelFileInput" accept=".onnx,.onnx_data,.bin" multiple style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1">
+        </div>
+
+        <div class="drop-zone" id="dropZone" role="button" tabindex="0" hidden
              aria-label="Drop an image here or click to browse for image classification">
           <p>Drop an image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
@@ -21639,7 +22918,7 @@ function preprocessImage(
  * Create an ONNX Runtime Web inference session with backend selection.
  * The execution provider list determines hardware acceleration priority.
  */
-async function createSession(modelPath) {
+async function createSession(modelPath, externalData) {
   // Read backend from the runtime <select> element
   const backendSelect = document.getElementById('backend');
   const backend = backendSelect ? backendSelect.value : 'webnn-gpu';
@@ -21664,11 +22943,13 @@ async function createSession(modelPath) {
       break;
   }
 
-  const cacheKey = modelPath.split('/').pop() || 'model.onnx';
-  const modelBuffer = await cachedFetch(modelPath, cacheKey);
-  const session = await ort.InferenceSession.create(modelBuffer, {
-    executionProviders: providers,
-  });
+  const cacheKey = (typeof modelPath === 'string' ? modelPath.split('/').pop() : null) || 'model.onnx';
+  const modelBuffer = typeof modelPath === 'string' ? await cachedFetch(modelPath, cacheKey) : modelPath;
+  const opts = { executionProviders: providers };
+  if (externalData && externalData.length > 0) {
+    opts.externalData = externalData;
+  }
+  const session = await ort.InferenceSession.create(modelBuffer, opts);
 
   // Log which backend was selected
   console.log('Inference session created');
@@ -21769,6 +23050,81 @@ function postprocessResults(output) {
   return topK(probs, 5);
 }
 
+function formatBytes(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function showProgress(filename) {
+  const el = document.getElementById('progressBar');
+  el.hidden = false;
+  document.getElementById('progressFilename').textContent = filename;
+  document.getElementById('progressStats').textContent = '0%';
+  const fill = document.getElementById('progressFill');
+  fill.style.width = '0%';
+  fill.className = 'progress-fill';
+}
+
+function updateProgress(loaded, total) {
+  const fill = document.getElementById('progressFill');
+  const stats = document.getElementById('progressStats');
+  if (total && total > 0) {
+    fill.classList.remove('indeterminate');
+    const pct = Math.min(100, (loaded / total) * 100);
+    fill.style.width = pct.toFixed(1) + '%';
+    stats.textContent = formatBytes(loaded) + ' / ' + formatBytes(total) + '  \\u00b7  ' + pct.toFixed(0) + '%';
+  } else {
+    if (!fill.classList.contains('indeterminate')) fill.classList.add('indeterminate');
+    stats.textContent = formatBytes(loaded);
+  }
+}
+
+function completeProgress(finalSize) {
+  const fill = document.getElementById('progressFill');
+  fill.classList.remove('indeterminate');
+  fill.classList.add('done');
+  fill.style.width = '100%';
+  document.getElementById('progressStats').textContent = formatBytes(finalSize);
+}
+
+async function fetchWithProgress(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('HTTP ' + res.status + ': ' + res.statusText);
+  const contentLength = res.headers.get('Content-Length');
+  const total = contentLength ? parseInt(contentLength, 10) : null;
+  if (!res.body) {
+    const buf = await res.arrayBuffer();
+    updateProgress(buf.byteLength, buf.byteLength);
+    return buf;
+  }
+  const reader = res.body.getReader();
+  if (total && total > 0) {
+    const result = new Uint8Array(total);
+    let offset = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      result.set(value, offset);
+      offset += value.byteLength;
+      updateProgress(offset, total);
+    }
+    return result.buffer;
+  }
+  const chunks = [];
+  let loaded = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    loaded += value.byteLength;
+    updateProgress(loaded, null);
+  }
+  const result = new Uint8Array(loaded);
+  let off = 0;
+  for (const c of chunks) { result.set(c, off); off += c.byteLength; }
+  return result.buffer;
+}
 
 // --- Application ---
 const MODEL_PATH = './mobilenet.onnx';
@@ -21851,18 +23207,59 @@ function renderResults(results) {
   }
 }
 
-async function init() {
+const modelDropZone = document.getElementById('modelDropZone');
+const modelFileInput = document.getElementById('modelFileInput');
+
+modelDropZone.addEventListener('click', () => modelFileInput.click());
+modelDropZone.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); modelFileInput.click(); }
+});
+modelDropZone.addEventListener('dragover', (e) => { e.preventDefault(); modelDropZone.classList.add('drag-over'); });
+modelDropZone.addEventListener('dragleave', () => { modelDropZone.classList.remove('drag-over'); });
+modelDropZone.addEventListener('drop', (e) => {
+  e.preventDefault(); modelDropZone.classList.remove('drag-over');
+  const files = Array.from(e.dataTransfer.files);
+  if (files.length > 0) handleModelFiles(files);
+});
+modelFileInput.addEventListener('change', () => { const files = Array.from(modelFileInput.files); if (files.length > 0) handleModelFiles(files); });
+
+async function handleModelFiles(files) {
+  // Separate model file from external data files
+  const modelFile = files.find(f => f.name.endsWith('.onnx') || f.name.endsWith('.tflite'));
+  if (!modelFile) {
+    updateStatus('No .onnx or .tflite model file found');
+    return;
+  }
+  const dataFiles = files.filter(f => f !== modelFile);
+
+  modelDropZone.hidden = true;
+  showProgress(modelFile.name);
   updateStatus('Loading model...');
   try {
-    session = await createSession(MODEL_PATH);
+    const buf = await modelFile.arrayBuffer();
+    completeProgress(buf.byteLength);
+
+    // Load external data files if present
+    const externalData = [];
+    for (const df of dataFiles) {
+      showProgress(df.name);
+      const dataBuf = await df.arrayBuffer();
+      completeProgress(dataBuf.byteLength);
+      externalData.push({ path: df.name, data: new Uint8Array(dataBuf) });
+    }
+
+    updateStatus('Creating session...');
+    session = await createSession(buf, externalData.length > 0 ? externalData : undefined);
     updateStatus('mobilenet \\u00b7 Ready');
+    document.getElementById('dropZone').hidden = false;
   } catch (e) {
     updateStatus('Failed to load model');
     console.error('Model load error:', e);
+    modelDropZone.hidden = false;
   }
 }
 
-init();
+
   </script>
 </body>
 </html>
@@ -21875,8 +23272,10 @@ Generated by [webai.js](https://github.com/ibelem/webai.js)
 ## Quick Start
 
 1. Copy your model file (\`mobilenet.onnx\`) into this directory
-2. Start a local server: \`npx serve .\` (or any static file server)
+2. Start a local HTTPS server: \`npx serve --ssl .\` (or any static file server with HTTPS)
 3. Open \`index.html\` in your browser
+
+> **Note:** WebGPU and WebNN require a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts) (HTTPS) to run. Use HTTPS even for localhost.
 
 ## How It Works
 
@@ -22162,7 +23561,6 @@ body {
 }
 
 main {
-  max-width: 960px;
   margin: 0 auto;
   padding: var(--webai-space-8) var(--webai-space-4);
 }
@@ -22223,6 +23621,21 @@ h2 {
   color: var(--webai-text-muted);
   font-size: var(--webai-font-size-sm);
   margin-top: var(--webai-space-2);
+}
+
+/* Model upload drop zone */
+.model-drop-zone {
+  border-color: var(--webai-accent);
+  border-style: dashed;
+  background: color-mix(in srgb, var(--webai-accent) 5%, transparent);
+  margin-bottom: var(--webai-space-4);
+}
+
+.model-drop-zone:hover,
+.model-drop-zone:focus-visible,
+.model-drop-zone.drag-over {
+  border-color: var(--webai-accent);
+  background: color-mix(in srgb, var(--webai-accent) 10%, transparent);
 }
 
 /* Preview */
@@ -22765,6 +24178,23 @@ h2 {
 
 .run-model-btn:hover { opacity: 0.9; }
 .run-model-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Load Model button (remote models — two-step flow) */
+.load-model-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--webai-space-2);
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-3) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  font-size: var(--webai-font-size-lg);
+  cursor: pointer;
+  margin-bottom: var(--webai-space-4);
+}
+
+.load-model-btn:hover { opacity: 0.9; }
 
 === src/lib/preprocess.js ===
 /**
@@ -22960,7 +24390,7 @@ import * as ort from 'onnxruntime-web';
  * Create an ONNX Runtime Web inference session with backend selection.
  * The execution provider list determines hardware acceleration priority.
  */
-export async function createSession(modelPath) {
+export async function createSession(modelPath, externalData) {
   // Read backend from the runtime <select> element
   const backendSelect = document.getElementById('backend');
   const backend = backendSelect ? backendSelect.value : 'webnn-gpu';
@@ -22985,11 +24415,13 @@ export async function createSession(modelPath) {
       break;
   }
 
-  const cacheKey = modelPath.split('/').pop() || 'model.onnx';
-  const modelBuffer = await cachedFetch(modelPath, cacheKey);
-  const session = await ort.InferenceSession.create(modelBuffer, {
-    executionProviders: providers,
-  });
+  const cacheKey = (typeof modelPath === 'string' ? modelPath.split('/').pop() : null) || 'model.onnx';
+  const modelBuffer = typeof modelPath === 'string' ? await cachedFetch(modelPath, cacheKey) : modelPath;
+  const opts = { executionProviders: providers };
+  if (externalData && externalData.length > 0) {
+    opts.externalData = externalData;
+  }
+  const session = await ort.InferenceSession.create(modelBuffer, opts);
 
   // Log which backend was selected
   console.log('Inference session created');
@@ -23104,6 +24536,8 @@ cp /path/to/mobilenet.onnx public/
 npm run dev
 \`\`\`
 
+> **Note:** WebGPU and WebNN require a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts) (HTTPS). Vite dev server supports HTTPS via \`--https\` flag or \`@vitejs/plugin-basic-ssl\`.
+
 ## How It Works
 
 1. **Preprocessing**: Image is resized to 224x224px, normalized with
@@ -23202,7 +24636,6 @@ body {
 }
 
 main {
-  max-width: 960px;
   margin: 0 auto;
   padding: var(--webai-space-8) var(--webai-space-4);
 }
@@ -23263,6 +24696,21 @@ h2 {
   color: var(--webai-text-muted);
   font-size: var(--webai-font-size-sm);
   margin-top: var(--webai-space-2);
+}
+
+/* Model upload drop zone */
+.model-drop-zone {
+  border-color: var(--webai-accent);
+  border-style: dashed;
+  background: color-mix(in srgb, var(--webai-accent) 5%, transparent);
+  margin-bottom: var(--webai-space-4);
+}
+
+.model-drop-zone:hover,
+.model-drop-zone:focus-visible,
+.model-drop-zone.drag-over {
+  border-color: var(--webai-accent);
+  background: color-mix(in srgb, var(--webai-accent) 10%, transparent);
 }
 
 /* Preview */
@@ -23805,6 +25253,23 @@ h2 {
 
 .run-model-btn:hover { opacity: 0.9; }
 .run-model-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Load Model button (remote models — two-step flow) */
+.load-model-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--webai-space-2);
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-3) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  font-size: var(--webai-font-size-lg);
+  cursor: pointer;
+  margin-bottom: var(--webai-space-4);
+}
+
+.load-model-btn:hover { opacity: 0.9; }
   </style>
 </head>
 <body>
@@ -23815,7 +25280,14 @@ h2 {
 
     <div class="container">
       <div>
-        <div class="drop-zone" id="dropZone" role="button" tabindex="0"
+        <div class="drop-zone model-drop-zone" id="modelDropZone" role="button" tabindex="0"
+             aria-label="Drop model files here or click to browse">
+          <p>Drop model files (.onnx + data) here or click to browse</p>
+          <p class="hint">Supports .onnx model files (+ external data)</p>
+          <input type="file" id="modelFileInput" accept=".onnx,.onnx_data,.bin" multiple style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1">
+        </div>
+
+        <div class="drop-zone" id="dropZone" role="button" tabindex="0" hidden
              aria-label="Drop an image here or click to browse for image classification">
           <p>Drop an image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
@@ -24118,6 +25590,81 @@ function postprocessResults(output) {
   return topK(probs, 5);
 }
 
+function formatBytes(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function showProgress(filename) {
+  const el = document.getElementById('progressBar');
+  el.hidden = false;
+  document.getElementById('progressFilename').textContent = filename;
+  document.getElementById('progressStats').textContent = '0%';
+  const fill = document.getElementById('progressFill');
+  fill.style.width = '0%';
+  fill.className = 'progress-fill';
+}
+
+function updateProgress(loaded, total) {
+  const fill = document.getElementById('progressFill');
+  const stats = document.getElementById('progressStats');
+  if (total && total > 0) {
+    fill.classList.remove('indeterminate');
+    const pct = Math.min(100, (loaded / total) * 100);
+    fill.style.width = pct.toFixed(1) + '%';
+    stats.textContent = formatBytes(loaded) + ' / ' + formatBytes(total) + '  \\u00b7  ' + pct.toFixed(0) + '%';
+  } else {
+    if (!fill.classList.contains('indeterminate')) fill.classList.add('indeterminate');
+    stats.textContent = formatBytes(loaded);
+  }
+}
+
+function completeProgress(finalSize) {
+  const fill = document.getElementById('progressFill');
+  fill.classList.remove('indeterminate');
+  fill.classList.add('done');
+  fill.style.width = '100%';
+  document.getElementById('progressStats').textContent = formatBytes(finalSize);
+}
+
+async function fetchWithProgress(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('HTTP ' + res.status + ': ' + res.statusText);
+  const contentLength = res.headers.get('Content-Length');
+  const total = contentLength ? parseInt(contentLength, 10) : null;
+  if (!res.body) {
+    const buf = await res.arrayBuffer();
+    updateProgress(buf.byteLength, buf.byteLength);
+    return buf;
+  }
+  const reader = res.body.getReader();
+  if (total && total > 0) {
+    const result = new Uint8Array(total);
+    let offset = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      result.set(value, offset);
+      offset += value.byteLength;
+      updateProgress(offset, total);
+    }
+    return result.buffer;
+  }
+  const chunks = [];
+  let loaded = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    loaded += value.byteLength;
+    updateProgress(loaded, null);
+  }
+  const result = new Uint8Array(loaded);
+  let off = 0;
+  for (const c of chunks) { result.set(c, off); off += c.byteLength; }
+  return result.buffer;
+}
 
 // --- Application ---
 const MODEL_PATH = './mobilenet.onnx';
@@ -24200,18 +25747,59 @@ function renderResults(results) {
   }
 }
 
-async function init() {
+const modelDropZone = document.getElementById('modelDropZone');
+const modelFileInput = document.getElementById('modelFileInput');
+
+modelDropZone.addEventListener('click', () => modelFileInput.click());
+modelDropZone.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); modelFileInput.click(); }
+});
+modelDropZone.addEventListener('dragover', (e) => { e.preventDefault(); modelDropZone.classList.add('drag-over'); });
+modelDropZone.addEventListener('dragleave', () => { modelDropZone.classList.remove('drag-over'); });
+modelDropZone.addEventListener('drop', (e) => {
+  e.preventDefault(); modelDropZone.classList.remove('drag-over');
+  const files = Array.from(e.dataTransfer.files);
+  if (files.length > 0) handleModelFiles(files);
+});
+modelFileInput.addEventListener('change', () => { const files = Array.from(modelFileInput.files); if (files.length > 0) handleModelFiles(files); });
+
+async function handleModelFiles(files) {
+  // Separate model file from external data files
+  const modelFile = files.find(f => f.name.endsWith('.onnx') || f.name.endsWith('.tflite'));
+  if (!modelFile) {
+    updateStatus('No .onnx or .tflite model file found');
+    return;
+  }
+  const dataFiles = files.filter(f => f !== modelFile);
+
+  modelDropZone.hidden = true;
+  showProgress(modelFile.name);
   updateStatus('Loading model...');
   try {
-    session = await createSession(MODEL_PATH);
+    const buf = await modelFile.arrayBuffer();
+    completeProgress(buf.byteLength);
+
+    // Load external data files if present
+    const externalData = [];
+    for (const df of dataFiles) {
+      showProgress(df.name);
+      const dataBuf = await df.arrayBuffer();
+      completeProgress(dataBuf.byteLength);
+      externalData.push({ path: df.name, data: new Uint8Array(dataBuf) });
+    }
+
+    updateStatus('Creating session...');
+    session = await createSession(buf, externalData.length > 0 ? externalData : undefined);
     updateStatus('mobilenet \\u00b7 Ready');
+    document.getElementById('dropZone').hidden = false;
   } catch (e) {
     updateStatus('Failed to load model');
     console.error('Model load error:', e);
+    modelDropZone.hidden = false;
   }
 }
 
-init();
+
   </script>
 </body>
 </html>
@@ -24224,8 +25812,10 @@ Generated by [webai.js](https://github.com/ibelem/webai.js)
 ## Quick Start
 
 1. Copy your model file (\`mobilenet.onnx\`) into this directory
-2. Start a local server: \`npx serve .\` (or any static file server)
+2. Start a local HTTPS server: \`npx serve --ssl .\` (or any static file server with HTTPS)
 3. Open \`index.html\` in your browser
+
+> **Note:** WebGPU and WebNN require a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts) (HTTPS) to run. Use HTTPS even for localhost.
 
 ## How It Works
 
@@ -24317,7 +25907,6 @@ body {
 }
 
 main {
-  max-width: 960px;
   margin: 0 auto;
   padding: var(--webai-space-8) var(--webai-space-4);
 }
@@ -24378,6 +25967,21 @@ h2 {
   color: var(--webai-text-muted);
   font-size: var(--webai-font-size-sm);
   margin-top: var(--webai-space-2);
+}
+
+/* Model upload drop zone */
+.model-drop-zone {
+  border-color: var(--webai-accent);
+  border-style: dashed;
+  background: color-mix(in srgb, var(--webai-accent) 5%, transparent);
+  margin-bottom: var(--webai-space-4);
+}
+
+.model-drop-zone:hover,
+.model-drop-zone:focus-visible,
+.model-drop-zone.drag-over {
+  border-color: var(--webai-accent);
+  background: color-mix(in srgb, var(--webai-accent) 10%, transparent);
 }
 
 /* Preview */
@@ -24920,6 +26524,23 @@ h2 {
 
 .run-model-btn:hover { opacity: 0.9; }
 .run-model-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Load Model button (remote models — two-step flow) */
+.load-model-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--webai-space-2);
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-3) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  font-size: var(--webai-font-size-lg);
+  cursor: pointer;
+  margin-bottom: var(--webai-space-4);
+}
+
+.load-model-btn:hover { opacity: 0.9; }
 /* Canvas overlay */
 .preview-wrapper {
   position: relative;
@@ -25008,7 +26629,14 @@ h2 {
 
     <div class="container">
       <div>
-        <div class="drop-zone" id="dropZone" role="button" tabindex="0"
+        <div class="drop-zone model-drop-zone" id="modelDropZone" role="button" tabindex="0"
+             aria-label="Drop model files here or click to browse">
+          <p>Drop model files (.onnx + data) here or click to browse</p>
+          <p class="hint">Supports .onnx model files (+ external data)</p>
+          <input type="file" id="modelFileInput" accept=".onnx,.onnx_data,.bin" multiple style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1">
+        </div>
+
+        <div class="drop-zone" id="dropZone" role="button" tabindex="0" hidden
              aria-label="Drop an image here or click to browse for feature extraction">
           <p>Drop an image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
@@ -25163,7 +26791,7 @@ function preprocessImage(
  * Create an ONNX Runtime Web inference session with backend selection.
  * The execution provider list determines hardware acceleration priority.
  */
-async function createSession(modelPath) {
+async function createSession(modelPath, externalData) {
   // Read backend from the runtime <select> element
   const backendSelect = document.getElementById('backend');
   const backend = backendSelect ? backendSelect.value : 'webnn-gpu';
@@ -25188,9 +26816,11 @@ async function createSession(modelPath) {
       break;
   }
 
-  const session = await ort.InferenceSession.create(modelPath, {
-    executionProviders: providers,
-  });
+  const opts = { executionProviders: providers };
+  if (externalData && externalData.length > 0) {
+    opts.externalData = externalData;
+  }
+  const session = await ort.InferenceSession.create(modelPath, opts);
 
   // Log which backend was selected
   console.log('Inference session created');
@@ -25248,6 +26878,81 @@ function postprocessEmbeddings(output) {
   return output instanceof Float32Array ? output : new Float32Array(output);
 }
 
+function formatBytes(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function showProgress(filename) {
+  const el = document.getElementById('progressBar');
+  el.hidden = false;
+  document.getElementById('progressFilename').textContent = filename;
+  document.getElementById('progressStats').textContent = '0%';
+  const fill = document.getElementById('progressFill');
+  fill.style.width = '0%';
+  fill.className = 'progress-fill';
+}
+
+function updateProgress(loaded, total) {
+  const fill = document.getElementById('progressFill');
+  const stats = document.getElementById('progressStats');
+  if (total && total > 0) {
+    fill.classList.remove('indeterminate');
+    const pct = Math.min(100, (loaded / total) * 100);
+    fill.style.width = pct.toFixed(1) + '%';
+    stats.textContent = formatBytes(loaded) + ' / ' + formatBytes(total) + '  \\u00b7  ' + pct.toFixed(0) + '%';
+  } else {
+    if (!fill.classList.contains('indeterminate')) fill.classList.add('indeterminate');
+    stats.textContent = formatBytes(loaded);
+  }
+}
+
+function completeProgress(finalSize) {
+  const fill = document.getElementById('progressFill');
+  fill.classList.remove('indeterminate');
+  fill.classList.add('done');
+  fill.style.width = '100%';
+  document.getElementById('progressStats').textContent = formatBytes(finalSize);
+}
+
+async function fetchWithProgress(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('HTTP ' + res.status + ': ' + res.statusText);
+  const contentLength = res.headers.get('Content-Length');
+  const total = contentLength ? parseInt(contentLength, 10) : null;
+  if (!res.body) {
+    const buf = await res.arrayBuffer();
+    updateProgress(buf.byteLength, buf.byteLength);
+    return buf;
+  }
+  const reader = res.body.getReader();
+  if (total && total > 0) {
+    const result = new Uint8Array(total);
+    let offset = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      result.set(value, offset);
+      offset += value.byteLength;
+      updateProgress(offset, total);
+    }
+    return result.buffer;
+  }
+  const chunks = [];
+  let loaded = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    loaded += value.byteLength;
+    updateProgress(loaded, null);
+  }
+  const result = new Uint8Array(loaded);
+  let off = 0;
+  for (const c of chunks) { result.set(c, off); off += c.byteLength; }
+  return result.buffer;
+}
 
 // --- Application ---
 const MODEL_PATH = './clip-vit.onnx';
@@ -25328,18 +27033,59 @@ function renderEmbedding(embedding) {
     '</div>';
 }
 
-async function init() {
+const modelDropZone = document.getElementById('modelDropZone');
+const modelFileInput = document.getElementById('modelFileInput');
+
+modelDropZone.addEventListener('click', () => modelFileInput.click());
+modelDropZone.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); modelFileInput.click(); }
+});
+modelDropZone.addEventListener('dragover', (e) => { e.preventDefault(); modelDropZone.classList.add('drag-over'); });
+modelDropZone.addEventListener('dragleave', () => { modelDropZone.classList.remove('drag-over'); });
+modelDropZone.addEventListener('drop', (e) => {
+  e.preventDefault(); modelDropZone.classList.remove('drag-over');
+  const files = Array.from(e.dataTransfer.files);
+  if (files.length > 0) handleModelFiles(files);
+});
+modelFileInput.addEventListener('change', () => { const files = Array.from(modelFileInput.files); if (files.length > 0) handleModelFiles(files); });
+
+async function handleModelFiles(files) {
+  // Separate model file from external data files
+  const modelFile = files.find(f => f.name.endsWith('.onnx') || f.name.endsWith('.tflite'));
+  if (!modelFile) {
+    updateStatus('No .onnx or .tflite model file found');
+    return;
+  }
+  const dataFiles = files.filter(f => f !== modelFile);
+
+  modelDropZone.hidden = true;
+  showProgress(modelFile.name);
   updateStatus('Loading model...');
   try {
-    session = await createSession(MODEL_PATH);
+    const buf = await modelFile.arrayBuffer();
+    completeProgress(buf.byteLength);
+
+    // Load external data files if present
+    const externalData = [];
+    for (const df of dataFiles) {
+      showProgress(df.name);
+      const dataBuf = await df.arrayBuffer();
+      completeProgress(dataBuf.byteLength);
+      externalData.push({ path: df.name, data: new Uint8Array(dataBuf) });
+    }
+
+    updateStatus('Creating session...');
+    session = await createSession(buf, externalData.length > 0 ? externalData : undefined);
     updateStatus('clip-vit \\u00b7 Ready');
+    document.getElementById('dropZone').hidden = false;
   } catch (e) {
     updateStatus('Failed to load model');
     console.error('Model load error:', e);
+    modelDropZone.hidden = false;
   }
 }
 
-init();
+
   </script>
 </body>
 </html>
@@ -25352,8 +27098,10 @@ Generated by [webai.js](https://github.com/ibelem/webai.js)
 ## Quick Start
 
 1. Copy your model file (\`clip-vit.onnx\`) into this directory
-2. Start a local server: \`npx serve .\` (or any static file server)
+2. Start a local HTTPS server: \`npx serve --ssl .\` (or any static file server with HTTPS)
 3. Open \`index.html\` in your browser
+
+> **Note:** WebGPU and WebNN require a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts) (HTTPS) to run. Use HTTPS even for localhost.
 
 ## How It Works
 
@@ -25445,7 +27193,6 @@ body {
 }
 
 main {
-  max-width: 960px;
   margin: 0 auto;
   padding: var(--webai-space-8) var(--webai-space-4);
 }
@@ -25506,6 +27253,21 @@ h2 {
   color: var(--webai-text-muted);
   font-size: var(--webai-font-size-sm);
   margin-top: var(--webai-space-2);
+}
+
+/* Model upload drop zone */
+.model-drop-zone {
+  border-color: var(--webai-accent);
+  border-style: dashed;
+  background: color-mix(in srgb, var(--webai-accent) 5%, transparent);
+  margin-bottom: var(--webai-space-4);
+}
+
+.model-drop-zone:hover,
+.model-drop-zone:focus-visible,
+.model-drop-zone.drag-over {
+  border-color: var(--webai-accent);
+  background: color-mix(in srgb, var(--webai-accent) 10%, transparent);
 }
 
 /* Preview */
@@ -26048,6 +27810,23 @@ h2 {
 
 .run-model-btn:hover { opacity: 0.9; }
 .run-model-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Load Model button (remote models — two-step flow) */
+.load-model-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--webai-space-2);
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-3) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  font-size: var(--webai-font-size-lg);
+  cursor: pointer;
+  margin-bottom: var(--webai-space-4);
+}
+
+.load-model-btn:hover { opacity: 0.9; }
 /* Canvas overlay */
 .preview-wrapper {
   position: relative;
@@ -26136,7 +27915,14 @@ h2 {
 
     <div class="container">
       <div>
-        <div class="drop-zone" id="dropZone" role="button" tabindex="0"
+        <div class="drop-zone model-drop-zone" id="modelDropZone" role="button" tabindex="0"
+             aria-label="Drop model files here or click to browse">
+          <p>Drop model files (.onnx + data) here or click to browse</p>
+          <p class="hint">Supports .onnx model files (+ external data)</p>
+          <input type="file" id="modelFileInput" accept=".onnx,.onnx_data,.bin" multiple style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1">
+        </div>
+
+        <div class="drop-zone" id="dropZone" role="button" tabindex="0" hidden
              aria-label="Drop an image here or click to browse for image segmentation">
           <p>Drop an image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
@@ -26294,7 +28080,7 @@ function preprocessImage(
  * Create an ONNX Runtime Web inference session with backend selection.
  * The execution provider list determines hardware acceleration priority.
  */
-async function createSession(modelPath) {
+async function createSession(modelPath, externalData) {
   // Read backend from the runtime <select> element
   const backendSelect = document.getElementById('backend');
   const backend = backendSelect ? backendSelect.value : 'webnn-gpu';
@@ -26319,9 +28105,11 @@ async function createSession(modelPath) {
       break;
   }
 
-  const session = await ort.InferenceSession.create(modelPath, {
-    executionProviders: providers,
-  });
+  const opts = { executionProviders: providers };
+  if (externalData && externalData.length > 0) {
+    opts.externalData = externalData;
+  }
+  const session = await ort.InferenceSession.create(modelPath, opts);
 
   // Log which backend was selected
   console.log('Inference session created');
@@ -26418,6 +28206,81 @@ function postprocessSegmentation(
   return argmaxMask(output, numClasses, height, width);
 }
 
+function formatBytes(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function showProgress(filename) {
+  const el = document.getElementById('progressBar');
+  el.hidden = false;
+  document.getElementById('progressFilename').textContent = filename;
+  document.getElementById('progressStats').textContent = '0%';
+  const fill = document.getElementById('progressFill');
+  fill.style.width = '0%';
+  fill.className = 'progress-fill';
+}
+
+function updateProgress(loaded, total) {
+  const fill = document.getElementById('progressFill');
+  const stats = document.getElementById('progressStats');
+  if (total && total > 0) {
+    fill.classList.remove('indeterminate');
+    const pct = Math.min(100, (loaded / total) * 100);
+    fill.style.width = pct.toFixed(1) + '%';
+    stats.textContent = formatBytes(loaded) + ' / ' + formatBytes(total) + '  \\u00b7  ' + pct.toFixed(0) + '%';
+  } else {
+    if (!fill.classList.contains('indeterminate')) fill.classList.add('indeterminate');
+    stats.textContent = formatBytes(loaded);
+  }
+}
+
+function completeProgress(finalSize) {
+  const fill = document.getElementById('progressFill');
+  fill.classList.remove('indeterminate');
+  fill.classList.add('done');
+  fill.style.width = '100%';
+  document.getElementById('progressStats').textContent = formatBytes(finalSize);
+}
+
+async function fetchWithProgress(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('HTTP ' + res.status + ': ' + res.statusText);
+  const contentLength = res.headers.get('Content-Length');
+  const total = contentLength ? parseInt(contentLength, 10) : null;
+  if (!res.body) {
+    const buf = await res.arrayBuffer();
+    updateProgress(buf.byteLength, buf.byteLength);
+    return buf;
+  }
+  const reader = res.body.getReader();
+  if (total && total > 0) {
+    const result = new Uint8Array(total);
+    let offset = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      result.set(value, offset);
+      offset += value.byteLength;
+      updateProgress(offset, total);
+    }
+    return result.buffer;
+  }
+  const chunks = [];
+  let loaded = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    loaded += value.byteLength;
+    updateProgress(loaded, null);
+  }
+  const result = new Uint8Array(loaded);
+  let off = 0;
+  for (const c of chunks) { result.set(c, off); off += c.byteLength; }
+  return result.buffer;
+}
 
 // --- Application ---
 const COLORS = [
@@ -26537,18 +28400,59 @@ function renderMask(mask, displayW, displayH) {
   }
 }
 
-async function init() {
+const modelDropZone = document.getElementById('modelDropZone');
+const modelFileInput = document.getElementById('modelFileInput');
+
+modelDropZone.addEventListener('click', () => modelFileInput.click());
+modelDropZone.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); modelFileInput.click(); }
+});
+modelDropZone.addEventListener('dragover', (e) => { e.preventDefault(); modelDropZone.classList.add('drag-over'); });
+modelDropZone.addEventListener('dragleave', () => { modelDropZone.classList.remove('drag-over'); });
+modelDropZone.addEventListener('drop', (e) => {
+  e.preventDefault(); modelDropZone.classList.remove('drag-over');
+  const files = Array.from(e.dataTransfer.files);
+  if (files.length > 0) handleModelFiles(files);
+});
+modelFileInput.addEventListener('change', () => { const files = Array.from(modelFileInput.files); if (files.length > 0) handleModelFiles(files); });
+
+async function handleModelFiles(files) {
+  // Separate model file from external data files
+  const modelFile = files.find(f => f.name.endsWith('.onnx') || f.name.endsWith('.tflite'));
+  if (!modelFile) {
+    updateStatus('No .onnx or .tflite model file found');
+    return;
+  }
+  const dataFiles = files.filter(f => f !== modelFile);
+
+  modelDropZone.hidden = true;
+  showProgress(modelFile.name);
   updateStatus('Loading model...');
   try {
-    session = await createSession(MODEL_PATH);
+    const buf = await modelFile.arrayBuffer();
+    completeProgress(buf.byteLength);
+
+    // Load external data files if present
+    const externalData = [];
+    for (const df of dataFiles) {
+      showProgress(df.name);
+      const dataBuf = await df.arrayBuffer();
+      completeProgress(dataBuf.byteLength);
+      externalData.push({ path: df.name, data: new Uint8Array(dataBuf) });
+    }
+
+    updateStatus('Creating session...');
+    session = await createSession(buf, externalData.length > 0 ? externalData : undefined);
     updateStatus('deeplabv3 \\u00b7 Ready');
+    document.getElementById('dropZone').hidden = false;
   } catch (e) {
     updateStatus('Failed to load model');
     console.error('Model load error:', e);
+    modelDropZone.hidden = false;
   }
 }
 
-init();
+
   </script>
 </body>
 </html>
@@ -26561,8 +28465,10 @@ Generated by [webai.js](https://github.com/ibelem/webai.js)
 ## Quick Start
 
 1. Copy your model file (\`deeplabv3.onnx\`) into this directory
-2. Start a local server: \`npx serve .\` (or any static file server)
+2. Start a local HTTPS server: \`npx serve --ssl .\` (or any static file server with HTTPS)
 3. Open \`index.html\` in your browser
+
+> **Note:** WebGPU and WebNN require a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts) (HTTPS) to run. Use HTTPS even for localhost.
 
 ## How It Works
 
@@ -26681,7 +28587,6 @@ body {
 }
 
 main {
-  max-width: 960px;
   margin: 0 auto;
   padding: var(--webai-space-8) var(--webai-space-4);
 }
@@ -26742,6 +28647,21 @@ h2 {
   color: var(--webai-text-muted);
   font-size: var(--webai-font-size-sm);
   margin-top: var(--webai-space-2);
+}
+
+/* Model upload drop zone */
+.model-drop-zone {
+  border-color: var(--webai-accent);
+  border-style: dashed;
+  background: color-mix(in srgb, var(--webai-accent) 5%, transparent);
+  margin-bottom: var(--webai-space-4);
+}
+
+.model-drop-zone:hover,
+.model-drop-zone:focus-visible,
+.model-drop-zone.drag-over {
+  border-color: var(--webai-accent);
+  background: color-mix(in srgb, var(--webai-accent) 10%, transparent);
 }
 
 /* Preview */
@@ -27284,6 +29204,23 @@ h2 {
 
 .run-model-btn:hover { opacity: 0.9; }
 .run-model-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Load Model button (remote models — two-step flow) */
+.load-model-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--webai-space-2);
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-3) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  font-size: var(--webai-font-size-lg);
+  cursor: pointer;
+  margin-bottom: var(--webai-space-4);
+}
+
+.load-model-btn:hover { opacity: 0.9; }
 
 === pages/index.vue ===
 <script setup>
@@ -27510,7 +29447,7 @@ import * as ort from 'onnxruntime-web';
  * Create an ONNX Runtime Web inference session with backend selection.
  * The execution provider list determines hardware acceleration priority.
  */
-export async function createSession(modelPath) {
+export async function createSession(modelPath, externalData) {
   // Read backend from the runtime <select> element
   const backendSelect = document.getElementById('backend');
   const backend = backendSelect ? backendSelect.value : 'webnn-gpu';
@@ -27535,9 +29472,11 @@ export async function createSession(modelPath) {
       break;
   }
 
-  const session = await ort.InferenceSession.create(modelPath, {
-    executionProviders: providers,
-  });
+  const opts = { executionProviders: providers };
+  if (externalData && externalData.length > 0) {
+    opts.externalData = externalData;
+  }
+  const session = await ort.InferenceSession.create(modelPath, opts);
 
   // Log which backend was selected
   console.log('Inference session created');
@@ -27651,6 +29590,8 @@ npm install
 cp /path/to/mobilenet.onnx public/
 npm run dev
 \`\`\`
+
+> **Note:** WebGPU and WebNN require a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts) (HTTPS). Vite dev server supports HTTPS via \`--https\` flag or \`@vitejs/plugin-basic-ssl\`.
 
 ## How It Works
 
@@ -27777,7 +29718,6 @@ body {
 }
 
 main {
-  max-width: 960px;
   margin: 0 auto;
   padding: var(--webai-space-8) var(--webai-space-4);
 }
@@ -27838,6 +29778,21 @@ h2 {
   color: var(--webai-text-muted);
   font-size: var(--webai-font-size-sm);
   margin-top: var(--webai-space-2);
+}
+
+/* Model upload drop zone */
+.model-drop-zone {
+  border-color: var(--webai-accent);
+  border-style: dashed;
+  background: color-mix(in srgb, var(--webai-accent) 5%, transparent);
+  margin-bottom: var(--webai-space-4);
+}
+
+.model-drop-zone:hover,
+.model-drop-zone:focus-visible,
+.model-drop-zone.drag-over {
+  border-color: var(--webai-accent);
+  background: color-mix(in srgb, var(--webai-accent) 10%, transparent);
 }
 
 /* Preview */
@@ -28380,6 +30335,23 @@ h2 {
 
 .run-model-btn:hover { opacity: 0.9; }
 .run-model-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Load Model button (remote models — two-step flow) */
+.load-model-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--webai-space-2);
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-3) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  font-size: var(--webai-font-size-lg);
+  cursor: pointer;
+  margin-bottom: var(--webai-space-4);
+}
+
+.load-model-btn:hover { opacity: 0.9; }
 
 === pages/index.vue ===
 <script setup lang="ts">
@@ -28562,7 +30534,7 @@ import * as ort from 'onnxruntime-web';
  * Create an ONNX Runtime Web inference session with backend selection.
  * The execution provider list determines hardware acceleration priority.
  */
-export async function createSession(modelPath: string): Promise<ort.InferenceSession> {
+export async function createSession(modelPath: string | ArrayBuffer | Uint8Array, externalData?: Array<{ path: string; data: Uint8Array }>): Promise<ort.InferenceSession> {
   // Read backend from the runtime <select> element
   const backendSelect = document.getElementById('backend') as HTMLSelectElement;
   const backend = backendSelect ? backendSelect.value : 'webnn-gpu';
@@ -28587,9 +30559,11 @@ export async function createSession(modelPath: string): Promise<ort.InferenceSes
       break;
   }
 
-  const session = await ort.InferenceSession.create(modelPath, {
-    executionProviders: providers,
-  });
+  const opts: any = { executionProviders: providers };
+  if (externalData && externalData.length > 0) {
+    opts.externalData = externalData;
+  }
+  const session = await ort.InferenceSession.create(modelPath, opts);
 
   // Log which backend was selected
   console.log('Inference session created');
@@ -28704,6 +30678,8 @@ cp /path/to/bert-sentiment.onnx public/
 npm run dev
 \`\`\`
 
+> **Note:** WebGPU and WebNN require a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts) (HTTPS). Vite dev server supports HTTPS via \`--https\` flag or \`@vitejs/plugin-basic-ssl\`.
+
 ## How It Works
 
 1. **Preprocessing**: Image is resized to 224x224px, normalized with
@@ -28801,7 +30777,6 @@ body {
 }
 
 main {
-  max-width: 960px;
   margin: 0 auto;
   padding: var(--webai-space-8) var(--webai-space-4);
 }
@@ -28862,6 +30837,21 @@ h2 {
   color: var(--webai-text-muted);
   font-size: var(--webai-font-size-sm);
   margin-top: var(--webai-space-2);
+}
+
+/* Model upload drop zone */
+.model-drop-zone {
+  border-color: var(--webai-accent);
+  border-style: dashed;
+  background: color-mix(in srgb, var(--webai-accent) 5%, transparent);
+  margin-bottom: var(--webai-space-4);
+}
+
+.model-drop-zone:hover,
+.model-drop-zone:focus-visible,
+.model-drop-zone.drag-over {
+  border-color: var(--webai-accent);
+  background: color-mix(in srgb, var(--webai-accent) 10%, transparent);
 }
 
 /* Preview */
@@ -29404,6 +31394,23 @@ h2 {
 
 .run-model-btn:hover { opacity: 0.9; }
 .run-model-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Load Model button (remote models — two-step flow) */
+.load-model-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--webai-space-2);
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-3) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  font-size: var(--webai-font-size-lg);
+  cursor: pointer;
+  margin-bottom: var(--webai-space-4);
+}
+
+.load-model-btn:hover { opacity: 0.9; }
 /* Canvas overlay */
 .preview-wrapper {
   position: relative;
@@ -29492,7 +31499,14 @@ h2 {
 
     <div class="container">
       <div>
-        <div class="drop-zone" id="dropZone" role="button" tabindex="0"
+        <div class="drop-zone model-drop-zone" id="modelDropZone" role="button" tabindex="0"
+             aria-label="Drop model files here or click to browse">
+          <p>Drop model files (.onnx + data) here or click to browse</p>
+          <p class="hint">Supports .onnx model files (+ external data)</p>
+          <input type="file" id="modelFileInput" accept=".onnx,.onnx_data,.bin" multiple style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1">
+        </div>
+
+        <div class="drop-zone" id="dropZone" role="button" tabindex="0" hidden
              aria-label="Drop an image here or click to browse for object detection">
           <p>Drop an image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
@@ -29650,7 +31664,7 @@ function preprocessImage(
  * Create an ONNX Runtime Web inference session with backend selection.
  * The execution provider list determines hardware acceleration priority.
  */
-async function createSession(modelPath) {
+async function createSession(modelPath, externalData) {
   // Read backend from the runtime <select> element
   const backendSelect = document.getElementById('backend');
   const backend = backendSelect ? backendSelect.value : 'webnn-gpu';
@@ -29675,9 +31689,11 @@ async function createSession(modelPath) {
       break;
   }
 
-  const session = await ort.InferenceSession.create(modelPath, {
-    executionProviders: providers,
-  });
+  const opts = { executionProviders: providers };
+  if (externalData && externalData.length > 0) {
+    opts.externalData = externalData;
+  }
+  const session = await ort.InferenceSession.create(modelPath, opts);
 
   // Log which backend was selected
   console.log('Inference session created');
@@ -29842,6 +31858,81 @@ function postprocessDetections(
   return keptIndices.map((i) => allBoxes[i]);
 }
 
+function formatBytes(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function showProgress(filename) {
+  const el = document.getElementById('progressBar');
+  el.hidden = false;
+  document.getElementById('progressFilename').textContent = filename;
+  document.getElementById('progressStats').textContent = '0%';
+  const fill = document.getElementById('progressFill');
+  fill.style.width = '0%';
+  fill.className = 'progress-fill';
+}
+
+function updateProgress(loaded, total) {
+  const fill = document.getElementById('progressFill');
+  const stats = document.getElementById('progressStats');
+  if (total && total > 0) {
+    fill.classList.remove('indeterminate');
+    const pct = Math.min(100, (loaded / total) * 100);
+    fill.style.width = pct.toFixed(1) + '%';
+    stats.textContent = formatBytes(loaded) + ' / ' + formatBytes(total) + '  \\u00b7  ' + pct.toFixed(0) + '%';
+  } else {
+    if (!fill.classList.contains('indeterminate')) fill.classList.add('indeterminate');
+    stats.textContent = formatBytes(loaded);
+  }
+}
+
+function completeProgress(finalSize) {
+  const fill = document.getElementById('progressFill');
+  fill.classList.remove('indeterminate');
+  fill.classList.add('done');
+  fill.style.width = '100%';
+  document.getElementById('progressStats').textContent = formatBytes(finalSize);
+}
+
+async function fetchWithProgress(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('HTTP ' + res.status + ': ' + res.statusText);
+  const contentLength = res.headers.get('Content-Length');
+  const total = contentLength ? parseInt(contentLength, 10) : null;
+  if (!res.body) {
+    const buf = await res.arrayBuffer();
+    updateProgress(buf.byteLength, buf.byteLength);
+    return buf;
+  }
+  const reader = res.body.getReader();
+  if (total && total > 0) {
+    const result = new Uint8Array(total);
+    let offset = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      result.set(value, offset);
+      offset += value.byteLength;
+      updateProgress(offset, total);
+    }
+    return result.buffer;
+  }
+  const chunks = [];
+  let loaded = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    loaded += value.byteLength;
+    updateProgress(loaded, null);
+  }
+  const result = new Uint8Array(loaded);
+  let off = 0;
+  for (const c of chunks) { result.set(c, off); off += c.byteLength; }
+  return result.buffer;
+}
 
 // --- Application ---
 const COLORS = [
@@ -29969,18 +32060,59 @@ function renderDetections(boxes, imgW, imgH) {
   }
 }
 
-async function init() {
+const modelDropZone = document.getElementById('modelDropZone');
+const modelFileInput = document.getElementById('modelFileInput');
+
+modelDropZone.addEventListener('click', () => modelFileInput.click());
+modelDropZone.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); modelFileInput.click(); }
+});
+modelDropZone.addEventListener('dragover', (e) => { e.preventDefault(); modelDropZone.classList.add('drag-over'); });
+modelDropZone.addEventListener('dragleave', () => { modelDropZone.classList.remove('drag-over'); });
+modelDropZone.addEventListener('drop', (e) => {
+  e.preventDefault(); modelDropZone.classList.remove('drag-over');
+  const files = Array.from(e.dataTransfer.files);
+  if (files.length > 0) handleModelFiles(files);
+});
+modelFileInput.addEventListener('change', () => { const files = Array.from(modelFileInput.files); if (files.length > 0) handleModelFiles(files); });
+
+async function handleModelFiles(files) {
+  // Separate model file from external data files
+  const modelFile = files.find(f => f.name.endsWith('.onnx') || f.name.endsWith('.tflite'));
+  if (!modelFile) {
+    updateStatus('No .onnx or .tflite model file found');
+    return;
+  }
+  const dataFiles = files.filter(f => f !== modelFile);
+
+  modelDropZone.hidden = true;
+  showProgress(modelFile.name);
   updateStatus('Loading model...');
   try {
-    session = await createSession(MODEL_PATH);
+    const buf = await modelFile.arrayBuffer();
+    completeProgress(buf.byteLength);
+
+    // Load external data files if present
+    const externalData = [];
+    for (const df of dataFiles) {
+      showProgress(df.name);
+      const dataBuf = await df.arrayBuffer();
+      completeProgress(dataBuf.byteLength);
+      externalData.push({ path: df.name, data: new Uint8Array(dataBuf) });
+    }
+
+    updateStatus('Creating session...');
+    session = await createSession(buf, externalData.length > 0 ? externalData : undefined);
     updateStatus('yolov8n \\u00b7 Ready');
+    document.getElementById('dropZone').hidden = false;
   } catch (e) {
     updateStatus('Failed to load model');
     console.error('Model load error:', e);
+    modelDropZone.hidden = false;
   }
 }
 
-init();
+
   </script>
 </body>
 </html>
@@ -29993,8 +32125,10 @@ Generated by [webai.js](https://github.com/ibelem/webai.js)
 ## Quick Start
 
 1. Copy your model file (\`yolov8n.onnx\`) into this directory
-2. Start a local server: \`npx serve .\` (or any static file server)
+2. Start a local HTTPS server: \`npx serve --ssl .\` (or any static file server with HTTPS)
 3. Open \`index.html\` in your browser
+
+> **Note:** WebGPU and WebNN require a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts) (HTTPS) to run. Use HTTPS even for localhost.
 
 ## How It Works
 
@@ -30228,7 +32362,6 @@ body {
 }
 
 main {
-  max-width: 960px;
   margin: 0 auto;
   padding: var(--webai-space-8) var(--webai-space-4);
 }
@@ -30289,6 +32422,21 @@ h2 {
   color: var(--webai-text-muted);
   font-size: var(--webai-font-size-sm);
   margin-top: var(--webai-space-2);
+}
+
+/* Model upload drop zone */
+.model-drop-zone {
+  border-color: var(--webai-accent);
+  border-style: dashed;
+  background: color-mix(in srgb, var(--webai-accent) 5%, transparent);
+  margin-bottom: var(--webai-space-4);
+}
+
+.model-drop-zone:hover,
+.model-drop-zone:focus-visible,
+.model-drop-zone.drag-over {
+  border-color: var(--webai-accent);
+  background: color-mix(in srgb, var(--webai-accent) 10%, transparent);
 }
 
 /* Preview */
@@ -30832,6 +32980,23 @@ h2 {
 .run-model-btn:hover { opacity: 0.9; }
 .run-model-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
+/* Load Model button (remote models — two-step flow) */
+.load-model-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--webai-space-2);
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-3) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  font-size: var(--webai-font-size-lg);
+  cursor: pointer;
+  margin-bottom: var(--webai-space-4);
+}
+
+.load-model-btn:hover { opacity: 0.9; }
+
 === src/lib/preprocess.js ===
 /**
  * Resize image using bilinear interpolation.
@@ -30957,7 +33122,7 @@ import * as ort from 'onnxruntime-web';
  * Create an ONNX Runtime Web inference session with backend selection.
  * The execution provider list determines hardware acceleration priority.
  */
-export async function createSession(modelPath) {
+export async function createSession(modelPath, externalData) {
   // Read backend from the runtime <select> element
   const backendSelect = document.getElementById('backend');
   const backend = backendSelect ? backendSelect.value : 'webnn-gpu';
@@ -30982,9 +33147,11 @@ export async function createSession(modelPath) {
       break;
   }
 
-  const session = await ort.InferenceSession.create(modelPath, {
-    executionProviders: providers,
-  });
+  const opts = { executionProviders: providers };
+  if (externalData && externalData.length > 0) {
+    opts.externalData = externalData;
+  }
+  const session = await ort.InferenceSession.create(modelPath, opts);
 
   // Log which backend was selected
   console.log('Inference session created');
@@ -31096,6 +33263,8 @@ Generated by [webai.js](https://github.com/ibelem/webai.js)
 npm install
 npm run dev
 \`\`\`
+
+> **Note:** WebGPU and WebNN require a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts) (HTTPS). Use HTTPS even for localhost.
 
 ## How It Works
 
@@ -31317,7 +33486,6 @@ body {
 }
 
 main {
-  max-width: 960px;
   margin: 0 auto;
   padding: var(--webai-space-8) var(--webai-space-4);
 }
@@ -31378,6 +33546,21 @@ h2 {
   color: var(--webai-text-muted);
   font-size: var(--webai-font-size-sm);
   margin-top: var(--webai-space-2);
+}
+
+/* Model upload drop zone */
+.model-drop-zone {
+  border-color: var(--webai-accent);
+  border-style: dashed;
+  background: color-mix(in srgb, var(--webai-accent) 5%, transparent);
+  margin-bottom: var(--webai-space-4);
+}
+
+.model-drop-zone:hover,
+.model-drop-zone:focus-visible,
+.model-drop-zone.drag-over {
+  border-color: var(--webai-accent);
+  background: color-mix(in srgb, var(--webai-accent) 10%, transparent);
 }
 
 /* Preview */
@@ -31921,6 +34104,23 @@ h2 {
 .run-model-btn:hover { opacity: 0.9; }
 .run-model-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
+/* Load Model button (remote models — two-step flow) */
+.load-model-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--webai-space-2);
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-3) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  font-size: var(--webai-font-size-lg);
+  cursor: pointer;
+  margin-bottom: var(--webai-space-4);
+}
+
+.load-model-btn:hover { opacity: 0.9; }
+
 === src/lib/preprocess.ts ===
 /**
  * BPE Tokenizer: loads tokenizer.json and encodes text to token IDs.
@@ -32029,7 +34229,7 @@ import * as ort from 'onnxruntime-web';
  * Create an ONNX Runtime Web inference session with backend selection.
  * The execution provider list determines hardware acceleration priority.
  */
-export async function createSession(modelPath: string): Promise<ort.InferenceSession> {
+export async function createSession(modelPath: string | ArrayBuffer | Uint8Array, externalData?: Array<{ path: string; data: Uint8Array }>): Promise<ort.InferenceSession> {
   // Read backend from the runtime <select> element
   const backendSelect = document.getElementById('backend') as HTMLSelectElement;
   const backend = backendSelect ? backendSelect.value : 'webnn-gpu';
@@ -32054,9 +34254,11 @@ export async function createSession(modelPath: string): Promise<ort.InferenceSes
       break;
   }
 
-  const session = await ort.InferenceSession.create(modelPath, {
-    executionProviders: providers,
-  });
+  const opts: any = { executionProviders: providers };
+  if (externalData && externalData.length > 0) {
+    opts.externalData = externalData;
+  }
+  const session = await ort.InferenceSession.create(modelPath, opts);
 
   // Log which backend was selected
   console.log('Inference session created');
@@ -32168,6 +34370,8 @@ Generated by [webai.js](https://github.com/ibelem/webai.js)
 npm install
 npm run dev
 \`\`\`
+
+> **Note:** WebGPU and WebNN require a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts) (HTTPS). Use HTTPS even for localhost.
 
 ## How It Works
 
@@ -32452,7 +34656,6 @@ body {
 }
 
 main {
-  max-width: 960px;
   margin: 0 auto;
   padding: var(--webai-space-8) var(--webai-space-4);
 }
@@ -32513,6 +34716,21 @@ h2 {
   color: var(--webai-text-muted);
   font-size: var(--webai-font-size-sm);
   margin-top: var(--webai-space-2);
+}
+
+/* Model upload drop zone */
+.model-drop-zone {
+  border-color: var(--webai-accent);
+  border-style: dashed;
+  background: color-mix(in srgb, var(--webai-accent) 5%, transparent);
+  margin-bottom: var(--webai-space-4);
+}
+
+.model-drop-zone:hover,
+.model-drop-zone:focus-visible,
+.model-drop-zone.drag-over {
+  border-color: var(--webai-accent);
+  background: color-mix(in srgb, var(--webai-accent) 10%, transparent);
 }
 
 /* Preview */
@@ -33056,6 +35274,23 @@ h2 {
 .run-model-btn:hover { opacity: 0.9; }
 .run-model-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
+/* Load Model button (remote models — two-step flow) */
+.load-model-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--webai-space-2);
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-3) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  font-size: var(--webai-font-size-lg);
+  cursor: pointer;
+  margin-bottom: var(--webai-space-4);
+}
+
+.load-model-btn:hover { opacity: 0.9; }
+
 === src/lib/preprocess.js ===
 /**
  * Resize image using bilinear interpolation.
@@ -33181,7 +35416,7 @@ import * as ort from 'onnxruntime-web';
  * Create an ONNX Runtime Web inference session with backend selection.
  * The execution provider list determines hardware acceleration priority.
  */
-export async function createSession(modelPath) {
+export async function createSession(modelPath, externalData) {
   // Read backend from the runtime <select> element
   const backendSelect = document.getElementById('backend');
   const backend = backendSelect ? backendSelect.value : 'webnn-gpu';
@@ -33206,9 +35441,11 @@ export async function createSession(modelPath) {
       break;
   }
 
-  const session = await ort.InferenceSession.create(modelPath, {
-    executionProviders: providers,
-  });
+  const opts = { executionProviders: providers };
+  if (externalData && externalData.length > 0) {
+    opts.externalData = externalData;
+  }
+  const session = await ort.InferenceSession.create(modelPath, opts);
 
   // Log which backend was selected
   console.log('Inference session created');
@@ -33322,6 +35559,8 @@ npm install
 cp /path/to/mobilenet.onnx public/
 npm run dev
 \`\`\`
+
+> **Note:** WebGPU and WebNN require a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts) (HTTPS). Vite dev server supports HTTPS via \`--https\` flag or \`@vitejs/plugin-basic-ssl\`.
 
 ## How It Works
 
@@ -33549,7 +35788,6 @@ body {
 }
 
 main {
-  max-width: 960px;
   margin: 0 auto;
   padding: var(--webai-space-8) var(--webai-space-4);
 }
@@ -33610,6 +35848,21 @@ h2 {
   color: var(--webai-text-muted);
   font-size: var(--webai-font-size-sm);
   margin-top: var(--webai-space-2);
+}
+
+/* Model upload drop zone */
+.model-drop-zone {
+  border-color: var(--webai-accent);
+  border-style: dashed;
+  background: color-mix(in srgb, var(--webai-accent) 5%, transparent);
+  margin-bottom: var(--webai-space-4);
+}
+
+.model-drop-zone:hover,
+.model-drop-zone:focus-visible,
+.model-drop-zone.drag-over {
+  border-color: var(--webai-accent);
+  background: color-mix(in srgb, var(--webai-accent) 10%, transparent);
 }
 
 /* Preview */
@@ -34153,6 +36406,23 @@ h2 {
 .run-model-btn:hover { opacity: 0.9; }
 .run-model-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
+/* Load Model button (remote models — two-step flow) */
+.load-model-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--webai-space-2);
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-3) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  font-size: var(--webai-font-size-lg);
+  cursor: pointer;
+  margin-bottom: var(--webai-space-4);
+}
+
+.load-model-btn:hover { opacity: 0.9; }
+
 === src/lib/preprocess.ts ===
 /**
  * BPE Tokenizer: loads tokenizer.json and encodes text to token IDs.
@@ -34261,7 +36531,7 @@ import * as ort from 'onnxruntime-web';
  * Create an ONNX Runtime Web inference session with backend selection.
  * The execution provider list determines hardware acceleration priority.
  */
-export async function createSession(modelPath: string): Promise<ort.InferenceSession> {
+export async function createSession(modelPath: string | ArrayBuffer | Uint8Array, externalData?: Array<{ path: string; data: Uint8Array }>): Promise<ort.InferenceSession> {
   // Read backend from the runtime <select> element
   const backendSelect = document.getElementById('backend') as HTMLSelectElement;
   const backend = backendSelect ? backendSelect.value : 'webnn-gpu';
@@ -34286,9 +36556,11 @@ export async function createSession(modelPath: string): Promise<ort.InferenceSes
       break;
   }
 
-  const session = await ort.InferenceSession.create(modelPath, {
-    executionProviders: providers,
-  });
+  const opts: any = { executionProviders: providers };
+  if (externalData && externalData.length > 0) {
+    opts.externalData = externalData;
+  }
+  const session = await ort.InferenceSession.create(modelPath, opts);
 
   // Log which backend was selected
   console.log('Inference session created');
@@ -34403,6 +36675,8 @@ cp /path/to/bert-sentiment.onnx public/
 npm run dev
 \`\`\`
 
+> **Note:** WebGPU and WebNN require a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts) (HTTPS). Vite dev server supports HTTPS via \`--https\` flag or \`@vitejs/plugin-basic-ssl\`.
+
 ## How It Works
 
 1. **Preprocessing**: Image is resized to 224x224px, normalized with
@@ -34501,7 +36775,6 @@ body {
 }
 
 main {
-  max-width: 960px;
   margin: 0 auto;
   padding: var(--webai-space-8) var(--webai-space-4);
 }
@@ -34562,6 +36835,21 @@ h2 {
   color: var(--webai-text-muted);
   font-size: var(--webai-font-size-sm);
   margin-top: var(--webai-space-2);
+}
+
+/* Model upload drop zone */
+.model-drop-zone {
+  border-color: var(--webai-accent);
+  border-style: dashed;
+  background: color-mix(in srgb, var(--webai-accent) 5%, transparent);
+  margin-bottom: var(--webai-space-4);
+}
+
+.model-drop-zone:hover,
+.model-drop-zone:focus-visible,
+.model-drop-zone.drag-over {
+  border-color: var(--webai-accent);
+  background: color-mix(in srgb, var(--webai-accent) 10%, transparent);
 }
 
 /* Preview */
@@ -35104,6 +37392,23 @@ h2 {
 
 .run-model-btn:hover { opacity: 0.9; }
 .run-model-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Load Model button (remote models — two-step flow) */
+.load-model-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--webai-space-2);
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-3) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  font-size: var(--webai-font-size-lg);
+  cursor: pointer;
+  margin-bottom: var(--webai-space-4);
+}
+
+.load-model-btn:hover { opacity: 0.9; }
   </style>
 </head>
 <body>
@@ -35244,7 +37549,7 @@ function tokenizeText(
  * Create an ONNX Runtime Web inference session with backend selection.
  * The execution provider list determines hardware acceleration priority.
  */
-async function createSession(modelPath) {
+async function createSession(modelPath, externalData) {
   // Read backend from the runtime <select> element
   const backendSelect = document.getElementById('backend');
   const backend = backendSelect ? backendSelect.value : 'webnn-gpu';
@@ -35269,9 +37574,11 @@ async function createSession(modelPath) {
       break;
   }
 
-  const session = await ort.InferenceSession.create(modelPath, {
-    executionProviders: providers,
-  });
+  const opts = { executionProviders: providers };
+  if (externalData && externalData.length > 0) {
+    opts.externalData = externalData;
+  }
+  const session = await ort.InferenceSession.create(modelPath, opts);
 
   // Log which backend was selected
   console.log('Inference session created');
@@ -35459,8 +37766,10 @@ Generated by [webai.js](https://github.com/ibelem/webai.js)
 ## Quick Start
 
 1. Copy your model file (\`bert-sentiment.onnx\`) into this directory
-2. Start a local server: \`npx serve .\` (or any static file server)
+2. Start a local HTTPS server: \`npx serve --ssl .\` (or any static file server with HTTPS)
 3. Open \`index.html\` in your browser
+
+> **Note:** WebGPU and WebNN require a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts) (HTTPS) to run. Use HTTPS even for localhost.
 
 ## How It Works
 
@@ -35685,7 +37994,6 @@ body {
 }
 
 main {
-  max-width: 960px;
   margin: 0 auto;
   padding: var(--webai-space-8) var(--webai-space-4);
 }
@@ -35746,6 +38054,21 @@ h2 {
   color: var(--webai-text-muted);
   font-size: var(--webai-font-size-sm);
   margin-top: var(--webai-space-2);
+}
+
+/* Model upload drop zone */
+.model-drop-zone {
+  border-color: var(--webai-accent);
+  border-style: dashed;
+  background: color-mix(in srgb, var(--webai-accent) 5%, transparent);
+  margin-bottom: var(--webai-space-4);
+}
+
+.model-drop-zone:hover,
+.model-drop-zone:focus-visible,
+.model-drop-zone.drag-over {
+  border-color: var(--webai-accent);
+  background: color-mix(in srgb, var(--webai-accent) 10%, transparent);
 }
 
 /* Preview */
@@ -36289,6 +38612,23 @@ h2 {
 .run-model-btn:hover { opacity: 0.9; }
 .run-model-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
+/* Load Model button (remote models — two-step flow) */
+.load-model-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--webai-space-2);
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-3) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  font-size: var(--webai-font-size-lg);
+  cursor: pointer;
+  margin-bottom: var(--webai-space-4);
+}
+
+.load-model-btn:hover { opacity: 0.9; }
+
 === src/lib/preprocess.js ===
 /**
  * BPE Tokenizer: loads tokenizer.json and encodes text to token IDs.
@@ -36397,7 +38737,7 @@ import * as ort from 'onnxruntime-web';
  * Create an ONNX Runtime Web inference session with backend selection.
  * The execution provider list determines hardware acceleration priority.
  */
-export async function createSession(modelPath) {
+export async function createSession(modelPath, externalData) {
   // Read backend from the runtime <select> element
   const backendSelect = document.getElementById('backend');
   const backend = backendSelect ? backendSelect.value : 'webnn-gpu';
@@ -36422,9 +38762,11 @@ export async function createSession(modelPath) {
       break;
   }
 
-  const session = await ort.InferenceSession.create(modelPath, {
-    executionProviders: providers,
-  });
+  const opts = { executionProviders: providers };
+  if (externalData && externalData.length > 0) {
+    opts.externalData = externalData;
+  }
+  const session = await ort.InferenceSession.create(modelPath, opts);
 
   // Log which backend was selected
   console.log('Inference session created');
@@ -36538,6 +38880,8 @@ npm install
 cp /path/to/bert-sentiment.onnx public/
 npm run dev
 \`\`\`
+
+> **Note:** WebGPU and WebNN require a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts) (HTTPS). Vite dev server supports HTTPS via \`--https\` flag or \`@vitejs/plugin-basic-ssl\`.
 
 ## How It Works
 
@@ -36694,7 +39038,6 @@ body {
 }
 
 main {
-  max-width: 960px;
   margin: 0 auto;
   padding: var(--webai-space-8) var(--webai-space-4);
 }
@@ -36755,6 +39098,21 @@ h2 {
   color: var(--webai-text-muted);
   font-size: var(--webai-font-size-sm);
   margin-top: var(--webai-space-2);
+}
+
+/* Model upload drop zone */
+.model-drop-zone {
+  border-color: var(--webai-accent);
+  border-style: dashed;
+  background: color-mix(in srgb, var(--webai-accent) 5%, transparent);
+  margin-bottom: var(--webai-space-4);
+}
+
+.model-drop-zone:hover,
+.model-drop-zone:focus-visible,
+.model-drop-zone.drag-over {
+  border-color: var(--webai-accent);
+  background: color-mix(in srgb, var(--webai-accent) 10%, transparent);
 }
 
 /* Preview */
@@ -37297,6 +39655,23 @@ h2 {
 
 .run-model-btn:hover { opacity: 0.9; }
 .run-model-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Load Model button (remote models — two-step flow) */
+.load-model-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--webai-space-2);
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-3) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  font-size: var(--webai-font-size-lg);
+  cursor: pointer;
+  margin-bottom: var(--webai-space-4);
+}
+
+.load-model-btn:hover { opacity: 0.9; }
 
 === src/routes/+layout.svelte ===
 <script>
@@ -37489,7 +39864,7 @@ import * as ort from 'onnxruntime-web';
  * Create an ONNX Runtime Web inference session with backend selection.
  * The execution provider list determines hardware acceleration priority.
  */
-export async function createSession(modelPath: string): Promise<ort.InferenceSession> {
+export async function createSession(modelPath: string | ArrayBuffer | Uint8Array, externalData?: Array<{ path: string; data: Uint8Array }>): Promise<ort.InferenceSession> {
   // Read backend from the runtime <select> element
   const backendSelect = document.getElementById('backend') as HTMLSelectElement;
   const backend = backendSelect ? backendSelect.value : 'webnn-gpu';
@@ -37514,9 +39889,11 @@ export async function createSession(modelPath: string): Promise<ort.InferenceSes
       break;
   }
 
-  const session = await ort.InferenceSession.create(modelPath, {
-    executionProviders: providers,
-  });
+  const opts: any = { executionProviders: providers };
+  if (externalData && externalData.length > 0) {
+    opts.externalData = externalData;
+  }
+  const session = await ort.InferenceSession.create(modelPath, opts);
 
   // Log which backend was selected
   console.log('Inference session created');
@@ -37629,6 +40006,8 @@ npm install
 npm run dev
 \`\`\`
 
+> **Note:** WebGPU and WebNN require a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts) (HTTPS). Use HTTPS even for localhost.
+
 ## How It Works
 
 1. **Preprocessing**: Image is resized to 224x224px, normalized with
@@ -37728,7 +40107,6 @@ body {
 }
 
 main {
-  max-width: 960px;
   margin: 0 auto;
   padding: var(--webai-space-8) var(--webai-space-4);
 }
@@ -37789,6 +40167,21 @@ h2 {
   color: var(--webai-text-muted);
   font-size: var(--webai-font-size-sm);
   margin-top: var(--webai-space-2);
+}
+
+/* Model upload drop zone */
+.model-drop-zone {
+  border-color: var(--webai-accent);
+  border-style: dashed;
+  background: color-mix(in srgb, var(--webai-accent) 5%, transparent);
+  margin-bottom: var(--webai-space-4);
+}
+
+.model-drop-zone:hover,
+.model-drop-zone:focus-visible,
+.model-drop-zone.drag-over {
+  border-color: var(--webai-accent);
+  background: color-mix(in srgb, var(--webai-accent) 10%, transparent);
 }
 
 /* Preview */
@@ -38331,6 +40724,23 @@ h2 {
 
 .run-model-btn:hover { opacity: 0.9; }
 .run-model-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Load Model button (remote models — two-step flow) */
+.load-model-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--webai-space-2);
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-3) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  font-size: var(--webai-font-size-lg);
+  cursor: pointer;
+  margin-bottom: var(--webai-space-4);
+}
+
+.load-model-btn:hover { opacity: 0.9; }
   </style>
 </head>
 <body>
@@ -38471,7 +40881,7 @@ function tokenizeText(
  * Create an ONNX Runtime Web inference session with backend selection.
  * The execution provider list determines hardware acceleration priority.
  */
-async function createSession(modelPath) {
+async function createSession(modelPath, externalData) {
   // Read backend from the runtime <select> element
   const backendSelect = document.getElementById('backend');
   const backend = backendSelect ? backendSelect.value : 'webnn-gpu';
@@ -38496,9 +40906,11 @@ async function createSession(modelPath) {
       break;
   }
 
-  const session = await ort.InferenceSession.create(modelPath, {
-    executionProviders: providers,
-  });
+  const opts = { executionProviders: providers };
+  if (externalData && externalData.length > 0) {
+    opts.externalData = externalData;
+  }
+  const session = await ort.InferenceSession.create(modelPath, opts);
 
   // Log which backend was selected
   console.log('Inference session created');
@@ -38663,8 +41075,10 @@ Generated by [webai.js](https://github.com/ibelem/webai.js)
 ## Quick Start
 
 1. Copy your model file (\`gpt2.onnx\`) into this directory
-2. Start a local server: \`npx serve .\` (or any static file server)
+2. Start a local HTTPS server: \`npx serve --ssl .\` (or any static file server with HTTPS)
 3. Open \`index.html\` in your browser
+
+> **Note:** WebGPU and WebNN require a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts) (HTTPS) to run. Use HTTPS even for localhost.
 
 ## How It Works
 
@@ -38937,7 +41351,6 @@ body {
 }
 
 main {
-  max-width: 960px;
   margin: 0 auto;
   padding: var(--webai-space-8) var(--webai-space-4);
 }
@@ -38998,6 +41411,21 @@ h2 {
   color: var(--webai-text-muted);
   font-size: var(--webai-font-size-sm);
   margin-top: var(--webai-space-2);
+}
+
+/* Model upload drop zone */
+.model-drop-zone {
+  border-color: var(--webai-accent);
+  border-style: dashed;
+  background: color-mix(in srgb, var(--webai-accent) 5%, transparent);
+  margin-bottom: var(--webai-space-4);
+}
+
+.model-drop-zone:hover,
+.model-drop-zone:focus-visible,
+.model-drop-zone.drag-over {
+  border-color: var(--webai-accent);
+  background: color-mix(in srgb, var(--webai-accent) 10%, transparent);
 }
 
 /* Preview */
@@ -39540,6 +41968,23 @@ h2 {
 
 .run-model-btn:hover { opacity: 0.9; }
 .run-model-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Load Model button (remote models — two-step flow) */
+.load-model-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--webai-space-2);
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-3) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  font-size: var(--webai-font-size-lg);
+  cursor: pointer;
+  margin-bottom: var(--webai-space-4);
+}
+
+.load-model-btn:hover { opacity: 0.9; }
 /* Canvas overlay */
 .preview-wrapper {
   position: relative;
@@ -39772,7 +42217,7 @@ import * as ort from 'onnxruntime-web';
  * Create an ONNX Runtime Web inference session with backend selection.
  * The execution provider list determines hardware acceleration priority.
  */
-export async function createSession(modelPath: string): Promise<ort.InferenceSession> {
+export async function createSession(modelPath: string | ArrayBuffer | Uint8Array, externalData?: Array<{ path: string; data: Uint8Array }>): Promise<ort.InferenceSession> {
   // Read backend from the runtime <select> element
   const backendSelect = document.getElementById('backend') as HTMLSelectElement;
   const backend = backendSelect ? backendSelect.value : 'webnn-gpu';
@@ -39797,9 +42242,11 @@ export async function createSession(modelPath: string): Promise<ort.InferenceSes
       break;
   }
 
-  const session = await ort.InferenceSession.create(modelPath, {
-    executionProviders: providers,
-  });
+  const opts: any = { executionProviders: providers };
+  if (externalData && externalData.length > 0) {
+    opts.externalData = externalData;
+  }
+  const session = await ort.InferenceSession.create(modelPath, opts);
 
   // Log which backend was selected
   console.log('Inference session created');
@@ -39893,6 +42340,8 @@ Generated by [webai.js](https://github.com/ibelem/webai.js)
 npm install
 npm run dev
 \`\`\`
+
+> **Note:** WebGPU and WebNN require a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts) (HTTPS). Use HTTPS even for localhost.
 
 ## How It Works
 
@@ -39992,7 +42441,6 @@ body {
 }
 
 main {
-  max-width: 960px;
   margin: 0 auto;
   padding: var(--webai-space-8) var(--webai-space-4);
 }
@@ -40053,6 +42501,21 @@ h2 {
   color: var(--webai-text-muted);
   font-size: var(--webai-font-size-sm);
   margin-top: var(--webai-space-2);
+}
+
+/* Model upload drop zone */
+.model-drop-zone {
+  border-color: var(--webai-accent);
+  border-style: dashed;
+  background: color-mix(in srgb, var(--webai-accent) 5%, transparent);
+  margin-bottom: var(--webai-space-4);
+}
+
+.model-drop-zone:hover,
+.model-drop-zone:focus-visible,
+.model-drop-zone.drag-over {
+  border-color: var(--webai-accent);
+  background: color-mix(in srgb, var(--webai-accent) 10%, transparent);
 }
 
 /* Preview */
@@ -40595,6 +43058,23 @@ h2 {
 
 .run-model-btn:hover { opacity: 0.9; }
 .run-model-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Load Model button (remote models — two-step flow) */
+.load-model-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--webai-space-2);
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-3) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  font-size: var(--webai-font-size-lg);
+  cursor: pointer;
+  margin-bottom: var(--webai-space-4);
+}
+
+.load-model-btn:hover { opacity: 0.9; }
   </style>
 </head>
 <body>
@@ -40737,7 +43217,7 @@ function tokenizeText(
  * Create an ONNX Runtime Web inference session with backend selection.
  * The execution provider list determines hardware acceleration priority.
  */
-async function createSession(modelPath) {
+async function createSession(modelPath, externalData) {
   // Read backend from the runtime <select> element
   const backendSelect = document.getElementById('backend');
   const backend = backendSelect ? backendSelect.value : 'webnn-gpu';
@@ -40762,9 +43242,11 @@ async function createSession(modelPath) {
       break;
   }
 
-  const session = await ort.InferenceSession.create(modelPath, {
-    executionProviders: providers,
-  });
+  const opts = { executionProviders: providers };
+  if (externalData && externalData.length > 0) {
+    opts.externalData = externalData;
+  }
+  const session = await ort.InferenceSession.create(modelPath, opts);
 
   // Log which backend was selected
   console.log('Inference session created');
@@ -40933,8 +43415,10 @@ Generated by [webai.js](https://github.com/ibelem/webai.js)
 ## Quick Start
 
 1. Copy your model file (\`bart-mnli.onnx\`) into this directory
-2. Start a local server: \`npx serve .\` (or any static file server)
+2. Start a local HTTPS server: \`npx serve --ssl .\` (or any static file server with HTTPS)
 3. Open \`index.html\` in your browser
+
+> **Note:** WebGPU and WebNN require a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts) (HTTPS) to run. Use HTTPS even for localhost.
 
 ## How It Works
 
@@ -41166,7 +43650,6 @@ body {
 }
 
 main {
-  max-width: 960px;
   margin: 0 auto;
   padding: var(--webai-space-8) var(--webai-space-4);
 }
@@ -41227,6 +43710,21 @@ h2 {
   color: var(--webai-text-muted);
   font-size: var(--webai-font-size-sm);
   margin-top: var(--webai-space-2);
+}
+
+/* Model upload drop zone */
+.model-drop-zone {
+  border-color: var(--webai-accent);
+  border-style: dashed;
+  background: color-mix(in srgb, var(--webai-accent) 5%, transparent);
+  margin-bottom: var(--webai-space-4);
+}
+
+.model-drop-zone:hover,
+.model-drop-zone:focus-visible,
+.model-drop-zone.drag-over {
+  border-color: var(--webai-accent);
+  background: color-mix(in srgb, var(--webai-accent) 10%, transparent);
 }
 
 /* Preview */
@@ -41770,6 +44268,23 @@ h2 {
 .run-model-btn:hover { opacity: 0.9; }
 .run-model-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
+/* Load Model button (remote models — two-step flow) */
+.load-model-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--webai-space-2);
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-3) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  font-size: var(--webai-font-size-lg);
+  cursor: pointer;
+  margin-bottom: var(--webai-space-4);
+}
+
+.load-model-btn:hover { opacity: 0.9; }
+
 === src/lib/preprocess.ts ===
 /**
  * BPE Tokenizer: loads tokenizer.json and encodes text to token IDs.
@@ -41878,7 +44393,7 @@ import * as ort from 'onnxruntime-web';
  * Create an ONNX Runtime Web inference session with backend selection.
  * The execution provider list determines hardware acceleration priority.
  */
-export async function createSession(modelPath: string): Promise<ort.InferenceSession> {
+export async function createSession(modelPath: string | ArrayBuffer | Uint8Array, externalData?: Array<{ path: string; data: Uint8Array }>): Promise<ort.InferenceSession> {
   // Read backend from the runtime <select> element
   const backendSelect = document.getElementById('backend') as HTMLSelectElement;
   const backend = backendSelect ? backendSelect.value : 'webnn-gpu';
@@ -41903,9 +44418,11 @@ export async function createSession(modelPath: string): Promise<ort.InferenceSes
       break;
   }
 
-  const session = await ort.InferenceSession.create(modelPath, {
-    executionProviders: providers,
-  });
+  const opts: any = { executionProviders: providers };
+  if (externalData && externalData.length > 0) {
+    opts.externalData = externalData;
+  }
+  const session = await ort.InferenceSession.create(modelPath, opts);
 
   // Log which backend was selected
   console.log('Inference session created');
@@ -41987,6 +44504,8 @@ Generated by [webai.js](https://github.com/ibelem/webai.js)
 npm install
 npm run dev
 \`\`\`
+
+> **Note:** WebGPU and WebNN require a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts) (HTTPS). Use HTTPS even for localhost.
 
 ## How It Works
 

@@ -39,6 +39,7 @@ function generateCode(values: ConfigValues, pageTheme: string): GeneratedFile[] 
     modelUrl: values.modelUrl,
     hfModelId: values.hfModelId,
     hfFile: values.hfFile,
+    externalDataFiles: values.externalDataFiles,
   };
 
   try {

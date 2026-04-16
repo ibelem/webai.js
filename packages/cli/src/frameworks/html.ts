@@ -26,6 +26,7 @@ import {
   getTaskLabel,
   getEngineLabel,
   getModelPath,
+  emitExternalDataConst,
   buildPageHeading,
 } from './shared.js';
 import { LITERT_CDN } from '../emitters/inference-litert.js';
@@ -117,6 +118,24 @@ function emitProgressBarHtml(): string {
       </div>`;
 }
 
+/** Model upload drop zone for local-path models */
+function emitModelUploadDropZoneHtml(config: ResolvedConfig): string {
+  const ext = config.engine === 'litert' ? '.tflite' : '.onnx';
+  const hint = config.engine === 'litert' ? 'Supports .tflite model files' : 'Supports .onnx model files (+ external data)';
+  const accept = config.engine === 'litert' ? '.tflite,.bin' : '.onnx,.onnx_data,.bin';
+  return `<div class="drop-zone model-drop-zone" id="modelDropZone" role="button" tabindex="0"
+             aria-label="Drop model files here or click to browse">
+          <p>Drop model files (${ext} + data) here or click to browse</p>
+          <p class="hint">${hint}</p>
+          <input type="file" id="modelFileInput" accept="${accept}" multiple style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1">
+        </div>`;
+}
+
+/** "Load Model" button for remote models — user must click to start download */
+function emitLoadModelButtonHtml(): string {
+  return `<button id="loadModelBtn" class="load-model-btn">&#x25b6; Load Model</button>`;
+}
+
 /** Reusable JS: formatBytes + fetchWithProgress + showProgress/updateProgress/completeProgress */
 function emitProgressHelpers(): string {
   return `
@@ -197,31 +216,60 @@ async function fetchWithProgress(url) {
 }`;
 }
 
-/** Emit remote model init (fetchWithProgress → createSession → enable Run btn) */
-function emitRemoteInit(modelName: string, opts?: { tokenizer?: boolean; readyMsg?: string; enableRunBtn?: boolean }): string {
-  const { tokenizer = false, readyMsg = `${modelName} \\u00b7 Ready`, enableRunBtn = true } = opts ?? {};
+/** Emit remote model init — triggered by "Load Model" button click */
+function emitRemoteInit(modelName: string, opts?: { tokenizer?: boolean; readyMsg?: string; showDropZone?: boolean; externalDataFiles?: string[] }): string {
+  const { tokenizer = false, readyMsg = `${modelName} \\u00b7 Ready`, showDropZone = false, externalDataFiles = [] } = opts ?? {};
   const tokenizerLoad = tokenizer ? `\n    tokenizer = await loadTokenizer(TOKENIZER_PATH);` : '';
-  const enableBtn = enableRunBtn ? `\n    document.getElementById('runBtn').disabled = false;` : '';
+  const afterReady = showDropZone
+    ? `\n    document.getElementById('dropZone').hidden = false;`
+    : '';
+
+  // If external data files exist, download them in sequence with progress
+  const hasExtData = externalDataFiles.length > 0;
+  const extDataDownload = hasExtData
+    ? `
+    // Download external data files
+    const baseUrl = MODEL_PATH.substring(0, MODEL_PATH.lastIndexOf('/') + 1);
+    const externalData = [];
+    for (const extFile of EXTERNAL_DATA_FILES) {
+      showProgress(extFile);
+      updateStatus('Downloading ' + extFile + '...');
+      const extBuf = await fetchWithProgress(baseUrl + extFile);
+      completeProgress(extBuf.byteLength);
+      externalData.push({ path: extFile, data: new Uint8Array(extBuf) });
+    }`
+    : '';
+
+  const createCall = hasExtData
+    ? `session = await createSession(buf, externalData);`
+    : `session = await createSession(buf);`;
+
   return `async function init() {
+  const loadBtn = document.getElementById('loadModelBtn');
+  if (loadBtn) loadBtn.hidden = true;
   const filename = MODEL_PATH.split('/').pop() || '${modelName}';
   showProgress(filename);
   updateStatus('Downloading model...');
   try {
     const buf = await fetchWithProgress(MODEL_PATH);
-    completeProgress(buf.byteLength);
+    completeProgress(buf.byteLength);${extDataDownload}
     updateStatus('Creating session...');
-    session = await createSession(buf);${tokenizerLoad}
-    updateStatus('${readyMsg}');${enableBtn}
+    ${createCall}${tokenizerLoad}
+    updateStatus('${readyMsg}');${afterReady}
   } catch (e) {
     updateStatus('Failed to load model');
     console.error('Model load error:', e);
+    if (loadBtn) loadBtn.hidden = false;
   }
-}`;
+}
+
+const _loadBtn = document.getElementById('loadModelBtn');
+if (_loadBtn) _loadBtn.addEventListener('click', init);`;
 }
 
 /** Emit local model init (createSession from path) */
-function emitLocalInit(modelName: string, opts?: { tokenizer?: boolean; readyMsg?: string }): string {
-  const { tokenizer = false, readyMsg = `${modelName} \\u00b7 Ready` } = opts ?? {};
+function emitLocalInit(modelName: string, opts?: { tokenizer?: boolean; readyMsg?: string; showDropZone?: boolean }): string {
+  const { tokenizer = false, readyMsg = `${modelName} \\u00b7 Ready`, showDropZone = false } = opts ?? {};
   const loadMsg = tokenizer ? 'Loading model and tokenizer...' : 'Loading model...';
   const sessionLoad = tokenizer
     ? `[session, tokenizer] = await Promise.all([
@@ -229,11 +277,14 @@ function emitLocalInit(modelName: string, opts?: { tokenizer?: boolean; readyMsg
       loadTokenizer(TOKENIZER_PATH),
     ]);`
     : `session = await createSession(MODEL_PATH);`;
+  const afterReady = showDropZone
+    ? `\n    document.getElementById('dropZone').hidden = false;`
+    : '';
   return `async function init() {
   updateStatus('${loadMsg}');
   try {
     ${sessionLoad}
-    updateStatus('${readyMsg}');
+    updateStatus('${readyMsg}');${afterReady}
   } catch (e) {
     updateStatus('Failed to load model');
     console.error('Model load error:', e);
@@ -241,7 +292,66 @@ function emitLocalInit(modelName: string, opts?: { tokenizer?: boolean; readyMsg
 }`;
 }
 
-/** Emit drop zone event listeners for local model */
+/** Emit local model init from user-uploaded file (model drop zone → createSession) */
+function emitLocalInitFromUpload(modelName: string, opts?: { tokenizer?: boolean; readyMsg?: string; showDropZone?: boolean }): string {
+  const { tokenizer = false, readyMsg = `${modelName} \\u00b7 Ready`, showDropZone = true } = opts ?? {};
+  const tokenizerLoad = tokenizer ? `\n    tokenizer = await loadTokenizer(TOKENIZER_PATH);` : '';
+  const afterReady = showDropZone
+    ? `\n    document.getElementById('dropZone').hidden = false;`
+    : '';
+  return `const modelDropZone = document.getElementById('modelDropZone');
+const modelFileInput = document.getElementById('modelFileInput');
+
+modelDropZone.addEventListener('click', () => modelFileInput.click());
+modelDropZone.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); modelFileInput.click(); }
+});
+modelDropZone.addEventListener('dragover', (e) => { e.preventDefault(); modelDropZone.classList.add('drag-over'); });
+modelDropZone.addEventListener('dragleave', () => { modelDropZone.classList.remove('drag-over'); });
+modelDropZone.addEventListener('drop', (e) => {
+  e.preventDefault(); modelDropZone.classList.remove('drag-over');
+  const files = Array.from(e.dataTransfer.files);
+  if (files.length > 0) handleModelFiles(files);
+});
+modelFileInput.addEventListener('change', () => { const files = Array.from(modelFileInput.files); if (files.length > 0) handleModelFiles(files); });
+
+async function handleModelFiles(files) {
+  // Separate model file from external data files
+  const modelFile = files.find(f => f.name.endsWith('.onnx') || f.name.endsWith('.tflite'));
+  if (!modelFile) {
+    updateStatus('No .onnx or .tflite model file found');
+    return;
+  }
+  const dataFiles = files.filter(f => f !== modelFile);
+
+  modelDropZone.hidden = true;
+  showProgress(modelFile.name);
+  updateStatus('Loading model...');
+  try {
+    const buf = await modelFile.arrayBuffer();
+    completeProgress(buf.byteLength);
+
+    // Load external data files if present
+    const externalData = [];
+    for (const df of dataFiles) {
+      showProgress(df.name);
+      const dataBuf = await df.arrayBuffer();
+      completeProgress(dataBuf.byteLength);
+      externalData.push({ path: df.name, data: new Uint8Array(dataBuf) });
+    }
+
+    updateStatus('Creating session...');
+    session = await createSession(buf, externalData.length > 0 ? externalData : undefined);${tokenizerLoad}
+    updateStatus('${readyMsg}');${afterReady}
+  } catch (e) {
+    updateStatus('Failed to load model');
+    console.error('Model load error:', e);
+    modelDropZone.hidden = false;
+  }
+}`;
+}
+
+/** Emit drop zone event listeners for image input */
 function emitDropZoneListeners(extraReset = ''): string {
   return `const dropZone = document.getElementById('dropZone');
 const changeBtn = document.getElementById('changeBtn');
@@ -264,13 +374,6 @@ changeBtn.addEventListener('click', () => {
 });`;
 }
 
-/** Emit remote Run button + file input listeners */
-function emitRunButtonListeners(): string {
-  return `const runBtn = document.getElementById('runBtn');
-runBtn.addEventListener('click', () => fileInput.click());
-fileInput.addEventListener('change', () => { const file = fileInput.files[0]; if (file) handleFile(file); });`;
-}
-
 // ---- File + Classification script ----
 
 function emitFileClassificationScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
@@ -286,7 +389,8 @@ async function handleFile(file) {
   }
   const url = URL.createObjectURL(file);
   previewImage.src = url;
-  preview.hidden = false;${!remote ? '\n  dropZone.hidden = true;' : ''}
+  preview.hidden = false;
+  dropZone.hidden = true;
   await new Promise((resolve) => { previewImage.onload = resolve; });
   const canvas = document.createElement('canvas');
   canvas.width = previewImage.naturalWidth;
@@ -327,10 +431,10 @@ function renderResults(results) {
 }`;
 
   return `${emitBlockCode(config, blocks)}
-${remote ? emitProgressHelpers() : ''}
+${emitProgressHelpers()}
 
 // --- Application ---
-const MODEL_PATH = '${modelPath}';
+const MODEL_PATH = '${modelPath}';${emitExternalDataConst(config)}
 let session = null;
 
 function updateStatus(text) {
@@ -342,14 +446,14 @@ const preview = document.getElementById('preview');
 const previewImage = document.getElementById('previewImage');
 const resultsDiv = document.getElementById('results');
 
-${remote ? emitRunButtonListeners() : emitDropZoneListeners()}
+${emitDropZoneListeners()}
 
 ${sharedInfer}
 ${renderFn}
 
-${remote ? emitRemoteInit(modelName) : emitLocalInit(modelName)}
+${remote ? emitRemoteInit(modelName, { showDropZone: true , externalDataFiles: config.externalDataFiles }) : emitLocalInitFromUpload(modelName, { showDropZone: true })}
 
-init();`;
+`;
 }
 
 // ---- File + Detection script ----
@@ -371,7 +475,8 @@ async function handleFile(file) {
   }
   const url = URL.createObjectURL(file);
   previewImage.src = url;
-  preview.hidden = false;${!remote ? '\n  dropZone.hidden = true;' : ''}
+  preview.hidden = false;
+  dropZone.hidden = true;
   await new Promise((resolve) => { previewImage.onload = resolve; });
   overlay.width = previewImage.naturalWidth;
   overlay.height = previewImage.naturalHeight;
@@ -394,12 +499,12 @@ async function handleFile(file) {
 }`;
 
   return `${emitBlockCode(config, blocks)}
-${remote ? emitProgressHelpers() : ''}
+${emitProgressHelpers()}
 
 // --- Application ---
 ${emitColorPalette()}
 
-const MODEL_PATH = '${modelPath}';
+const MODEL_PATH = '${modelPath}';${emitExternalDataConst(config)}
 const NUM_ATTRIBUTES = ${numAttributes};
 const NUM_ANCHORS = ${numAnchors};
 let session = null;
@@ -414,7 +519,7 @@ const previewImage = document.getElementById('previewImage');
 const overlay = document.getElementById('overlay');
 const resultsDiv = document.getElementById('results');
 
-${remote ? emitRunButtonListeners() : emitDropZoneListeners(overlayReset)}
+${emitDropZoneListeners(overlayReset)}
 
 ${handleFile}
 
@@ -462,9 +567,9 @@ function renderDetections(boxes, imgW, imgH) {
   }
 }
 
-${remote ? emitRemoteInit(modelName) : emitLocalInit(modelName)}
+${remote ? emitRemoteInit(modelName, { showDropZone: true , externalDataFiles: config.externalDataFiles }) : emitLocalInitFromUpload(modelName, { showDropZone: true })}
 
-init();`;
+`;
 }
 
 // ---- File + Segmentation script ----
@@ -487,7 +592,8 @@ async function handleFile(file) {
   }
   const url = URL.createObjectURL(file);
   previewImage.src = url;
-  preview.hidden = false;${!remote ? '\n  dropZone.hidden = true;' : ''}
+  preview.hidden = false;
+  dropZone.hidden = true;
   await new Promise((resolve) => { previewImage.onload = resolve; });
   overlay.width = previewImage.naturalWidth;
   overlay.height = previewImage.naturalHeight;
@@ -510,12 +616,12 @@ async function handleFile(file) {
 }`;
 
   return `${emitBlockCode(config, blocks)}
-${remote ? emitProgressHelpers() : ''}
+${emitProgressHelpers()}
 
 // --- Application ---
 ${emitColorPalette()}
 
-const MODEL_PATH = '${modelPath}';
+const MODEL_PATH = '${modelPath}';${emitExternalDataConst(config)}
 const NUM_CLASSES = ${numClasses};
 const MASK_H = ${maskH};
 const MASK_W = ${maskW};
@@ -531,7 +637,7 @@ const previewImage = document.getElementById('previewImage');
 const overlay = document.getElementById('overlay');
 const resultsDiv = document.getElementById('results');
 
-${remote ? emitRunButtonListeners() : emitDropZoneListeners(overlayReset)}
+${emitDropZoneListeners(overlayReset)}
 
 ${handleFile}
 
@@ -570,9 +676,9 @@ function renderMask(mask, displayW, displayH) {
   }
 }
 
-${remote ? emitRemoteInit(modelName) : emitLocalInit(modelName)}
+${remote ? emitRemoteInit(modelName, { showDropZone: true , externalDataFiles: config.externalDataFiles }) : emitLocalInitFromUpload(modelName, { showDropZone: true })}
 
-init();`;
+`;
 }
 
 // ---- File + Feature Extraction script ----
@@ -590,7 +696,8 @@ async function handleFile(file) {
   }
   const url = URL.createObjectURL(file);
   previewImage.src = url;
-  preview.hidden = false;${!remote ? '\n  dropZone.hidden = true;' : ''}
+  preview.hidden = false;
+  dropZone.hidden = true;
   await new Promise((resolve) => { previewImage.onload = resolve; });
   const canvas = document.createElement('canvas');
   canvas.width = previewImage.naturalWidth;
@@ -611,10 +718,10 @@ async function handleFile(file) {
 }`;
 
   return `${emitBlockCode(config, blocks)}
-${remote ? emitProgressHelpers() : ''}
+${emitProgressHelpers()}
 
 // --- Application ---
-const MODEL_PATH = '${modelPath}';
+const MODEL_PATH = '${modelPath}';${emitExternalDataConst(config)}
 let session = null;
 
 function updateStatus(text) {
@@ -626,7 +733,7 @@ const preview = document.getElementById('preview');
 const previewImage = document.getElementById('previewImage');
 const resultsDiv = document.getElementById('results');
 
-${remote ? emitRunButtonListeners() : emitDropZoneListeners()}
+${emitDropZoneListeners()}
 
 ${handleFile}
 
@@ -647,9 +754,9 @@ function renderEmbedding(embedding) {
     '</div>';
 }
 
-${remote ? emitRemoteInit(modelName) : emitLocalInit(modelName)}
+${remote ? emitRemoteInit(modelName, { showDropZone: true , externalDataFiles: config.externalDataFiles }) : emitLocalInitFromUpload(modelName, { showDropZone: true })}
 
-init();`;
+`;
 }
 
 // ---- Camera / Screen realtime script ----
@@ -754,7 +861,7 @@ ${remote ? emitProgressHelpers() : ''}
 // --- Application ---
 ${extraCode}
 
-const MODEL_PATH = '${modelPath}';
+const MODEL_PATH = '${modelPath}';${emitExternalDataConst(config)}
 let session = null;
 let currentStream = null;
 
@@ -762,7 +869,7 @@ function updateStatus(text) {
   document.getElementById('status').textContent = text;
 }
 
-${remote ? emitRemoteInit(modelName, { readyMsg: `${modelName} \\u00b7 Ready \\u00b7 Tap Start`, enableRunBtn: false }) : emitLocalInit(modelName, { readyMsg: `${modelName} \\u00b7 Ready \\u00b7 Tap Start` })}
+${remote ? emitRemoteInit(modelName, { readyMsg: `${modelName} \\u00b7 Ready \\u00b7 Tap Start`, externalDataFiles: config.externalDataFiles }) : emitLocalInit(modelName, { readyMsg: `${modelName} \\u00b7 Ready \\u00b7 Tap Start` })}
 
 const video = document.getElementById('video');
 const overlay = document.getElementById('overlay');
@@ -834,7 +941,7 @@ pauseBtn.addEventListener('click', () => {
   }
 });
 
-init();`;
+${!remote ? 'init();' : ''}`;
 }
 
 // ---- File + Audio Classification script ----
@@ -848,14 +955,14 @@ function emitFileAudioClassificationScript(config: ResolvedConfig, blocks: CodeB
 ${remote ? emitProgressHelpers() : ''}
 
 // --- Application ---
-const MODEL_PATH = '${modelPath}';
+const MODEL_PATH = '${modelPath}';${emitExternalDataConst(config)}
 let session = null;
 
 function updateStatus(text) {
   document.getElementById('status').textContent = text;
 }
 
-${remote ? emitRemoteInit(modelName, { enableRunBtn: false }) : emitLocalInit(modelName)}
+${remote ? emitRemoteInit(modelName, { externalDataFiles: config.externalDataFiles }) : emitLocalInit(modelName)}
 
 const fileInput = document.getElementById('fileInput');
 const resultsDiv = document.getElementById('results');
@@ -921,7 +1028,7 @@ function renderResults(results) {
   }
 }
 
-init();`;
+${!remote ? 'init();' : ''}`;
 }
 
 // ---- File + Speech-to-Text script ----
@@ -935,7 +1042,7 @@ function emitFileSpeechToTextScript(config: ResolvedConfig, blocks: CodeBlock[])
 ${remote ? emitProgressHelpers() : ''}
 
 // --- Application ---
-const MODEL_PATH = '${modelPath}';
+const MODEL_PATH = '${modelPath}';${emitExternalDataConst(config)}
 const VOCAB = [' ', ...'abcdefghijklmnopqrstuvwxyz'.split(''), "'"];
 let session = null;
 
@@ -943,7 +1050,7 @@ function updateStatus(text) {
   document.getElementById('status').textContent = text;
 }
 
-${remote ? emitRemoteInit(modelName, { enableRunBtn: false }) : emitLocalInit(modelName)}
+${remote ? emitRemoteInit(modelName, { externalDataFiles: config.externalDataFiles }) : emitLocalInit(modelName)}
 
 const fileInput = document.getElementById('fileInput');
 const transcript = document.getElementById('transcript');
@@ -987,7 +1094,7 @@ fileInput.addEventListener('change', async () => {
   transcript.textContent = text || '(no speech detected)';
 });
 
-init();`;
+${!remote ? 'init();' : ''}`;
 }
 
 // ---- Realtime (mic) + Speech-to-Text script ----
@@ -1001,7 +1108,7 @@ function emitRealtimeSpeechToTextScript(config: ResolvedConfig, blocks: CodeBloc
 ${remote ? emitProgressHelpers() : ''}
 
 // --- Application ---
-const MODEL_PATH = '${modelPath}';
+const MODEL_PATH = '${modelPath}';${emitExternalDataConst(config)}
 const VOCAB = [' ', ...'abcdefghijklmnopqrstuvwxyz'.split(''), "'"];
 let session = null;
 let capture = null;
@@ -1011,7 +1118,7 @@ function updateStatus(text) {
   document.getElementById('status').textContent = text;
 }
 
-${remote ? emitRemoteInit(modelName, { enableRunBtn: false }) : emitLocalInit(modelName)}
+${remote ? emitRemoteInit(modelName, { externalDataFiles: config.externalDataFiles }) : emitLocalInit(modelName)}
 
 async function processAudio(samples) {
   const mel = melSpectrogram(samples, 16000, 512, 160, 80);
@@ -1063,7 +1170,7 @@ stopBtn.addEventListener('click', () => {
   updateStatus('${config.modelName} \\u00b7 Stopped');
 });
 
-init();`;
+${!remote ? 'init();' : ''}`;
 }
 
 // ---- Realtime (mic) + Audio Classification script ----
@@ -1077,7 +1184,7 @@ function emitRealtimeAudioClassificationScript(config: ResolvedConfig, blocks: C
 ${remote ? emitProgressHelpers() : ''}
 
 // --- Application ---
-const MODEL_PATH = '${modelPath}';
+const MODEL_PATH = '${modelPath}';${emitExternalDataConst(config)}
 let session = null;
 let capture = null;
 let loop = null;
@@ -1086,7 +1193,7 @@ function updateStatus(text) {
   document.getElementById('status').textContent = text;
 }
 
-${remote ? emitRemoteInit(modelName, { enableRunBtn: false }) : emitLocalInit(modelName)}
+${remote ? emitRemoteInit(modelName, { externalDataFiles: config.externalDataFiles }) : emitLocalInit(modelName)}
 
 async function processAudio(samples) {
   const mel = melSpectrogram(samples, 16000, 512, 160, 40);
@@ -1160,7 +1267,7 @@ function renderResults(results) {
   }
 }
 
-init();`;
+${!remote ? 'init();' : ''}`;
 }
 
 // ---- Text-to-Speech script ----
@@ -1174,14 +1281,14 @@ function emitTextToSpeechScript(config: ResolvedConfig, blocks: CodeBlock[]): st
 ${remote ? emitProgressHelpers() : ''}
 
 // --- Application ---
-const MODEL_PATH = '${modelPath}';
+const MODEL_PATH = '${modelPath}';${emitExternalDataConst(config)}
 let session = null;
 
 function updateStatus(text) {
   document.getElementById('status').textContent = text;
 }
 
-${remote ? emitRemoteInit(modelName, { enableRunBtn: false }) : emitLocalInit(modelName)}
+${remote ? emitRemoteInit(modelName, { externalDataFiles: config.externalDataFiles }) : emitLocalInit(modelName)}
 
 const textInput = document.getElementById('textInput');
 const synthesizeBtn = document.getElementById('synthesizeBtn');
@@ -1212,7 +1319,7 @@ synthesizeBtn.addEventListener('click', async () => {
   updateStatus('${config.modelName} \\u00b7 ' + elapsed + 'ms \\u00b7 ' + getBackendLabel(session));
 });
 
-init();`;
+${!remote ? 'init();' : ''}`;
 }
 
 // ---- Text Classification script ----
@@ -1226,7 +1333,7 @@ function emitTextClassificationScript(config: ResolvedConfig, blocks: CodeBlock[
 ${remote ? emitProgressHelpers() : ''}
 
 // --- Application ---
-const MODEL_PATH = '${modelPath}';
+const MODEL_PATH = '${modelPath}';${emitExternalDataConst(config)}
 const TOKENIZER_PATH = MODEL_PATH.replace(/\\.onnx$/, '') + '/tokenizer.json';
 let session = null;
 let tokenizer = null;
@@ -1235,7 +1342,7 @@ function updateStatus(text) {
   document.getElementById('status').textContent = text;
 }
 
-${remote ? emitRemoteInit(modelName, { tokenizer: true, enableRunBtn: false }) : emitLocalInit(modelName, { tokenizer: true })}
+${remote ? emitRemoteInit(modelName, { tokenizer: true , externalDataFiles: config.externalDataFiles }) : emitLocalInit(modelName, { tokenizer: true })}
 
 const textInput = document.getElementById('textInput');
 const classifyBtn = document.getElementById('classifyBtn');
@@ -1286,7 +1393,7 @@ function renderResults(results) {
   }
 }
 
-init();`;
+${!remote ? 'init();' : ''}`;
 }
 
 // ---- Zero-Shot Classification script ----
@@ -1300,7 +1407,7 @@ function emitZeroShotScript(config: ResolvedConfig, blocks: CodeBlock[]): string
 ${remote ? emitProgressHelpers() : ''}
 
 // --- Application ---
-const MODEL_PATH = '${modelPath}';
+const MODEL_PATH = '${modelPath}';${emitExternalDataConst(config)}
 const TOKENIZER_PATH = MODEL_PATH.replace(/\\.onnx$/, '') + '/tokenizer.json';
 let session = null;
 let tokenizer = null;
@@ -1309,7 +1416,7 @@ function updateStatus(text) {
   document.getElementById('status').textContent = text;
 }
 
-${remote ? emitRemoteInit(modelName, { tokenizer: true, enableRunBtn: false }) : emitLocalInit(modelName, { tokenizer: true })}
+${remote ? emitRemoteInit(modelName, { tokenizer: true , externalDataFiles: config.externalDataFiles }) : emitLocalInit(modelName, { tokenizer: true })}
 
 const textInput = document.getElementById('textInput');
 const labelsInput = document.getElementById('labelsInput');
@@ -1371,7 +1478,7 @@ function renderResults(results) {
   }
 }
 
-init();`;
+${!remote ? 'init();' : ''}`;
 }
 
 // ---- Text Generation script ----
@@ -1385,7 +1492,7 @@ function emitTextGenerationScript(config: ResolvedConfig, blocks: CodeBlock[]): 
 ${remote ? emitProgressHelpers() : ''}
 
 // --- Application ---
-const MODEL_PATH = '${modelPath}';
+const MODEL_PATH = '${modelPath}';${emitExternalDataConst(config)}
 const TOKENIZER_PATH = MODEL_PATH.replace(/\\.onnx$/, '') + '/tokenizer.json';
 const MAX_NEW_TOKENS = 50;
 const EOS_TOKEN_ID = 2;
@@ -1396,7 +1503,7 @@ function updateStatus(text) {
   document.getElementById('status').textContent = text;
 }
 
-${remote ? emitRemoteInit(modelName, { tokenizer: true, enableRunBtn: false }) : emitLocalInit(modelName, { tokenizer: true })}
+${remote ? emitRemoteInit(modelName, { tokenizer: true , externalDataFiles: config.externalDataFiles }) : emitLocalInit(modelName, { tokenizer: true })}
 
 const textInput = document.getElementById('textInput');
 const generateBtn = document.getElementById('generateBtn');
@@ -1440,7 +1547,7 @@ generateBtn.addEventListener('click', async () => {
   generateBtn.disabled = false;
 });
 
-init();`;
+${!remote ? 'init();' : ''}`;
 }
 
 // ---- Fill-Mask script ----
@@ -1454,7 +1561,7 @@ function emitFillMaskScript(config: ResolvedConfig, blocks: CodeBlock[]): string
 ${remote ? emitProgressHelpers() : ''}
 
 // --- Application ---
-const MODEL_PATH = '${modelPath}';
+const MODEL_PATH = '${modelPath}';${emitExternalDataConst(config)}
 const TOKENIZER_PATH = MODEL_PATH.replace(/\\.onnx$/, '') + '/tokenizer.json';
 let session = null;
 let tokenizer = null;
@@ -1463,7 +1570,7 @@ function updateStatus(text) {
   document.getElementById('status').textContent = text;
 }
 
-${remote ? emitRemoteInit(modelName, { tokenizer: true, enableRunBtn: false }) : emitLocalInit(modelName, { tokenizer: true })}
+${remote ? emitRemoteInit(modelName, { tokenizer: true , externalDataFiles: config.externalDataFiles }) : emitLocalInit(modelName, { tokenizer: true })}
 
 const textInput = document.getElementById('textInput');
 const predictBtn = document.getElementById('predictBtn');
@@ -1497,7 +1604,7 @@ predictBtn.addEventListener('click', async () => {
   }
 });
 
-init();`;
+${!remote ? 'init();' : ''}`;
 }
 
 // ---- Sentence Similarity script ----
@@ -1511,7 +1618,7 @@ function emitSentenceSimilarityScript(config: ResolvedConfig, blocks: CodeBlock[
 ${remote ? emitProgressHelpers() : ''}
 
 // --- Application ---
-const MODEL_PATH = '${modelPath}';
+const MODEL_PATH = '${modelPath}';${emitExternalDataConst(config)}
 const TOKENIZER_PATH = MODEL_PATH.replace(/\\.onnx$/, '') + '/tokenizer.json';
 let session = null;
 let tokenizer = null;
@@ -1520,7 +1627,7 @@ function updateStatus(text) {
   document.getElementById('status').textContent = text;
 }
 
-${remote ? emitRemoteInit(modelName, { tokenizer: true, enableRunBtn: false }) : emitLocalInit(modelName, { tokenizer: true })}
+${remote ? emitRemoteInit(modelName, { tokenizer: true , externalDataFiles: config.externalDataFiles }) : emitLocalInit(modelName, { tokenizer: true })}
 
 const sourceInput = document.getElementById('sourceInput');
 const compareInput = document.getElementById('compareInput');
@@ -1559,7 +1666,7 @@ compareBtn.addEventListener('click', async () => {
   updateStatus('${config.modelName} \\u00b7 ' + elapsed + 'ms \\u00b7 ' + getBackendLabel(session));
 });
 
-init();`;
+${!remote ? 'init();' : ''}`;
 }
 
 // ---- Depth Estimation script ----
@@ -1575,14 +1682,15 @@ function handleFile(file) {
   const url = URL.createObjectURL(file);
   previewImage.src = url;
   previewImage.onload = () => processImage(previewImage);
-  preview.hidden = false;${!remote ? '\n  dropZone.hidden = true;' : ''}
+  preview.hidden = false;
+  dropZone.hidden = true;
 }`;
 
   return `${emitBlockCode(config, blocks)}
-${remote ? emitProgressHelpers() : ''}
+${emitProgressHelpers()}
 
 // --- Application ---
-const MODEL_PATH = '${modelPath}';
+const MODEL_PATH = '${modelPath}';${emitExternalDataConst(config)}
 let session = null;
 
 function updateStatus(text) {
@@ -1594,7 +1702,7 @@ const preview = document.getElementById('preview');
 const previewImage = document.getElementById('previewImage');
 const depthCanvas = document.getElementById('depthCanvas');
 
-${remote ? emitRunButtonListeners() : emitDropZoneListeners()}
+${emitDropZoneListeners()}
 
 ${handleFile}
 
@@ -1624,9 +1732,9 @@ async function processImage(img) {
   updateStatus('${modelName} \\u00b7 ' + elapsed + 'ms \\u00b7 ' + getBackendLabel(session));
 }
 
-${remote ? emitRemoteInit(modelName) : emitLocalInit(modelName)}
+${remote ? emitRemoteInit(modelName, { showDropZone: true , externalDataFiles: config.externalDataFiles }) : emitLocalInitFromUpload(modelName, { showDropZone: true })}
 
-init();`;
+`;
 }
 
 // ---- Token Classification (NER) script ----
@@ -1640,7 +1748,7 @@ function emitTokenClassificationScript(config: ResolvedConfig, blocks: CodeBlock
 ${remote ? emitProgressHelpers() : ''}
 
 // --- Application ---
-const MODEL_PATH = '${modelPath}';
+const MODEL_PATH = '${modelPath}';${emitExternalDataConst(config)}
 const TOKENIZER_PATH = MODEL_PATH.replace(/\\.onnx$/, '') + '/tokenizer.json';
 let session = null;
 let tokenizer = null;
@@ -1649,7 +1757,7 @@ function updateStatus(text) {
   document.getElementById('status').textContent = text;
 }
 
-${remote ? emitRemoteInit(modelName, { tokenizer: true, enableRunBtn: false }) : emitLocalInit(modelName, { tokenizer: true })}
+${remote ? emitRemoteInit(modelName, { tokenizer: true , externalDataFiles: config.externalDataFiles }) : emitLocalInit(modelName, { tokenizer: true })}
 
 const textInput = document.getElementById('textInput');
 const analyzeBtn = document.getElementById('analyzeBtn');
@@ -1685,7 +1793,7 @@ analyzeBtn.addEventListener('click', async () => {
   resultsDiv.innerHTML = html;
 });
 
-init();`;
+${!remote ? 'init();' : ''}`;
 }
 
 // ---- Question Answering script ----
@@ -1699,7 +1807,7 @@ function emitQuestionAnsweringScript(config: ResolvedConfig, blocks: CodeBlock[]
 ${remote ? emitProgressHelpers() : ''}
 
 // --- Application ---
-const MODEL_PATH = '${modelPath}';
+const MODEL_PATH = '${modelPath}';${emitExternalDataConst(config)}
 const TOKENIZER_PATH = MODEL_PATH.replace(/\\.onnx$/, '') + '/tokenizer.json';
 let session = null;
 let tokenizer = null;
@@ -1708,7 +1816,7 @@ function updateStatus(text) {
   document.getElementById('status').textContent = text;
 }
 
-${remote ? emitRemoteInit(modelName, { tokenizer: true, enableRunBtn: false }) : emitLocalInit(modelName, { tokenizer: true })}
+${remote ? emitRemoteInit(modelName, { tokenizer: true , externalDataFiles: config.externalDataFiles }) : emitLocalInit(modelName, { tokenizer: true })}
 
 const contextInput = document.getElementById('contextInput');
 const questionInput = document.getElementById('questionInput');
@@ -1739,7 +1847,7 @@ answerBtn.addEventListener('click', async () => {
   answerDiv.innerHTML = '<div>' + result.answer + '</div><div class="score">Confidence: ' + (result.score * 100).toFixed(1) + '%</div>';
 });
 
-init();`;
+${!remote ? 'init();' : ''}`;
 }
 
 // ---- Summarization script ----
@@ -1753,7 +1861,7 @@ function emitSummarizationScript(config: ResolvedConfig, blocks: CodeBlock[]): s
 ${remote ? emitProgressHelpers() : ''}
 
 // --- Application ---
-const MODEL_PATH = '${modelPath}';
+const MODEL_PATH = '${modelPath}';${emitExternalDataConst(config)}
 const TOKENIZER_PATH = MODEL_PATH.replace(/\\.onnx$/, '') + '/tokenizer.json';
 const MAX_NEW_TOKENS = 128;
 const EOS_TOKEN_ID = 1;
@@ -1764,7 +1872,7 @@ function updateStatus(text) {
   document.getElementById('status').textContent = text;
 }
 
-${remote ? emitRemoteInit(modelName, { tokenizer: true, enableRunBtn: false }) : emitLocalInit(modelName, { tokenizer: true })}
+${remote ? emitRemoteInit(modelName, { tokenizer: true , externalDataFiles: config.externalDataFiles }) : emitLocalInit(modelName, { tokenizer: true })}
 
 const textInput = document.getElementById('textInput');
 const summarizeBtn = document.getElementById('summarizeBtn');
@@ -1794,7 +1902,7 @@ summarizeBtn.addEventListener('click', async () => {
   summarizeBtn.disabled = false;
 });
 
-init();`;
+${!remote ? 'init();' : ''}`;
 }
 
 // ---- Translation script ----
@@ -1808,7 +1916,7 @@ function emitTranslationScript(config: ResolvedConfig, blocks: CodeBlock[]): str
 ${remote ? emitProgressHelpers() : ''}
 
 // --- Application ---
-const MODEL_PATH = '${modelPath}';
+const MODEL_PATH = '${modelPath}';${emitExternalDataConst(config)}
 const TOKENIZER_PATH = MODEL_PATH.replace(/\\.onnx$/, '') + '/tokenizer.json';
 const MAX_NEW_TOKENS = 128;
 const EOS_TOKEN_ID = 1;
@@ -1819,7 +1927,7 @@ function updateStatus(text) {
   document.getElementById('status').textContent = text;
 }
 
-${remote ? emitRemoteInit(modelName, { tokenizer: true, enableRunBtn: false }) : emitLocalInit(modelName, { tokenizer: true })}
+${remote ? emitRemoteInit(modelName, { tokenizer: true , externalDataFiles: config.externalDataFiles }) : emitLocalInit(modelName, { tokenizer: true })}
 
 const textInput = document.getElementById('textInput');
 const translateBtn = document.getElementById('translateBtn');
@@ -1849,7 +1957,7 @@ translateBtn.addEventListener('click', async () => {
   translateBtn.disabled = false;
 });
 
-init();`;
+${!remote ? 'init();' : ''}`;
 }
 
 // ---- Text2Text Generation script ----
@@ -1863,7 +1971,7 @@ function emitText2TextScript(config: ResolvedConfig, blocks: CodeBlock[]): strin
 ${remote ? emitProgressHelpers() : ''}
 
 // --- Application ---
-const MODEL_PATH = '${modelPath}';
+const MODEL_PATH = '${modelPath}';${emitExternalDataConst(config)}
 const TOKENIZER_PATH = MODEL_PATH.replace(/\\.onnx$/, '') + '/tokenizer.json';
 const MAX_NEW_TOKENS = 128;
 const EOS_TOKEN_ID = 1;
@@ -1874,7 +1982,7 @@ function updateStatus(text) {
   document.getElementById('status').textContent = text;
 }
 
-${remote ? emitRemoteInit(modelName, { tokenizer: true, enableRunBtn: false }) : emitLocalInit(modelName, { tokenizer: true })}
+${remote ? emitRemoteInit(modelName, { tokenizer: true , externalDataFiles: config.externalDataFiles }) : emitLocalInit(modelName, { tokenizer: true })}
 
 const textInput = document.getElementById('textInput');
 const runBtn = document.getElementById('runBtn');
@@ -1904,7 +2012,7 @@ runBtn.addEventListener('click', async () => {
   runBtn.disabled = false;
 });
 
-init();`;
+${!remote ? 'init();' : ''}`;
 }
 
 // ---- Conversational script ----
@@ -1918,7 +2026,7 @@ function emitConversationalScript(config: ResolvedConfig, blocks: CodeBlock[]): 
 ${remote ? emitProgressHelpers() : ''}
 
 // --- Application ---
-const MODEL_PATH = '${modelPath}';
+const MODEL_PATH = '${modelPath}';${emitExternalDataConst(config)}
 const TOKENIZER_PATH = MODEL_PATH.replace(/\\.onnx$/, '') + '/tokenizer.json';
 const MAX_NEW_TOKENS = 50;
 const EOS_TOKEN_ID = 2;
@@ -1929,7 +2037,7 @@ function updateStatus(text) {
   document.getElementById('status').textContent = text;
 }
 
-${remote ? emitRemoteInit(modelName, { tokenizer: true, enableRunBtn: false }) : emitLocalInit(modelName, { tokenizer: true })}
+${remote ? emitRemoteInit(modelName, { tokenizer: true , externalDataFiles: config.externalDataFiles }) : emitLocalInit(modelName, { tokenizer: true })}
 
 const chatMessages = document.getElementById('chatMessages');
 const chatInput = document.getElementById('chatInput');
@@ -1989,7 +2097,7 @@ chatInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendBtn.click(); }
 });
 
-init();`;
+${!remote ? 'init();' : ''}`;
 }
 
 // ---- Table Question Answering script ----
@@ -2003,7 +2111,7 @@ function emitTableQAScript(config: ResolvedConfig, blocks: CodeBlock[]): string 
 ${remote ? emitProgressHelpers() : ''}
 
 // --- Application ---
-const MODEL_PATH = '${modelPath}';
+const MODEL_PATH = '${modelPath}';${emitExternalDataConst(config)}
 const TOKENIZER_PATH = MODEL_PATH.replace(/\\.onnx$/, '') + '/tokenizer.json';
 let session = null;
 let tokenizer = null;
@@ -2012,7 +2120,7 @@ function updateStatus(text) {
   document.getElementById('status').textContent = text;
 }
 
-${remote ? emitRemoteInit(modelName, { tokenizer: true, enableRunBtn: false }) : emitLocalInit(modelName, { tokenizer: true })}
+${remote ? emitRemoteInit(modelName, { tokenizer: true , externalDataFiles: config.externalDataFiles }) : emitLocalInit(modelName, { tokenizer: true })}
 
 const tableInput = document.getElementById('tableInput');
 const questionInput = document.getElementById('questionInput');
@@ -2043,7 +2151,7 @@ answerBtn.addEventListener('click', async () => {
   answerDiv.innerHTML = '<div>' + result.answer + '</div><div class="score">Confidence: ' + (result.score * 100).toFixed(1) + '%</div>';
 });
 
-init();`;
+${!remote ? 'init();' : ''}`;
 }
 
 // ---- Image-to-Text script ----
@@ -2059,14 +2167,15 @@ function handleFile(file) {
   const url = URL.createObjectURL(file);
   previewImage.src = url;
   previewImage.onload = () => processImage(previewImage);
-  preview.hidden = false;${!remote ? '\n  dropZone.hidden = true;' : ''}
+  preview.hidden = false;
+  dropZone.hidden = true;
 }`;
 
   return `${emitBlockCode(config, blocks)}
-${remote ? emitProgressHelpers() : ''}
+${emitProgressHelpers()}
 
 // --- Application ---
-const MODEL_PATH = '${modelPath}';
+const MODEL_PATH = '${modelPath}';${emitExternalDataConst(config)}
 let session = null;
 
 function updateStatus(text) {
@@ -2078,7 +2187,7 @@ const preview = document.getElementById('preview');
 const previewImage = document.getElementById('previewImage');
 const resultsDiv = document.getElementById('output');
 
-${remote ? emitRunButtonListeners() : emitDropZoneListeners()}
+${emitDropZoneListeners()}
 
 ${handleFile}
 
@@ -2097,9 +2206,9 @@ async function processImage(img) {
   resultsDiv.textContent = caption;
 }
 
-${remote ? emitRemoteInit(modelName) : emitLocalInit(modelName)}
+${remote ? emitRemoteInit(modelName, { showDropZone: true , externalDataFiles: config.externalDataFiles }) : emitLocalInitFromUpload(modelName, { showDropZone: true })}
 
-init();`;
+`;
 }
 
 // ---- Visual Question Answering script ----
@@ -2115,14 +2224,15 @@ function handleFile(file) {
   const url = URL.createObjectURL(file);
   previewImage.src = url;
   previewImage.onload = () => { currentImage = previewImage; };
-  preview.hidden = false;${!remote ? '\n  dropZone.hidden = true;' : ''}
+  preview.hidden = false;
+  dropZone.hidden = true;
 }`;
 
   return `${emitBlockCode(config, blocks)}
-${remote ? emitProgressHelpers() : ''}
+${emitProgressHelpers()}
 
 // --- Application ---
-const MODEL_PATH = '${modelPath}';
+const MODEL_PATH = '${modelPath}';${emitExternalDataConst(config)}
 const TOKENIZER_PATH = MODEL_PATH.replace(/\\.onnx$/, '') + '/tokenizer.json';
 let session = null;
 let tokenizer = null;
@@ -2139,7 +2249,7 @@ const askBtn = document.getElementById('askBtn');
 const resultsDiv = document.getElementById('answer');
 let currentImage = null;
 
-${remote ? emitRunButtonListeners() : emitDropZoneListeners('\n  currentImage = null;')}
+${emitDropZoneListeners('\n  currentImage = null;')}
 
 ${handleFile}
 
@@ -2165,9 +2275,9 @@ askBtn.addEventListener('click', async () => {
   resultsDiv.textContent = answer;
 });
 
-${remote ? emitRemoteInit(modelName, { tokenizer: true }) : emitLocalInit(modelName, { tokenizer: true })}
+${remote ? emitRemoteInit(modelName, { tokenizer: true, showDropZone: true , externalDataFiles: config.externalDataFiles }) : emitLocalInitFromUpload(modelName, { tokenizer: true, showDropZone: true })}
 
-init();`;
+`;
 }
 
 // ---- Document Question Answering script ----
@@ -2183,14 +2293,15 @@ function handleFile(file) {
   const url = URL.createObjectURL(file);
   previewImage.src = url;
   previewImage.onload = () => { currentImage = previewImage; };
-  preview.hidden = false;${!remote ? '\n  dropZone.hidden = true;' : ''}
+  preview.hidden = false;
+  dropZone.hidden = true;
 }`;
 
   return `${emitBlockCode(config, blocks)}
-${remote ? emitProgressHelpers() : ''}
+${emitProgressHelpers()}
 
 // --- Application ---
-const MODEL_PATH = '${modelPath}';
+const MODEL_PATH = '${modelPath}';${emitExternalDataConst(config)}
 const TOKENIZER_PATH = MODEL_PATH.replace(/\\.onnx$/, '') + '/tokenizer.json';
 let session = null;
 let tokenizer = null;
@@ -2207,7 +2318,7 @@ const askBtn = document.getElementById('askBtn');
 const resultsDiv = document.getElementById('answer');
 let currentImage = null;
 
-${remote ? emitRunButtonListeners() : emitDropZoneListeners('\n  currentImage = null;')}
+${emitDropZoneListeners('\n  currentImage = null;')}
 
 ${handleFile}
 
@@ -2233,9 +2344,9 @@ askBtn.addEventListener('click', async () => {
   resultsDiv.textContent = answer;
 });
 
-${remote ? emitRemoteInit(modelName, { tokenizer: true }) : emitLocalInit(modelName, { tokenizer: true })}
+${remote ? emitRemoteInit(modelName, { tokenizer: true, showDropZone: true , externalDataFiles: config.externalDataFiles }) : emitLocalInitFromUpload(modelName, { tokenizer: true, showDropZone: true })}
 
-init();`;
+`;
 }
 
 // ---- Image-Text-to-Text script ----
@@ -2251,14 +2362,15 @@ function handleFile(file) {
   const url = URL.createObjectURL(file);
   previewImage.src = url;
   previewImage.onload = () => { currentImage = previewImage; };
-  preview.hidden = false;${!remote ? '\n  dropZone.hidden = true;' : ''}
+  preview.hidden = false;
+  dropZone.hidden = true;
 }`;
 
   return `${emitBlockCode(config, blocks)}
-${remote ? emitProgressHelpers() : ''}
+${emitProgressHelpers()}
 
 // --- Application ---
-const MODEL_PATH = '${modelPath}';
+const MODEL_PATH = '${modelPath}';${emitExternalDataConst(config)}
 const TOKENIZER_PATH = MODEL_PATH.replace(/\\.onnx$/, '') + '/tokenizer.json';
 let session = null;
 let tokenizer = null;
@@ -2275,7 +2387,7 @@ const generateBtn = document.getElementById('generateBtn');
 const resultsDiv = document.getElementById('output');
 let currentImage = null;
 
-${remote ? emitRunButtonListeners() : emitDropZoneListeners('\n  currentImage = null;')}
+${emitDropZoneListeners('\n  currentImage = null;')}
 
 ${handleFile}
 
@@ -2303,9 +2415,9 @@ generateBtn.addEventListener('click', async () => {
   generateBtn.disabled = false;
 });
 
-${remote ? emitRemoteInit(modelName, { tokenizer: true }) : emitLocalInit(modelName, { tokenizer: true })}
+${remote ? emitRemoteInit(modelName, { tokenizer: true, showDropZone: true , externalDataFiles: config.externalDataFiles }) : emitLocalInitFromUpload(modelName, { tokenizer: true, showDropZone: true })}
 
-init();`;
+`;
 }
 
 // ---- Audio-to-Audio script ----
@@ -2319,14 +2431,14 @@ function emitAudioToAudioScript(config: ResolvedConfig, blocks: CodeBlock[]): st
 ${remote ? emitProgressHelpers() : ''}
 
 // --- Application ---
-const MODEL_PATH = '${modelPath}';
+const MODEL_PATH = '${modelPath}';${emitExternalDataConst(config)}
 let session = null;
 
 function updateStatus(text) {
   document.getElementById('status').textContent = text;
 }
 
-${remote ? emitRemoteInit(modelName, { enableRunBtn: false }) : emitLocalInit(modelName)}
+${remote ? emitRemoteInit(modelName, { externalDataFiles: config.externalDataFiles }) : emitLocalInit(modelName)}
 
 const fileInput = document.getElementById('fileInput');
 const outputDiv = document.getElementById('output');
@@ -2353,7 +2465,7 @@ fileInput.addEventListener('change', async () => {
   outputDiv.textContent = 'Processed ' + (samples.length / 16000).toFixed(1) + 's of audio. Playing output...';
 });
 
-init();`;
+${!remote ? 'init();' : ''}`;
 }
 
 // ---- Speaker Diarization script ----
@@ -2367,14 +2479,14 @@ function emitSpeakerDiarizationScript(config: ResolvedConfig, blocks: CodeBlock[
 ${remote ? emitProgressHelpers() : ''}
 
 // --- Application ---
-const MODEL_PATH = '${modelPath}';
+const MODEL_PATH = '${modelPath}';${emitExternalDataConst(config)}
 let session = null;
 
 function updateStatus(text) {
   document.getElementById('status').textContent = text;
 }
 
-${remote ? emitRemoteInit(modelName, { enableRunBtn: false }) : emitLocalInit(modelName)}
+${remote ? emitRemoteInit(modelName, { externalDataFiles: config.externalDataFiles }) : emitLocalInit(modelName)}
 
 const fileInput = document.getElementById('fileInput');
 const resultsDiv = document.getElementById('results');
@@ -2407,7 +2519,7 @@ fileInput.addEventListener('change', async () => {
   }
 });
 
-init();`;
+${!remote ? 'init();' : ''}`;
 }
 
 // ---- Voice Activity Detection script ----
@@ -2421,14 +2533,14 @@ function emitVADScript(config: ResolvedConfig, blocks: CodeBlock[]): string {
 ${remote ? emitProgressHelpers() : ''}
 
 // --- Application ---
-const MODEL_PATH = '${modelPath}';
+const MODEL_PATH = '${modelPath}';${emitExternalDataConst(config)}
 let session = null;
 
 function updateStatus(text) {
   document.getElementById('status').textContent = text;
 }
 
-${remote ? emitRemoteInit(modelName, { enableRunBtn: false }) : emitLocalInit(modelName)}
+${remote ? emitRemoteInit(modelName, { externalDataFiles: config.externalDataFiles }) : emitLocalInit(modelName)}
 
 const fileInput = document.getElementById('fileInput');
 const resultsDiv = document.getElementById('results');
@@ -2461,7 +2573,7 @@ fileInput.addEventListener('change', async () => {
   }
 });
 
-init();`;
+${!remote ? 'init();' : ''}`;
 }
 
 // ---- Script dispatcher ----
@@ -2547,16 +2659,9 @@ function emitFileClassificationBody(config: ResolvedConfig): string {
   const taskLabel = getTaskLabel(config.task);
   const remote = isRemoteModel(config);
 
-  const inputArea = remote
-    ? `${emitProgressBarHtml()}
+  const modelUploadZone = !remote ? emitModelUploadDropZoneHtml(config) + '\n\n        ' : '';
 
-        <div id="preview" class="preview" hidden>
-          <img id="previewImage" alt="Selected image for classification">
-        </div>
-
-        <button id="runBtn" class="run-model-btn" disabled>&#x25b6; Run Inference</button>
-        <input type="file" id="fileInput" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1">`
-    : `<div class="drop-zone" id="dropZone" role="button" tabindex="0"
+  const inputArea = `${modelUploadZone}<div class="drop-zone" id="dropZone" role="button" tabindex="0" hidden
              aria-label="Drop an image here or click to browse for ${taskLabel.toLowerCase()}">
           <p>Drop an image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
@@ -2583,19 +2688,9 @@ function emitFileOverlayBody(config: ResolvedConfig): string {
   const taskLabel = getTaskLabel(config.task);
   const remote = isRemoteModel(config);
 
-  const inputArea = remote
-    ? `${emitProgressBarHtml()}
+  const modelUploadZone = !remote ? emitModelUploadDropZoneHtml(config) + '\n\n        ' : '';
 
-        <div id="preview" class="preview" hidden>
-          <div class="preview-wrapper">
-            <img id="previewImage" alt="Selected image for ${taskLabel.toLowerCase()}">
-            <canvas id="overlay"></canvas>
-          </div>
-        </div>
-
-        <button id="runBtn" class="run-model-btn" disabled>&#x25b6; Run Inference</button>
-        <input type="file" id="fileInput" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1">`
-    : `<div class="drop-zone" id="dropZone" role="button" tabindex="0"
+  const inputArea = `${modelUploadZone}<div class="drop-zone" id="dropZone" role="button" tabindex="0" hidden
              aria-label="Drop an image here or click to browse for ${taskLabel.toLowerCase()}">
           <p>Drop an image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
@@ -2778,16 +2873,9 @@ function emitDepthEstimationBody(config: ResolvedConfig): string {
   const taskLabel = getTaskLabel(config.task);
   const remote = isRemoteModel(config);
 
-  const inputArea = remote
-    ? `${emitProgressBarHtml()}
+  const modelUploadZone = !remote ? emitModelUploadDropZoneHtml(config) + '\n\n        ' : '';
 
-        <div id="preview" class="preview" hidden>
-          <img id="previewImage" alt="Selected image for depth estimation">
-        </div>
-
-        <button id="runBtn" class="run-model-btn" disabled>&#x25b6; Run Inference</button>
-        <input type="file" id="fileInput" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true" tabindex="-1">`
-    : `<div class="drop-zone" id="dropZone" role="button" tabindex="0"
+  const inputArea = `${modelUploadZone}<div class="drop-zone" id="dropZone" role="button" tabindex="0" hidden
              aria-label="Drop an image here or click to browse for ${taskLabel.toLowerCase()}">
           <p>Drop an image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
@@ -2926,9 +3014,14 @@ Charlie, 35, Chicago</textarea>
 /** Image-to-Text body */
 function emitImageToTextBody(config: ResolvedConfig): string {
   const taskLabel = getTaskLabel(config.task);
+  const remote = isRemoteModel(config);
+  const modelUploadZone = !remote ? emitModelUploadDropZoneHtml(config) : '';
+
   return `    <div class="container">
       <div>
-        <div class="drop-zone" id="dropZone" role="button" tabindex="0"
+        ${modelUploadZone}
+
+        <div class="drop-zone" id="dropZone" role="button" tabindex="0" hidden
              aria-label="Drop an image here or click to browse for ${taskLabel.toLowerCase()}">
           <p>Drop an image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
@@ -2949,11 +3042,16 @@ function emitImageToTextBody(config: ResolvedConfig): string {
 /** Visual Question Answering body */
 function emitVQABody(config: ResolvedConfig): string {
   const taskLabel = getTaskLabel(config.task);
+  const remote = isRemoteModel(config);
+  const modelUploadZone = !remote ? emitModelUploadDropZoneHtml(config) : '';
+
   return `    <h2>${taskLabel}</h2>
 
     <div class="container">
       <div class="multimodal-input">
-        <div class="drop-zone" id="dropZone" role="button" tabindex="0"
+        ${modelUploadZone}
+
+        <div class="drop-zone" id="dropZone" role="button" tabindex="0" hidden
              aria-label="Drop an image here or click to browse">
           <p>Drop an image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
@@ -2977,11 +3075,16 @@ function emitVQABody(config: ResolvedConfig): string {
 /** Document Question Answering body */
 function emitDocQABody(config: ResolvedConfig): string {
   const taskLabel = getTaskLabel(config.task);
+  const remote = isRemoteModel(config);
+  const modelUploadZone = !remote ? emitModelUploadDropZoneHtml(config) : '';
+
   return `    <h2>${taskLabel}</h2>
 
     <div class="container">
       <div class="multimodal-input">
-        <div class="drop-zone" id="dropZone" role="button" tabindex="0"
+        ${modelUploadZone}
+
+        <div class="drop-zone" id="dropZone" role="button" tabindex="0" hidden
              aria-label="Drop a document image here or click to browse">
           <p>Drop a document image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
@@ -3005,11 +3108,16 @@ function emitDocQABody(config: ResolvedConfig): string {
 /** Image-Text-to-Text body */
 function emitImageTextToTextBody(config: ResolvedConfig): string {
   const taskLabel = getTaskLabel(config.task);
+  const remote = isRemoteModel(config);
+  const modelUploadZone = !remote ? emitModelUploadDropZoneHtml(config) : '';
+
   return `    <h2>${taskLabel}</h2>
 
     <div class="container">
       <div class="multimodal-input">
-        <div class="drop-zone" id="dropZone" role="button" tabindex="0"
+        ${modelUploadZone}
+
+        <div class="drop-zone" id="dropZone" role="button" tabindex="0" hidden
              aria-label="Drop an image here or click to browse">
           <p>Drop an image here or click to browse</p>
           <p class="hint">Supports JPG, PNG, WebP</p>
@@ -3338,6 +3446,12 @@ export function emitHtml(config: ResolvedConfig, blocks: CodeBlock[]): Generated
   const bodyContent = emitBodyContent(config);
   const backendSelect = emitBackendSelect(config.engine);
 
+  const remote = isRemoteModel(config);
+  const modelActionHtml = remote
+    ? `\n    ${emitLoadModelButtonHtml()}\n    ${emitProgressBarHtml()}\n`
+    : '';
+  const statusDefault = remote ? 'Click Load Model to start' : 'Loading...';
+
   const html = `<!DOCTYPE html>
 <html lang="en" data-theme="${theme}">
 <head>
@@ -3354,12 +3468,12 @@ ${appCSS}${extraCSS}${audioCSS}
 
   <main>
     ${headingHtml}
-
+${modelActionHtml}
 ${bodyContent}
   </main>
 
   <aside class="status-bar">
-    <span id="status">${config.modelName} · Loading...</span>
+    <span id="status">${config.modelName} · ${statusDefault}</span>
     ${backendSelect}
   </aside>
 

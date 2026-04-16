@@ -55,6 +55,8 @@ export interface CliFlags {
   hfModelId?: string;
   /** HuggingFace file path (e.g. "onnx/model_fp16.onnx") — set by web UI */
   hfFile?: string;
+  /** External data file names for ONNX models (e.g. ["model.onnx_data", "model.onnx_data_1"]) */
+  externalDataFiles?: string[];
 }
 
 /**
@@ -106,6 +108,8 @@ export interface ResolvedConfig {
   hfModelId?: string;
   /** HuggingFace file path (e.g. "onnx/model_fp16.onnx") */
   hfFile?: string;
+  /** External data file names for ONNX models (e.g. ["model.onnx_data", "model.onnx_data_1"]) */
+  externalDataFiles?: string[];
 }
 
 /** A single step in the resolver trace (for --verbose output) */

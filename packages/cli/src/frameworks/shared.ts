@@ -113,6 +113,17 @@ export function getModelPath(config: ResolvedConfig, prefix = '.'): string {
   return `${prefix}/${config.modelName}.onnx`;
 }
 
+/**
+ * Emit the EXTERNAL_DATA_FILES constant for generated code.
+ * Returns empty string when no external data files exist.
+ */
+export function emitExternalDataConst(config: ResolvedConfig): string {
+  const files = config.externalDataFiles;
+  if (!files || files.length === 0) return '';
+  const items = files.map((f) => `'${f}'`).join(', ');
+  return `\nconst EXTERNAL_DATA_FILES = [${items}];`;
+}
+
 /** Generate CSS custom properties (design system) */
 export function emitDesignSystemCSS(_config: ResolvedConfig): string {
   return `:root {
@@ -175,7 +186,6 @@ body {
 }
 
 main {
-  max-width: 960px;
   margin: 0 auto;
   padding: var(--webai-space-8) var(--webai-space-4);
 }
@@ -236,6 +246,21 @@ h2 {
   color: var(--webai-text-muted);
   font-size: var(--webai-font-size-sm);
   margin-top: var(--webai-space-2);
+}
+
+/* Model upload drop zone */
+.model-drop-zone {
+  border-color: var(--webai-accent);
+  border-style: dashed;
+  background: color-mix(in srgb, var(--webai-accent) 5%, transparent);
+  margin-bottom: var(--webai-space-4);
+}
+
+.model-drop-zone:hover,
+.model-drop-zone:focus-visible,
+.model-drop-zone.drag-over {
+  border-color: var(--webai-accent);
+  background: color-mix(in srgb, var(--webai-accent) 10%, transparent);
 }
 
 /* Preview */
@@ -777,7 +802,24 @@ h2 {
 }
 
 .run-model-btn:hover { opacity: 0.9; }
-.run-model-btn:disabled { opacity: 0.5; cursor: not-allowed; }`;
+.run-model-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Load Model button (remote models — two-step flow) */
+.load-model-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--webai-space-2);
+  background: var(--webai-accent);
+  color: white;
+  border: none;
+  padding: var(--webai-space-3) var(--webai-space-6);
+  border-radius: var(--webai-radius);
+  font-size: var(--webai-font-size-lg);
+  cursor: pointer;
+  margin-bottom: var(--webai-space-4);
+}
+
+.load-model-btn:hover { opacity: 0.9; }`;
 }
 
 // ---- Audio Task Helpers ----
@@ -854,13 +896,17 @@ export function emitReadme(config: ResolvedConfig, files: string[]): string {
   let quickStart: string;
   if (config.framework === 'html') {
     if (isRemote) {
-      quickStart = `1. Start a local server: \`npx serve .\` (or any static file server)
+      quickStart = `1. Start a local HTTPS server: \`npx serve --ssl .\` (or any static file server with HTTPS)
 2. Open \`index.html\` in your browser
-3. The model loads automatically from the URL on first run`;
+3. The model loads automatically from the URL on first run
+
+> **Note:** WebGPU and WebNN require a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts) (HTTPS) to run. Use HTTPS even for localhost.`;
     } else {
       quickStart = `1. Copy your model file (\`${config.modelName}.onnx\`) into this directory
-2. Start a local server: \`npx serve .\` (or any static file server)
-3. Open \`index.html\` in your browser`;
+2. Start a local HTTPS server: \`npx serve --ssl .\` (or any static file server with HTTPS)
+3. Open \`index.html\` in your browser
+
+> **Note:** WebGPU and WebNN require a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts) (HTTPS) to run. Use HTTPS even for localhost.`;
     }
   } else if (isRemote) {
     quickStart = `\`\`\`bash
@@ -868,19 +914,25 @@ npm install
 npm run dev
 \`\`\`
 
-The model loads automatically from the URL on first run. No manual file copy needed.`;
+The model loads automatically from the URL on first run. No manual file copy needed.
+
+> **Note:** WebGPU and WebNN require a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts) (HTTPS). Vite dev server supports HTTPS via \`--https\` flag or \`@vitejs/plugin-basic-ssl\`.`;
   } else if (config.framework === 'react-vite' || config.framework === 'vue-vite' || config.framework === 'nuxt' || config.framework === 'astro') {
     quickStart = `\`\`\`bash
 npm install
 # Copy your model file to public/
 cp /path/to/${config.modelName}.onnx public/
 npm run dev
-\`\`\``;
+\`\`\`
+
+> **Note:** WebGPU and WebNN require a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts) (HTTPS). Vite dev server supports HTTPS via \`--https\` flag or \`@vitejs/plugin-basic-ssl\`.`;
   } else {
     quickStart = `\`\`\`bash
 npm install
 npm run dev
-\`\`\``;
+\`\`\`
+
+> **Note:** WebGPU and WebNN require a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts) (HTTPS). Use HTTPS even for localhost.`;
   }
 
   return `# ${config.modelName} — ${taskLabel}

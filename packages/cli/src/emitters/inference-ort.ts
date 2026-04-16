@@ -47,22 +47,28 @@ function emitCreateSession(config: ResolvedConfig, ts: boolean): string {
   const t = ts;
   const providers = emitProviders(ts);
 
+  const extDataType = t ? ', externalData?: Array<{ path: string; data: Uint8Array }>' : ', externalData';
+  const extDataOption = `
+  if (externalData && externalData.length > 0) {
+    opts.externalData = externalData;
+  }`;
+
   // When offline, load model via OPFS cache (cachedFetch is in scope from opfs-cache block)
   const modelLoad = config.offline
-    ? `  const cacheKey = modelPath.split('/').pop() || 'model.onnx';
-  const modelBuffer = await cachedFetch(modelPath, cacheKey);
-  const session = await ort.InferenceSession.create(modelBuffer, {
-    executionProviders: providers,
-  });`
-    : `  const session = await ort.InferenceSession.create(modelPath, {
-    executionProviders: providers,
-  });`;
+    ? `  const cacheKey = (typeof modelPath === 'string' ? modelPath.split('/').pop() : null) || 'model.onnx';
+  const modelBuffer = typeof modelPath === 'string' ? await cachedFetch(modelPath, cacheKey) : modelPath;
+  const opts${t ? ': any' : ''} = { executionProviders: providers };${extDataOption}
+  const session = await ort.InferenceSession.create(modelBuffer, opts);`
+    : `  const opts${t ? ': any' : ''} = { executionProviders: providers };${extDataOption}
+  const session = await ort.InferenceSession.create(modelPath, opts);`;
+
+  const paramType = t ? ': string | ArrayBuffer | Uint8Array' : '';
 
   return `/**
  * Create an ONNX Runtime Web inference session with backend selection.
  * The execution provider list determines hardware acceleration priority.
  */
-async function createSession(modelPath${t ? ': string' : ''})${t ? ': Promise<ort.InferenceSession>' : ''} {
+async function createSession(modelPath${paramType}${extDataType})${t ? ': Promise<ort.InferenceSession>' : ''} {
 ${providers}
 
 ${modelLoad}

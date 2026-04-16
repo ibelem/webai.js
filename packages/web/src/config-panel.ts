@@ -28,6 +28,8 @@ export interface ConfigValues {
   hfModelId?: string;
   /** Selected HF model filename (e.g., "onnx/model.onnx") */
   hfFile?: string;
+  /** External data file names for ONNX models (e.g. ["model.onnx_data"]) */
+  externalDataFiles?: string[];
 }
 
 interface SelectOption {
@@ -230,7 +232,7 @@ function createCheckbox(id: string, label: string, defaultChecked: boolean): HTM
   const wrapper = document.createElement('div');
   wrapper.style.display = 'flex';
   wrapper.style.alignItems = 'center';
-  wrapper.style.gap = '6px';
+  wrapper.style.gap = '8px';
   wrapper.style.marginTop = '12px';
 
   const input = document.createElement('input');
@@ -238,12 +240,45 @@ function createCheckbox(id: string, label: string, defaultChecked: boolean): HTM
   input.id = id;
   input.name = id;
   input.checked = defaultChecked;
+
+  // iOS-style toggle switch
+  const toggle = document.createElement('div');
+  toggle.className = 'toggle-switch' + (defaultChecked ? ' is-on' : '');
+  toggle.setAttribute('role', 'switch');
+  toggle.setAttribute('aria-checked', String(defaultChecked));
+  toggle.setAttribute('tabindex', '0');
+  toggle.innerHTML = '<div class="toggle-track"></div><div class="toggle-thumb"></div>';
+
+  const syncToggle = (): void => {
+    toggle.classList.toggle('is-on', input.checked);
+    toggle.setAttribute('aria-checked', String(input.checked));
+  };
+
+  toggle.addEventListener('click', () => {
+    input.checked = !input.checked;
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    syncToggle();
+  });
+  toggle.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      toggle.click();
+    }
+  });
+  input.addEventListener('change', syncToggle);
+
   wrapper.appendChild(input);
+  wrapper.appendChild(toggle);
 
   const lbl = document.createElement('label');
   lbl.htmlFor = id;
   lbl.textContent = label;
   lbl.style.marginTop = '0';
+  lbl.style.cursor = 'pointer';
+  lbl.addEventListener('click', (e) => {
+    e.preventDefault();
+    toggle.click();
+  });
   wrapper.appendChild(lbl);
 
   return wrapper;
@@ -408,6 +443,9 @@ export function setupConfigPanel(
       values.modelUrl = hfResult.url;
       values.hfModelId = hfResult.modelId;
       values.hfFile = hfResult.filename;
+      if (hfResult.externalDataFiles.length > 0) {
+        values.externalDataFiles = hfResult.externalDataFiles;
+      }
     } else if (detectedSource === 'url') {
       // Direct URL typed in — use it as modelUrl, extract filename for engine constraints
       values.modelUrl = modelText;

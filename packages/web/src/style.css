@@ -176,13 +176,26 @@ header h1 {
 .config-panel select,
 .config-panel input:not([type="checkbox"]) {
   width: 100%;
-  padding: 6px 8px;
+  padding: 6px 28px 6px 8px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 4px;
   color: var(--text);
   font-size: 13px;
   font-family: var(--font-mono);
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23333333'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 10px 6px;
+}
+
+.config-panel input:not([type="checkbox"]) {
+  appearance: auto;
+  -webkit-appearance: auto;
+  background-image: none;
+  padding: 6px 8px;
 }
 
 /* Model input hint tooltip */
@@ -227,6 +240,49 @@ header h1 {
 .config-panel input[type="checkbox"] {
   width: auto;
   flex-shrink: 0;
+  /* Hidden — replaced by iOS toggle */
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+/* iOS-style toggle switch */
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 22px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.toggle-switch .toggle-track {
+  position: absolute;
+  inset: 0;
+  background: var(--border);
+  border-radius: 11px;
+  transition: background 200ms var(--ease-out-quart);
+}
+
+.toggle-switch .toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  background: white;
+  border-radius: 50%;
+  transition: transform 200ms var(--ease-out-quart);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+.toggle-switch.is-on .toggle-track {
+  background: var(--accent);
+}
+
+.toggle-switch.is-on .toggle-thumb {
+  transform: translateX(18px);
 }
 
 .icon-select {
@@ -460,13 +516,19 @@ footer a {
 
 .hf-picker-files select {
   width: 100%;
-  padding: 6px 8px;
+  padding: 6px 28px 6px 8px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 4px;
   color: var(--text);
   font-size: 12px;
   font-family: var(--font-mono);
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23333333'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 10px 6px;
 }
 
 .hf-picker-files select:focus {
@@ -534,5 +596,33 @@ footer a {
     border-bottom: 1px solid var(--border);
     grid-row: auto;
     max-height: 40vh;
+  }
+  .code-section {
+    grid-column: 1;
+    grid-row: auto;
+  }
+  .try-it-section {
+    grid-column: 1;
+    grid-row: auto;
+    max-height: 40vh;
+  }
+  .try-it-frame {
+    min-height: 200px;
+  }
+  .code-toolbar {
+    flex-wrap: wrap;
+  }
+  .file-tabs {
+    max-width: 100%;
+  }
+}
+
+/* Tablet */
+@media (min-width: 769px) and (max-width: 1024px) {
+  :root {
+    --sidebar-width: 240px;
+  }
+  .try-it-frame {
+    min-height: 250px;
   }
 }
