@@ -12,6 +12,28 @@ export function canTryIt(framework: string): boolean {
   return framework === 'html';
 }
 
+const FRAMEWORK_REASONS: Record<string, string> = {
+  'react-vite': 'React + Vite projects require JSX compilation and a dev server.',
+  'vanilla-vite': 'Vanilla + Vite projects use ES module imports that need bundling.',
+  'vue-vite': 'Vue + Vite projects require SFC compilation (.vue files).',
+  nuxt: 'Nuxt projects require server-side rendering and a build step.',
+  sveltekit: 'SvelteKit projects require Svelte compilation and a dev server.',
+  'svelte-vite': 'Svelte + Vite projects require Svelte compilation (.svelte files).',
+  nextjs: 'Next.js projects require React/JSX compilation and a Node.js server.',
+  astro: 'Astro projects require component compilation and a build step.',
+};
+
+export function getPreviewUnavailableHtml(framework: string): string {
+  const reason = FRAMEWORK_REASONS[framework] ?? 'This framework requires a build step.';
+  return `<body style="font-family:system-ui;padding:2rem;color:#888;background:#1a1a2e">
+    <h2 style="color:#ccc;margin-bottom:0.5rem">Preview not available</h2>
+    <p style="margin-top:0.25rem">${reason}</p>
+    <p>Run the following to preview locally:</p>
+    <pre style="background:#0d0d1a;padding:1rem;border-radius:6px;color:#7ec8e3"><code>npm install\nnpm run dev</code></pre>
+    <p>Then open the local URL shown in the terminal.</p>
+  </body>`;
+}
+
 export function runInIframe(
   iframe: HTMLIFrameElement,
   files: GeneratedFile[],
@@ -43,11 +65,7 @@ export function setupTryIt(
     }
     const framework = getFramework();
     if (!canTryIt(framework)) {
-      iframe.srcdoc = `<body style="font-family:system-ui;padding:2rem;color:#666">
-        <h2>Preview not available</h2>
-        <p>The <strong>${framework}</strong> template requires <code>npm install && npm run dev</code>.</p>
-        <p>Copy the generated code and run it locally.</p>
-      </body>`;
+      iframe.srcdoc = getPreviewUnavailableHtml(framework);
       section.classList.remove('is-closed');
       requestAnimationFrame(() => requestAnimationFrame(() => relayoutEditor()));
       return;

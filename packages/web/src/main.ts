@@ -13,7 +13,7 @@ import type { GeneratedFile } from 'webai';
 import { zipSync, strToU8 } from 'fflate';
 import { setupConfigPanel, updateUrlParams, readUrlParams, type ConfigValues } from './config-panel.js';
 import { setupCodePreview, updateCodePreview, getActiveFileContent, setEditorTheme, relayoutEditor } from './code-preview.js';
-import { setupTryIt, canTryIt, runInIframe } from './try-it.js';
+import { setupTryIt, canTryIt, runInIframe, getPreviewUnavailableHtml } from './try-it.js';
 import { createMockMetadata } from './mock-metadata.js';
 
 let currentFramework = 'html';
@@ -243,6 +243,8 @@ async function init(): Promise<void> {
     if (!tryItSection.classList.contains('is-closed')) {
       if (canTryIt(values.framework)) {
         runInIframe(tryItFrame, currentFiles);
+      } else {
+        tryItFrame.srcdoc = getPreviewUnavailableHtml(values.framework);
       }
     }
   });
