@@ -33,19 +33,24 @@ function emitCreateSession(config: ResolvedConfig, ts: boolean): string {
 
   // When offline, load model via OPFS cache first
   const modelSource = config.offline
-    ? `  const cacheKey = modelPath.split('/').pop() || 'model.tflite';
+    ? `  const cacheKey = (typeof modelPath === 'string' ? modelPath.split('/').pop() : null) || 'model.tflite';
   const modelData = await cachedFetch(modelPath, cacheKey);`
     : '';
 
-  const modelArg = config.offline ? 'new Uint8Array(modelData)' : 'modelPath';
+  const modelArg = config.offline ? 'new Uint8Array(modelData)' : 'modelInput';
+
+  const paramType = t ? ': string | ArrayBuffer | Uint8Array' : '';
 
   return `/**
  * Create a LiteRT inference session.
  * Loads and compiles a .tflite model for browser-based inference.
  * Backend is read from the runtime <select id="backend"> element.
  */
-async function createSession(modelPath${t ? ': string' : ''})${t ? ': Promise<any>' : ''} {
-${modelSource}${modelSource ? '\n' : ''}  // Initialize LiteRT.js Wasm runtime
+async function createSession(modelPath${paramType})${t ? ': Promise<any>' : ''} {
+${modelSource}${modelSource ? '\n' : ''}  // Normalize input: loadAndCompile accepts string | Uint8Array (not ArrayBuffer)
+  const modelInput = modelPath instanceof ArrayBuffer ? new Uint8Array(modelPath) : modelPath;
+
+  // Initialize LiteRT.js Wasm runtime
   await loadLiteRt(LITERT_WASM_PATH);
 
   // Read backend from the runtime <select> element

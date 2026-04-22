@@ -20421,6 +20421,9 @@ function preprocessImage(
  * Backend is read from the runtime <select id="backend"> element.
  */
 async function createSession(modelPath) {
+  // Normalize input: loadAndCompile accepts string | Uint8Array (not ArrayBuffer)
+  const modelInput = modelPath instanceof ArrayBuffer ? new Uint8Array(modelPath) : modelPath;
+
   // Initialize LiteRT.js Wasm runtime
   await loadLiteRt(LITERT_WASM_PATH);
 
@@ -20440,7 +20443,7 @@ async function createSession(modelPath) {
   }
   // else: no accelerator → defaults to 'wasm'
 
-  const model = await loadAndCompile(modelPath, options);
+  const model = await loadAndCompile(modelInput, options);
 
   const label = backend.startsWith('webnn') ? 'WebNN ' + (backend.split('-')[1] || 'gpu').toUpperCase()
     : backend === 'webgpu' ? 'WebGPU' : 'Wasm';
@@ -21824,6 +21827,9 @@ const LITERT_WASM_PATH = '/node_modules/@litertjs/core/wasm/';
  * Backend is read from the runtime <select id="backend"> element.
  */
 export async function createSession(modelPath) {
+  // Normalize input: loadAndCompile accepts string | Uint8Array (not ArrayBuffer)
+  const modelInput = modelPath instanceof ArrayBuffer ? new Uint8Array(modelPath) : modelPath;
+
   // Initialize LiteRT.js Wasm runtime
   await loadLiteRt(LITERT_WASM_PATH);
 
@@ -21843,7 +21849,7 @@ export async function createSession(modelPath) {
   }
   // else: no accelerator → defaults to 'wasm'
 
-  const model = await loadAndCompile(modelPath, options);
+  const model = await loadAndCompile(modelInput, options);
 
   const label = backend.startsWith('webnn') ? 'WebNN ' + (backend.split('-')[1] || 'gpu').toUpperCase()
     : backend === 'webgpu' ? 'WebGPU' : 'Wasm';
