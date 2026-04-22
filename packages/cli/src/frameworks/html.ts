@@ -53,7 +53,7 @@ function emitBlockCode(config: ResolvedConfig, blocks: CodeBlock[]): string {
   if (config.engine === 'ort') {
     sections.push(`import * as ort from '${ORT_CDN}';`);
   } else if (config.engine === 'litert') {
-    sections.push(`import { loadLiteRt, loadAndCompile, Tensor } from '${LITERT_CDN.replace('/wasm/', '/dist/litertjs-core.min.mjs')}';`);
+    sections.push(`import { loadLiteRt, loadAndCompile, Tensor } from '${LITERT_CDN.replace('/wasm/', '/dist/index.js')}';`);
     sections.push(`const LITERT_WASM_PATH = '${LITERT_CDN}';`);
   }
 
