@@ -161,11 +161,28 @@ const TASK_SHAPES: Record<string, { inputs: ModelMetadata['inputs']; outputs: Mo
   },
 };
 
+/**
+ * Convert a 4D NCHW shape [B, C, H, W] to NHWC [B, H, W, C].
+ * Only applies to image-like tensors (4D with small channel dim).
+ */
+function toNHWC(shape: (number | string)[]): (number | string)[] {
+  if (shape.length !== 4) return shape;
+  const [b, c, h, w] = shape;
+  // Only convert if it looks like NCHW (channel dim ≤ 4, spatial dims > 4)
+  if (typeof c === 'number' && c <= 4 && typeof h === 'number' && h > 4) {
+    return [b, h, w, c];
+  }
+  return shape;
+}
+
 export function createMockMetadata(task: TaskType, format: 'onnx' | 'tflite' = 'onnx'): ModelMetadata {
   const shapes = TASK_SHAPES[task] ?? TASK_SHAPES['image-classification'];
+  const inputs = format === 'tflite'
+    ? shapes.inputs.map((inp) => ({ ...inp, shape: toNHWC(inp.shape) }))
+    : shapes.inputs;
   return {
     format,
-    inputs: shapes.inputs,
+    inputs,
     outputs: shapes.outputs,
   };
 }

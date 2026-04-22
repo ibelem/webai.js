@@ -80,7 +80,8 @@ ${modelSource}${modelSource ? '\n' : ''}  // Normalize input: loadAndCompile acc
 
 function emitRunInference(config: ResolvedConfig, ts: boolean): string {
   const t = ts;
-  const inputShape = config.modelMeta.inputs[0]?.shape ?? [1, 3, 224, 224];
+  // TFLite models use NHWC layout [batch, height, width, channels]
+  const inputShape = config.modelMeta.inputs[0]?.shape ?? [1, 224, 224, 3];
   const shapeStr = `[${inputShape.map((d) => (typeof d === 'string' ? d : String(d))).join(', ')}]`;
 
   return `/**
