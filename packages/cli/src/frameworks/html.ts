@@ -3400,15 +3400,15 @@ function needsAudioCSS(config: ResolvedConfig): boolean {
  * Generate the backend <select> HTML for the generated page.
  * Options and defaults depend on the engine:
  * - ORT: WebNN NPU, WebNN GPU (default), WebNN CPU, WebGPU, Wasm
- * - LiteRT: WebGPU (default), Wasm; WebNN options disabled (coming later)
+ * - LiteRT: WebNN NPU, WebNN GPU, WebNN CPU, WebGPU (default), Wasm
  * - WebNN: WebNN NPU, WebNN GPU (default), WebNN CPU
  */
 function emitBackendSelect(engine: string): string {
   if (engine === 'litert') {
     return `<select id="backend" class="backend-select" aria-label="Backend">
-      <option value="webnn-npu" disabled>WebNN NPU (coming soon)</option>
-      <option value="webnn-gpu" disabled>WebNN GPU (coming soon)</option>
-      <option value="webnn-cpu" disabled>WebNN CPU (coming soon)</option>
+      <option value="webnn-npu">WebNN NPU</option>
+      <option value="webnn-gpu">WebNN GPU</option>
+      <option value="webnn-cpu">WebNN CPU</option>
       <option value="webgpu" selected>WebGPU</option>
       <option value="wasm">Wasm</option>
     </select>`;

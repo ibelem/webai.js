@@ -3,7 +3,7 @@
  *
  * Generates code that:
  * 1. Initializes LiteRT.js Wasm runtime
- * 2. Loads and compiles a .tflite model (optionally with WebGPU acceleration)
+ * 2. Loads and compiles a .tflite model (with WebGPU, WebNN, or Wasm acceleration)
  * 3. Runs inference with Tensor creation
  * 4. Returns raw output data for postprocessing
  *
@@ -49,13 +49,23 @@ ${modelSource}${modelSource ? '\n' : ''}  // Initialize LiteRT.js Wasm runtime
   const backendSelect = document.getElementById('backend')${t ? ' as HTMLSelectElement' : ''};
   const backend = backendSelect ? backendSelect.value : 'webgpu';
 
-  const accelerator = backend === 'webgpu' ? 'webgpu' : undefined;
+  // Map backend selector value to LiteRT compile options
   const options${t ? ': Record<string, unknown>' : ''} = {};
-  if (accelerator) options.accelerator = accelerator;
+  if (backend === 'webgpu') {
+    options.accelerator = 'webgpu';
+  } else if (backend.startsWith('webnn')) {
+    // WebNN with device preference (webnn-cpu, webnn-gpu, webnn-npu)
+    const device = backend.split('-')[1] || 'gpu';
+    options.accelerator = 'webnn';
+    options.webNNOptions = { devicePreference: device };
+  }
+  // else: no accelerator → defaults to 'wasm'
 
   const model = await loadAndCompile(${modelArg}, options);
 
-  console.log('LiteRT session created (' + (accelerator || 'Wasm') + ')');
+  const label = backend.startsWith('webnn') ? 'WebNN ' + (backend.split('-')[1] || 'gpu').toUpperCase()
+    : backend === 'webgpu' ? 'WebGPU' : 'Wasm';
+  console.log('LiteRT session created (' + label + ')');
   return model;
 }`;
 }
@@ -82,9 +92,11 @@ async function runInference(
 
   let runInput = inputTensor;
   if (backend === 'webgpu') {
+    // WebGPU requires GPU tensor buffers
     runInput = await inputTensor.moveTo('webgpu');
     inputTensor.delete();
   }
+  // WebNN and Wasm use host memory tensors (no move needed)
 
   const results = await model.run(runInput);
   runInput.delete();
@@ -107,7 +119,9 @@ function getBackendLabel(model${t ? ': any' : ''})${t ? ': string' : ''} {
   void model;
   const backendSelect = document.getElementById('backend')${t ? ' as HTMLSelectElement | null' : ''};
   const backend = backendSelect ? backendSelect.value : 'webgpu';
-  return 'LiteRT (' + (backend === 'webgpu' ? 'WebGPU' : 'Wasm') + ')';
+  const label = backend.startsWith('webnn') ? 'WebNN ' + (backend.split('-')[1] || 'gpu').toUpperCase()
+    : backend === 'webgpu' ? 'WebGPU' : 'Wasm';
+  return 'LiteRT (' + label + ')';
 }`;
 }
 

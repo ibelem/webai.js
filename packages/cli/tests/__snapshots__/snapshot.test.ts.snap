@@ -20283,9 +20283,9 @@ h2 {
   <aside class="status-bar">
     <span id="status">mobilenet-tflite · Loading...</span>
     <select id="backend" class="backend-select" aria-label="Backend">
-      <option value="webnn-npu" disabled>WebNN NPU (coming soon)</option>
-      <option value="webnn-gpu" disabled>WebNN GPU (coming soon)</option>
-      <option value="webnn-cpu" disabled>WebNN CPU (coming soon)</option>
+      <option value="webnn-npu">WebNN NPU</option>
+      <option value="webnn-gpu">WebNN GPU</option>
+      <option value="webnn-cpu">WebNN CPU</option>
       <option value="webgpu" selected>WebGPU</option>
       <option value="wasm">Wasm</option>
     </select>
@@ -20432,13 +20432,23 @@ async function createSession(modelPath) {
   const backendSelect = document.getElementById('backend');
   const backend = backendSelect ? backendSelect.value : 'webgpu';
 
-  const accelerator = backend === 'webgpu' ? 'webgpu' : undefined;
+  // Map backend selector value to LiteRT compile options
   const options = {};
-  if (accelerator) options.accelerator = accelerator;
+  if (backend === 'webgpu') {
+    options.accelerator = 'webgpu';
+  } else if (backend.startsWith('webnn')) {
+    // WebNN with device preference (webnn-cpu, webnn-gpu, webnn-npu)
+    const device = backend.split('-')[1] || 'gpu';
+    options.accelerator = 'webnn';
+    options.webNNOptions = { devicePreference: device };
+  }
+  // else: no accelerator → defaults to 'wasm'
 
   const model = await loadAndCompile(modelPath, options);
 
-  console.log('LiteRT session created (' + (accelerator || 'Wasm') + ')');
+  const label = backend.startsWith('webnn') ? 'WebNN ' + (backend.split('-')[1] || 'gpu').toUpperCase()
+    : backend === 'webgpu' ? 'WebGPU' : 'Wasm';
+  console.log('LiteRT session created (' + label + ')');
   return model;
 }
 
@@ -20459,9 +20469,11 @@ async function runInference(
 
   let runInput = inputTensor;
   if (backend === 'webgpu') {
+    // WebGPU requires GPU tensor buffers
     runInput = await inputTensor.moveTo('webgpu');
     inputTensor.delete();
   }
+  // WebNN and Wasm use host memory tensors (no move needed)
 
   const results = await model.run(runInput);
   runInput.delete();
@@ -20481,7 +20493,9 @@ function getBackendLabel(model) {
   void model;
   const backendSelect = document.getElementById('backend');
   const backend = backendSelect ? backendSelect.value : 'webgpu';
-  return 'LiteRT (' + (backend === 'webgpu' ? 'WebGPU' : 'Wasm') + ')';
+  const label = backend.startsWith('webnn') ? 'WebNN ' + (backend.split('-')[1] || 'gpu').toUpperCase()
+    : backend === 'webgpu' ? 'WebGPU' : 'Wasm';
+  return 'LiteRT (' + label + ')';
 }
 
 // --- Postprocessing ---
@@ -21821,13 +21835,23 @@ export async function createSession(modelPath) {
   const backendSelect = document.getElementById('backend');
   const backend = backendSelect ? backendSelect.value : 'webgpu';
 
-  const accelerator = backend === 'webgpu' ? 'webgpu' : undefined;
+  // Map backend selector value to LiteRT compile options
   const options = {};
-  if (accelerator) options.accelerator = accelerator;
+  if (backend === 'webgpu') {
+    options.accelerator = 'webgpu';
+  } else if (backend.startsWith('webnn')) {
+    // WebNN with device preference (webnn-cpu, webnn-gpu, webnn-npu)
+    const device = backend.split('-')[1] || 'gpu';
+    options.accelerator = 'webnn';
+    options.webNNOptions = { devicePreference: device };
+  }
+  // else: no accelerator → defaults to 'wasm'
 
   const model = await loadAndCompile(modelPath, options);
 
-  console.log('LiteRT session created (' + (accelerator || 'Wasm') + ')');
+  const label = backend.startsWith('webnn') ? 'WebNN ' + (backend.split('-')[1] || 'gpu').toUpperCase()
+    : backend === 'webgpu' ? 'WebGPU' : 'Wasm';
+  console.log('LiteRT session created (' + label + ')');
   return model;
 }
 
@@ -21848,9 +21872,11 @@ export async function runInference(
 
   let runInput = inputTensor;
   if (backend === 'webgpu') {
+    // WebGPU requires GPU tensor buffers
     runInput = await inputTensor.moveTo('webgpu');
     inputTensor.delete();
   }
+  // WebNN and Wasm use host memory tensors (no move needed)
 
   const results = await model.run(runInput);
   runInput.delete();
@@ -21870,7 +21896,9 @@ export function getBackendLabel(model) {
   void model;
   const backendSelect = document.getElementById('backend');
   const backend = backendSelect ? backendSelect.value : 'webgpu';
-  return 'LiteRT (' + (backend === 'webgpu' ? 'WebGPU' : 'Wasm') + ')';
+  const label = backend.startsWith('webnn') ? 'WebNN ' + (backend.split('-')[1] || 'gpu').toUpperCase()
+    : backend === 'webgpu' ? 'WebGPU' : 'Wasm';
+  return 'LiteRT (' + label + ')';
 }
 
 === src/lib/postprocess.js ===
