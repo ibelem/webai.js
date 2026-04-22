@@ -178,12 +178,16 @@ export function resolveConfig(flags: CliFlags, metadata: ModelMetadata): Resolve
   const force = flags.force ?? false;
 
   // 7. Preprocessing (from task profile, Decision #29)
-  const preprocess = taskProfile.preprocess ?? {
-    imageSize: 224,
-    mean: [0, 0, 0],
-    std: [1, 1, 1],
-    layout: 'nchw' as const,
-  };
+  // TFLite models use NHWC layout; ONNX models use NCHW
+  const defaultLayout = engine === 'litert' ? 'nhwc' as const : 'nchw' as const;
+  const preprocess = taskProfile.preprocess
+    ? { ...taskProfile.preprocess, layout: defaultLayout }
+    : {
+        imageSize: 224,
+        mean: [0, 0, 0],
+        std: [1, 1, 1],
+        layout: defaultLayout,
+      };
   const preprocessIsDefault = true; // Always task defaults in Phase 1a (no HF config yet)
   step('preprocess', `${preprocess.imageSize}px, mean=[${preprocess.mean}]`, 'task-default');
 

@@ -375,6 +375,29 @@ export function setupConfigPanel(
   container.appendChild(createSelect('lang', 'Language', LANGS, initial.lang));
   container.appendChild(createCheckbox('offline', 'Offline (OPFS cache)', initial.offline === 'true'));
 
+  // Examples section
+  const examplesSection = document.createElement('div');
+  examplesSection.className = 'examples-section';
+  const examplesLabel = document.createElement('label');
+  examplesLabel.textContent = 'Examples';
+  examplesSection.appendChild(examplesLabel);
+  const examplesList = document.createElement('ul');
+  examplesList.className = 'examples-list';
+  const examples: Array<{ label: string; url: string }> = [
+    { label: 'MobileNet v2 (ONNX + ORT Web)', url: '?model=webnn%2Fmobilenet-v2&file=onnx%2Fmodel_fp16.onnx&task=image-classification&engine=ort&framework=html&input=file&lang=js&theme=dark' },
+    { label: 'MobileNet v3 (TFLite + LiteRT.js)', url: '?model=webnn%2Fmobilenet_v3_small&file=tflite%2Fmobilenet_v3_small.tflite&task=image-classification&engine=litert&framework=html&input=file&lang=js&theme=dark' },
+  ];
+  for (const ex of examples) {
+    const li = document.createElement('li');
+    const a = document.createElement('a');
+    a.href = ex.url;
+    a.textContent = ex.label;
+    li.appendChild(a);
+    examplesList.appendChild(li);
+  }
+  examplesSection.appendChild(examplesList);
+  container.appendChild(examplesSection);
+
   // Track HF picker state
   let hfResult: HfPickerResult | null = null;
 

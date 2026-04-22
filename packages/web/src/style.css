@@ -285,6 +285,32 @@ header h1 {
   transform: translateX(18px);
 }
 
+.examples-section {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.examples-list {
+  list-style: none;
+  padding: 0;
+  margin: 6px 0 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.examples-list li a {
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.examples-list li a:hover {
+  text-decoration: underline;
+}
+
 .icon-select {
   display: flex;
   align-items: center;
