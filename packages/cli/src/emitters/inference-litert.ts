@@ -25,6 +25,9 @@ const LITERT_PKG = '@litertjs/core';
 /** CDN base URL for loading LiteRT Wasm files in HTML framework */
 export const LITERT_CDN = 'https://cdn.jsdelivr.net/npm/@litertjs/core/wasm/';
 
+/** CDN URL for LiteRT.js ESM entry point (jsDelivr +esm resolves bare specifiers) */
+export const LITERT_ESM_CDN = 'https://cdn.jsdelivr.net/npm/@litertjs/core/+esm';
+
 function emitCreateSession(config: ResolvedConfig, ts: boolean): string {
   const t = ts;
 

@@ -29,7 +29,7 @@ import {
   emitExternalDataConst,
   buildPageHeading,
 } from './shared.js';
-import { LITERT_CDN } from '../emitters/inference-litert.js';
+import { LITERT_CDN, LITERT_ESM_CDN } from '../emitters/inference-litert.js';
 
 const ORT_CDN = 'https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.mjs';
 
@@ -53,7 +53,7 @@ function emitBlockCode(config: ResolvedConfig, blocks: CodeBlock[]): string {
   if (config.engine === 'ort') {
     sections.push(`import * as ort from '${ORT_CDN}';`);
   } else if (config.engine === 'litert') {
-    sections.push(`import { loadLiteRt, loadAndCompile, Tensor } from '${LITERT_CDN.replace('/wasm/', '/dist/index.js')}';`);
+    sections.push(`import { loadLiteRt, loadAndCompile, Tensor } from '${LITERT_ESM_CDN}';`);
     sections.push(`const LITERT_WASM_PATH = '${LITERT_CDN}';`);
   }
 
