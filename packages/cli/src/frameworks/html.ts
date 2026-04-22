@@ -67,7 +67,18 @@ function emitBlockCode(config: ResolvedConfig, blocks: CodeBlock[]): string {
   }
   sections.push(`// --- Preprocessing ---\n${preprocessBlock?.code ?? ''}`);
   if (inferenceBlock) {
-    sections.push(`// --- Inference ---\n${stripImports(inferenceBlock.code)}`);
+    // stripImports removes `import` lines; for LiteRT the inference block also
+    // contains a `const LITERT_WASM_PATH` that duplicates the CDN version
+    // emitted above, so strip that too.
+    let inferenceCode = stripImports(inferenceBlock.code);
+    if (config.engine === 'litert') {
+      inferenceCode = inferenceCode
+        .split('\n')
+        .filter((line) => !line.startsWith('const LITERT_WASM_PATH'))
+        .join('\n')
+        .replace(/^\n+/, '');
+    }
+    sections.push(`// --- Inference ---\n${inferenceCode}`);
   }
   sections.push(`// --- Postprocessing ---\n${postprocessBlock?.code ?? ''}`);
 

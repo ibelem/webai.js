@@ -20415,10 +20415,6 @@ function preprocessImage(
 }
 
 // --- Inference ---
-const LITERT_WASM_PATH = '/node_modules/@litertjs/core/wasm/';
-
-
-
 /**
  * Create a LiteRT inference session.
  * Loads and compiles a .tflite model for browser-based inference.
