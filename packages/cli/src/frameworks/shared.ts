@@ -496,10 +496,9 @@ h2 {
   background: var(--webai-accent);
   color: white;
   border: none;
-  padding: var(--webai-space-2) var(--webai-space-6);
-  border-radius: var(--webai-radius);
+  padding: var(--webai-space-1) var(--webai-space-3);
+  font-size: var(--webai-font-size-sm);
   cursor: pointer;
-  font-size: var(--webai-font-size-base);
 }
 
 .run-btn:hover { opacity: 0.9; }
@@ -818,7 +817,7 @@ h2 {
   border: none;
   padding: var(--webai-space-3) var(--webai-space-6);
   border-radius: var(--webai-radius);
-  font-size: var(--webai-font-size-base);
+  font-size: var(--webai-font-size-);
   cursor: pointer;
   margin-bottom: var(--webai-space-4);
 }
@@ -835,8 +834,7 @@ h2 {
   color: white;
   border: none;
   padding: var(--webai-space-1) var(--webai-space-3);
-  border-radius: var(--webai-radius);
-  font-size: var(--webai-font-size-base);
+  font-size: var(--webai-font-size-sm);
   cursor: pointer;
   margin-bottom: var(--webai-space-4);
 }

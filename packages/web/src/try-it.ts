@@ -25,12 +25,12 @@ const FRAMEWORK_REASONS: Record<string, string> = {
 
 export function getPreviewUnavailableHtml(framework: string): string {
   const reason = FRAMEWORK_REASONS[framework] ?? 'This framework requires a build step.';
-  return `<body style="font-family:system-ui;padding:2rem;color:#888;background:#1a1a2e">
-    <h2 style="color:#ccc;margin-bottom:0.5rem">Preview not available</h2>
+  return `<body style="font-family:system-ui,-apple-system,sans-serif;padding:1.5rem;color:#888;background:#1a1a2e;font-size:13px;line-height:1.5">
+    <h2 style="color:#ccc;margin-bottom:0.25rem;font-size:14px;font-weight:600">Preview not available</h2>
     <p style="margin-top:0.25rem">${reason}</p>
-    <p>Run the following to preview locally:</p>
-    <pre style="background:#0d0d1a;padding:1rem;border-radius:6px;color:#7ec8e3"><code>npm install\nnpm run dev</code></pre>
-    <p>Then open the local URL shown in the terminal.</p>
+    <p style="margin-top:0.75rem">Run the following to preview locally:</p>
+    <pre style="background:#0d0d1a;padding:0.75rem;border-radius:6px;color:#7ec8e3;font-size:12px;margin-top:0.25rem"><code>npm install\nnpm run dev</code></pre>
+    <p style="margin-top:0.5rem">Then open the local URL shown in the terminal.</p>
   </body>`;
 }
 
