@@ -23,7 +23,6 @@ import {
   collectAuxiliaryFiles,
   emitReadme,
   getTaskLabel,
-  getEngineLabel,
   buildFooterText,
   getModelPath,
 } from './shared.js';
@@ -215,7 +214,6 @@ function emitFileClassificationPageSvelte(config: ResolvedConfig): string {
   const le = libExt(config);
   const t = config.lang === 'ts';
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const tsLang = t ? ' lang="ts"' : '';
 
   return `<script${tsLang}>
@@ -317,7 +315,6 @@ function emitFileDetectionPageSvelte(config: ResolvedConfig): string {
   const le = libExt(config);
   const t = config.lang === 'ts';
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const tsLang = t ? ' lang="ts"' : '';
   const outputShape = config.modelMeta.outputs[0]?.shape ?? [1, 84, 8400];
   const numAttributes = outputShape[1] ?? 84;
@@ -448,7 +445,6 @@ function emitFileSegmentationPageSvelte(config: ResolvedConfig): string {
   const le = libExt(config);
   const t = config.lang === 'ts';
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const tsLang = t ? ' lang="ts"' : '';
   const outputShape = config.modelMeta.outputs[0]?.shape ?? [1, 21, 512, 512];
   const numClasses = outputShape[1] ?? 21;
@@ -567,7 +563,6 @@ function emitFileFeatureExtractionPageSvelte(config: ResolvedConfig): string {
   const le = libExt(config);
   const t = config.lang === 'ts';
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const tsLang = t ? ' lang="ts"' : '';
 
   return `<script${tsLang}>
@@ -665,7 +660,6 @@ function emitFillMaskSvelte(config: ResolvedConfig): string {
   const le = libExt(config);
   const t = config.lang === 'ts';
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const tsLang = t ? ' lang="ts"' : '';
 
   return `<script${tsLang}>
@@ -741,7 +735,6 @@ function emitSentenceSimilaritySvelte(config: ResolvedConfig): string {
   const le = libExt(config);
   const t = config.lang === 'ts';
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const tsLang = t ? ' lang="ts"' : '';
 
   return `<script${tsLang}>
@@ -825,7 +818,6 @@ function emitDepthEstimationSvelte(config: ResolvedConfig): string {
   const le = libExt(config);
   const t = config.lang === 'ts';
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const tsLang = t ? ' lang="ts"' : '';
 
   return `<script${tsLang}>
@@ -922,7 +914,6 @@ function emitTokenClassificationSvelte(config: ResolvedConfig): string {
   const le = libExt(config);
   const t = config.lang === 'ts';
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const tsLang = t ? ' lang="ts"' : '';
 
   return `<script${tsLang}>
@@ -1000,7 +991,6 @@ function emitQuestionAnsweringSvelte(config: ResolvedConfig): string {
   const le = libExt(config);
   const t = config.lang === 'ts';
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const tsLang = t ? ' lang="ts"' : '';
 
   return `<script${tsLang}>
@@ -1075,7 +1065,6 @@ function emitSummarizationSvelte(config: ResolvedConfig): string {
   const le = libExt(config);
   const t = config.lang === 'ts';
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const tsLang = t ? ' lang="ts"' : '';
 
   return `<script${tsLang}>
@@ -1145,7 +1134,6 @@ function emitTranslationSvelte(config: ResolvedConfig): string {
   const le = libExt(config);
   const t = config.lang === 'ts';
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const tsLang = t ? ' lang="ts"' : '';
 
   return `<script${tsLang}>
@@ -1215,7 +1203,6 @@ function emitText2TextSvelte(config: ResolvedConfig): string {
   const le = libExt(config);
   const t = config.lang === 'ts';
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const tsLang = t ? ' lang="ts"' : '';
 
   return `<script${tsLang}>
@@ -1285,7 +1272,6 @@ function emitConversationalSvelte(config: ResolvedConfig): string {
   const le = libExt(config);
   const t = config.lang === 'ts';
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const tsLang = t ? ' lang="ts"' : '';
 
   return `<script${tsLang}>
@@ -1372,7 +1358,6 @@ function emitTableQASvelte(config: ResolvedConfig): string {
   const le = libExt(config);
   const t = config.lang === 'ts';
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const tsLang = t ? ' lang="ts"' : '';
 
   return `<script${tsLang}>
@@ -1447,7 +1432,6 @@ function emitImageToTextSvelte(config: ResolvedConfig): string {
   const le = libExt(config);
   const t = config.lang === 'ts';
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const tsLang = t ? ' lang="ts"' : '';
 
   return `<script${tsLang}>
@@ -1535,7 +1519,6 @@ function emitVQASvelte(config: ResolvedConfig): string {
   const le = libExt(config);
   const t = config.lang === 'ts';
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const tsLang = t ? ' lang="ts"' : '';
 
   return `<script${tsLang}>
@@ -1637,7 +1620,6 @@ function emitDocQASvelte(config: ResolvedConfig): string {
   const le = libExt(config);
   const t = config.lang === 'ts';
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const tsLang = t ? ' lang="ts"' : '';
 
   return `<script${tsLang}>
@@ -1739,7 +1721,6 @@ function emitImageTextToTextSvelte(config: ResolvedConfig): string {
   const le = libExt(config);
   const t = config.lang === 'ts';
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const tsLang = t ? ' lang="ts"' : '';
 
   return `<script${tsLang}>
@@ -1844,7 +1825,6 @@ function emitAudioToAudioSvelte(config: ResolvedConfig): string {
   const le = libExt(config);
   const t = config.lang === 'ts';
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const tsLang = t ? ' lang="ts"' : '';
 
   return `<script${tsLang}>
@@ -1907,7 +1887,6 @@ function emitSpeakerDiarizationSvelte(config: ResolvedConfig): string {
   const le = libExt(config);
   const t = config.lang === 'ts';
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const tsLang = t ? ' lang="ts"' : '';
 
   return `<script${tsLang}>
@@ -1979,7 +1958,6 @@ function emitVADSvelte(config: ResolvedConfig): string {
   const le = libExt(config);
   const t = config.lang === 'ts';
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const tsLang = t ? ' lang="ts"' : '';
 
   return `<script${tsLang}>
@@ -2048,7 +2026,6 @@ function emitRealtimePageSvelte(config: ResolvedConfig): string {
   const le = libExt(config);
   const t = config.lang === 'ts';
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const tsLang = t ? ' lang="ts"' : '';
   const isScreen = config.input === 'screen';
   const startFn = isScreen ? 'startScreenCapture' : 'startCamera';
@@ -2215,7 +2192,6 @@ function emitFileAudioClassificationPageSvelte(config: ResolvedConfig): string {
   const le = libExt(config);
   const t = config.lang === 'ts';
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const tsLang = t ? ' lang="ts"' : '';
 
   return `<script${tsLang}>
@@ -2305,7 +2281,6 @@ function emitFileSpeechToTextPageSvelte(config: ResolvedConfig): string {
   const le = libExt(config);
   const t = config.lang === 'ts';
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const tsLang = t ? ' lang="ts"' : '';
 
   return `<script${tsLang}>
@@ -2381,7 +2356,6 @@ function emitMicSpeechToTextPageSvelte(config: ResolvedConfig): string {
   const le = libExt(config);
   const t = config.lang === 'ts';
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const tsLang = t ? ' lang="ts"' : '';
 
   return `<script${tsLang}>
@@ -2464,7 +2438,6 @@ function emitMicAudioClassificationPageSvelte(config: ResolvedConfig): string {
   const le = libExt(config);
   const t = config.lang === 'ts';
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const tsLang = t ? ' lang="ts"' : '';
 
   return `<script${tsLang}>
@@ -2561,7 +2534,6 @@ function emitTextToSpeechPageSvelte(config: ResolvedConfig): string {
   const le = libExt(config);
   const t = config.lang === 'ts';
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const tsLang = t ? ' lang="ts"' : '';
 
   return `<script${tsLang}>
@@ -2620,7 +2592,6 @@ function emitTextClassificationPageSvelte(config: ResolvedConfig): string {
   const le = libExt(config);
   const t = config.lang === 'ts';
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const tsLang = t ? ' lang="ts"' : '';
 
   return `<script${tsLang}>
@@ -2703,7 +2674,6 @@ function emitZeroShotClassificationPageSvelte(config: ResolvedConfig): string {
   const le = libExt(config);
   const t = config.lang === 'ts';
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const tsLang = t ? ' lang="ts"' : '';
 
   return `<script${tsLang}>
@@ -2798,7 +2768,6 @@ function emitTextGenerationPageSvelte(config: ResolvedConfig): string {
   const le = libExt(config);
   const t = config.lang === 'ts';
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const tsLang = t ? ' lang="ts"' : '';
 
   return `<script${tsLang}>

@@ -26,7 +26,6 @@ import {
   collectAuxiliaryFiles,
   emitReadme,
   getTaskLabel,
-  getEngineLabel,
   buildFooterText,
   getModelPath,
 } from './shared.js';

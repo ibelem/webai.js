@@ -24,7 +24,6 @@ import {
   findBlock,
   emitReadme,
   getTaskLabel,
-  getEngineLabel,
   buildFooterText,
   getModelPath,
   emitExternalDataConst,
@@ -3446,7 +3445,6 @@ function emitBackendSelect(engine: string): string {
  * Emit HTML framework files.
  */
 export function emitHtml(config: ResolvedConfig, blocks: CodeBlock[]): GeneratedFile[] {
-  const engineLabel = getEngineLabel(config.engine);
   const theme = config.theme;
   const { titleText, headingHtml } = buildPageHeading(config);
 

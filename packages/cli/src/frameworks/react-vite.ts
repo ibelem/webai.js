@@ -17,7 +17,6 @@ import {
   collectAuxiliaryFiles,
   emitReadme,
   getTaskLabel,
-  getEngineLabel,
   buildFooterText,
   getModelPath,
 } from './shared.js';
@@ -149,7 +148,6 @@ function emitFileClassificationApp(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
 
   const stateType = t ? '<{ indices: number[]; values: number[] } | null>' : '';
   const refType = t ? '<HTMLInputElement | null>' : '';
@@ -301,7 +299,6 @@ function emitFileDetectionApp(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const outputShape = config.modelMeta.outputs[0]?.shape ?? [1, 84, 8400];
   const numAttributes = outputShape[1] ?? 84;
   const numAnchors = outputShape[2] ?? 8400;
@@ -438,7 +435,6 @@ function emitFileSegmentationApp(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const outputShape = config.modelMeta.outputs[0]?.shape ?? [1, 21, 512, 512];
   const numClasses = outputShape[1] ?? 21;
   const maskH = outputShape[2] ?? 512;
@@ -569,7 +565,6 @@ function emitFileFeatureExtractionApp(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
 
   const stateType = t ? '<Float32Array | null>' : '';
   const refType = t ? '<HTMLInputElement | null>' : '';
@@ -674,7 +669,6 @@ function emitFileAudioClassificationApp(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
 
   const stateType = t ? '<{ indices: number[]; values: number[] } | null>' : '';
 
@@ -769,7 +763,6 @@ function emitFileSpeechToTextApp(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
 
   return `import { useState, useEffect, useRef, useCallback } from 'react';
 import { createSession, runInference, getBackendLabel } from './lib/inference.${le}';
@@ -848,7 +841,6 @@ function emitMicSpeechToTextApp(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
 
   return `import { useState, useEffect, useRef, useCallback } from 'react';
 import { createSession, runInference, getBackendLabel } from './lib/inference.${le}';
@@ -933,7 +925,6 @@ function emitMicAudioClassificationApp(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
 
   const stateType = t ? '<{ indices: number[]; values: number[] } | null>' : '';
 
@@ -1034,7 +1025,6 @@ function emitTextToSpeechApp(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
 
   return `import { useState, useEffect, useRef, useCallback } from 'react';
 import { createSession, runInference, getBackendLabel } from './lib/inference.${le}';
@@ -1096,7 +1086,6 @@ function emitTextClassificationApp(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const modelPath = getModelPath(config, '');
 
   const stateType = t ? '<{ indices: number[]; values: number[] } | null>' : '';
@@ -1187,7 +1176,6 @@ function emitZeroShotClassificationApp(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const modelPath = getModelPath(config, '');
 
   return `import { useState, useEffect, useRef, useCallback } from 'react';
@@ -1289,7 +1277,6 @@ function emitTextGenerationApp(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const modelPath = getModelPath(config, '');
 
   return `import { useState, useEffect, useRef, useCallback } from 'react';
@@ -1389,7 +1376,6 @@ function emitFillMaskApp(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const modelPath = getModelPath(config, '');
 
   return `import { useState, useEffect, useRef, useCallback } from 'react';
@@ -1457,7 +1443,6 @@ function emitSentenceSimilarityApp(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const modelPath = getModelPath(config, '');
 
   return `import { useState, useEffect, useRef, useCallback } from 'react';
@@ -1534,7 +1519,6 @@ function emitDepthEstimationApp(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const modelPath = getModelPath(config, '');
 
   return `import { useState, useEffect, useRef, useCallback } from 'react';
@@ -1622,7 +1606,6 @@ function emitTokenClassificationApp(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const modelPath = getModelPath(config, '');
 
   return `import { useState, useEffect, useRef, useCallback } from 'react';
@@ -1688,7 +1671,6 @@ function emitQuestionAnsweringApp(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const modelPath = getModelPath(config, '');
 
   return `import { useState, useEffect, useRef, useCallback } from 'react';
@@ -1755,7 +1737,6 @@ function emitSummarizationApp(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const modelPath = getModelPath(config, '');
 
   return `import { useState, useEffect, useRef, useCallback } from 'react';
@@ -1819,7 +1800,6 @@ function emitTranslationApp(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const modelPath = getModelPath(config, '');
 
   return `import { useState, useEffect, useRef, useCallback } from 'react';
@@ -1883,7 +1863,6 @@ function emitText2TextApp(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const modelPath = getModelPath(config, '');
 
   return `import { useState, useEffect, useRef, useCallback } from 'react';
@@ -1947,7 +1926,6 @@ function emitConversationalApp(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const modelPath = getModelPath(config, '');
 
   return `import { useState, useEffect, useRef, useCallback } from 'react';
@@ -2033,7 +2011,6 @@ function emitTableQAApp(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const modelPath = getModelPath(config, '');
 
   return `import { useState, useEffect, useRef, useCallback } from 'react';
@@ -2100,7 +2077,6 @@ function emitImageToTextApp(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const modelPath = getModelPath(config, '');
 
   return `import { useState, useEffect, useRef, useCallback } from 'react';
@@ -2177,7 +2153,6 @@ function emitVQAApp(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const modelPath = getModelPath(config, '');
 
   return `import { useState, useEffect, useRef, useCallback } from 'react';
@@ -2266,7 +2241,6 @@ function emitDocQAApp(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const modelPath = getModelPath(config, '');
 
   return `import { useState, useEffect, useRef, useCallback } from 'react';
@@ -2355,7 +2329,6 @@ function emitImageTextToTextApp(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const modelPath = getModelPath(config, '');
 
   return `import { useState, useEffect, useRef, useCallback } from 'react';
@@ -2447,7 +2420,6 @@ function emitAudioToAudioApp(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const modelPath = getModelPath(config, '');
 
   return `import { useState, useEffect, useRef, useCallback } from 'react';
@@ -2505,7 +2477,6 @@ function emitSpeakerDiarizationApp(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const modelPath = getModelPath(config, '');
 
   return `import { useState, useEffect, useRef, useCallback } from 'react';
@@ -2570,7 +2541,6 @@ function emitVADApp(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const modelPath = getModelPath(config, '');
 
   return `import { useState, useEffect, useRef, useCallback } from 'react';
@@ -2632,7 +2602,6 @@ function emitRealtimeApp(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const isScreen = config.input === 'screen';
   const startFn = isScreen ? 'startScreenCapture' : 'startCamera';
   const btnLabel = isScreen ? 'Start Screen Capture' : 'Enable Camera';

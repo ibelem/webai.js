@@ -148,7 +148,6 @@ function emitFillMaskPage(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const modelPath = getModelPath(config, '');
 
   return `'use client';
@@ -218,7 +217,6 @@ function emitSentenceSimilarityPage(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const modelPath = getModelPath(config, '');
 
   return `'use client';
@@ -297,7 +295,6 @@ function emitDepthEstimationPage(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const modelPath = getModelPath(config, '');
 
   return `'use client';
@@ -387,7 +384,6 @@ function emitTokenClassificationPage(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const modelPath = getModelPath(config, '');
 
   return `'use client';
@@ -455,7 +451,6 @@ function emitQuestionAnsweringPage(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const modelPath = getModelPath(config, '');
 
   return `'use client';
@@ -524,7 +519,6 @@ function emitSummarizationPage(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const modelPath = getModelPath(config, '');
 
   return `'use client';
@@ -592,7 +586,6 @@ function emitTranslationPage(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const modelPath = getModelPath(config, '');
 
   return `'use client';
@@ -660,7 +653,6 @@ function emitText2TextPage(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const modelPath = getModelPath(config, '');
 
   return `'use client';
@@ -728,7 +720,6 @@ function emitConversationalPage(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const modelPath = getModelPath(config, '');
 
   return `'use client';
@@ -816,7 +807,6 @@ function emitTableQAPage(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const modelPath = getModelPath(config, '');
 
   return `'use client';
@@ -885,7 +875,6 @@ function emitImageToTextPage(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const modelPath = getModelPath(config, '');
 
   return `'use client';
@@ -966,7 +955,6 @@ function emitVQAPage(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const modelPath = getModelPath(config, '');
 
   return `'use client';
@@ -1057,7 +1045,6 @@ function emitDocQAPage(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const modelPath = getModelPath(config, '');
 
   return `'use client';
@@ -1148,7 +1135,6 @@ function emitImageTextToTextPage(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const modelPath = getModelPath(config, '');
 
   return `'use client';
@@ -1244,7 +1230,6 @@ function emitAudioToAudioPage(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const modelPath = getModelPath(config, '');
 
   return `'use client';
@@ -1306,7 +1291,6 @@ function emitSpeakerDiarizationPage(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const modelPath = getModelPath(config, '');
 
   return `'use client';
@@ -1373,7 +1357,6 @@ function emitVADPage(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const modelPath = getModelPath(config, '');
 
   return `'use client';
@@ -1437,7 +1420,6 @@ function emitFileClassificationPage(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
 
   const stateType = t ? '<{ indices: number[]; values: number[] } | null>' : '';
   const refType = t ? '<HTMLInputElement | null>' : '';
@@ -1550,7 +1532,6 @@ function emitFileDetectionPage(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const outputShape = config.modelMeta.outputs[0]?.shape ?? [1, 84, 8400];
   const numAttributes = outputShape[1] ?? 84;
   const numAnchors = outputShape[2] ?? 8400;
@@ -1688,7 +1669,6 @@ function emitFileSegmentationPage(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const outputShape = config.modelMeta.outputs[0]?.shape ?? [1, 21, 512, 512];
   const numClasses = outputShape[1] ?? 21;
   const maskH = outputShape[2] ?? 512;
@@ -1820,7 +1800,6 @@ function emitFileFeatureExtractionPage(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
 
   const stateType = t ? '<{ dims: number; norm: string; first5: string } | null>' : '';
   const refType = t ? '<HTMLInputElement | null>' : '';
@@ -1929,7 +1908,6 @@ function emitRealtimePage(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
   const isScreen = config.input === 'screen';
   const startFn = isScreen ? 'startScreenCapture' : 'startCamera';
   const label = isScreen ? 'Screen Capture' : 'Camera';
@@ -2104,7 +2082,6 @@ function emitFileAudioClassificationPage(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
 
   const stateType = t ? '<{ indices: number[]; values: number[] } | null>' : '';
 
@@ -2201,7 +2178,6 @@ function emitFileSpeechToTextPage(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
 
   return `'use client';
 
@@ -2282,7 +2258,6 @@ function emitMicSpeechToTextPage(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
 
   return `'use client';
 
@@ -2369,7 +2344,6 @@ function emitMicAudioClassificationPage(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
 
   const stateType = t ? '<{ indices: number[]; values: number[] } | null>' : '';
 
@@ -2472,7 +2446,6 @@ function emitTextToSpeechPage(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
 
   return `'use client';
 
@@ -2536,7 +2509,6 @@ function emitTextClassificationPage(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
 
   const stateType = t ? '<{ indices: number[]; values: number[] } | null>' : '';
   const tokenizerType = t ? '<any>' : '';
@@ -2626,7 +2598,6 @@ function emitZeroShotClassificationPage(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
 
   const resultType = t ? '<Array<{ label: string; score: number }> | null>' : '';
   const tokenizerType = t ? '<any>' : '';
@@ -2729,7 +2700,6 @@ function emitTextGenerationPage(config: ResolvedConfig): string {
   const t = config.lang === 'ts';
   const le = libExt(config);
   const taskLabel = getTaskLabel(config.task);
-  const engineLabel = getEngineLabel(config.engine);
 
   const tokenizerType = t ? '<any>' : '';
 
