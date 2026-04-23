@@ -23,13 +23,19 @@ const FRAMEWORK_REASONS: Record<string, string> = {
   astro: 'Astro projects require component compilation and a build step.',
 };
 
-export function getPreviewUnavailableHtml(framework: string): string {
+export function getPreviewUnavailableHtml(framework: string, theme: 'dark' | 'light' = 'dark'): string {
   const reason = FRAMEWORK_REASONS[framework] ?? 'This framework requires a build step.';
-  return `<body style="font-family:system-ui,-apple-system,sans-serif;padding:1.5rem;color:#888;background:#1a1a2e;font-size:13px;line-height:1.5">
-    <h2 style="color:#ccc;margin-bottom:0.25rem;font-size:14px;font-weight:600">Preview not available</h2>
+  const dark = theme === 'dark';
+  const bg = dark ? 'rgb(212, 212, 212)' : '#ffffff';
+  const text = dark ? '#888' : '#555';
+  const heading = dark ? '#ccc' : '#222';
+  const preBg = dark ? '#0d0d1a' : '#e8e8e8';
+  const preText = dark ? '#7ec8e3' : '#1a6b8a';
+  return `<body style="font-family:system-ui,-apple-system,sans-serif;padding:1.5rem;color:${text};background:${bg};font-size:13px;line-height:1.5">
+    <h2 style="color:${heading};margin-bottom:0.25rem;font-size:14px;font-weight:600">Preview not available</h2>
     <p style="margin-top:0.25rem">${reason}</p>
     <p style="margin-top:0.75rem">Run the following to preview locally:</p>
-    <pre style="background:#0d0d1a;padding:0.75rem;border-radius:6px;color:#7ec8e3;font-size:12px;margin-top:0.25rem"><code>npm install\nnpm run dev</code></pre>
+    <pre style="background:${preBg};padding:0.75rem;border-radius:6px;color:${preText};font-size:12px;margin-top:0.25rem"><code>npm install\nnpm run dev</code></pre>
     <p style="margin-top:0.5rem">Then open the local URL shown in the terminal.</p>
   </body>`;
 }
@@ -53,6 +59,7 @@ export function setupTryIt(
   iframe: HTMLIFrameElement,
   getFiles: () => GeneratedFile[],
   getFramework: () => string,
+  getTheme: () => 'dark' | 'light',
 ): void {
   tryItBtn.addEventListener('click', () => {
     const isOpen = !section.classList.contains('is-closed');
@@ -67,7 +74,7 @@ export function setupTryIt(
     if (!iframe.srcdoc) {
       const framework = getFramework();
       if (!canTryIt(framework)) {
-        iframe.srcdoc = getPreviewUnavailableHtml(framework);
+        iframe.srcdoc = getPreviewUnavailableHtml(framework, getTheme());
       } else {
         const files = getFiles();
         runInIframe(iframe, files);

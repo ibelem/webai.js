@@ -211,6 +211,8 @@ async function init(): Promise<void> {
       updateUrlParams(latestConfigValues, next);
       if (canTryIt(latestConfigValues.framework)) {
         runInIframe(tryItFrame, currentFiles);
+      } else {
+        tryItFrame.srcdoc = getPreviewUnavailableHtml(latestConfigValues.framework, next as 'dark' | 'light');
       }
     }
   });
@@ -230,6 +232,7 @@ async function init(): Promise<void> {
     tryItFrame,
     () => currentFiles,
     () => currentFramework,
+    getPageTheme,
   );
 
   setupConfigPanel(configPanel, (values) => {
@@ -243,7 +246,7 @@ async function init(): Promise<void> {
     if (canTryIt(values.framework)) {
       runInIframe(tryItFrame, currentFiles);
     } else {
-      tryItFrame.srcdoc = getPreviewUnavailableHtml(values.framework);
+      tryItFrame.srcdoc = getPreviewUnavailableHtml(values.framework, getPageTheme());
     }
   });
 }
