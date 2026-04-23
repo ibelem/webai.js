@@ -209,7 +209,7 @@ async function init(): Promise<void> {
       currentFiles = generateCode(latestConfigValues, next);
       updateCodePreview(currentFiles, tabContainer);
       updateUrlParams(latestConfigValues, next);
-      if (!tryItSection.classList.contains('is-closed') && canTryIt(latestConfigValues.framework)) {
+      if (canTryIt(latestConfigValues.framework)) {
         runInIframe(tryItFrame, currentFiles);
       }
     }
@@ -239,13 +239,11 @@ async function init(): Promise<void> {
     updateCodePreview(currentFiles, tabContainer);
     updateUrlParams(values, getPageTheme());
 
-    // Auto-run preview if it's open
-    if (!tryItSection.classList.contains('is-closed')) {
-      if (canTryIt(values.framework)) {
-        runInIframe(tryItFrame, currentFiles);
-      } else {
-        tryItFrame.srcdoc = getPreviewUnavailableHtml(values.framework);
-      }
+    // Always keep preview in sync with selected framework
+    if (canTryIt(values.framework)) {
+      runInIframe(tryItFrame, currentFiles);
+    } else {
+      tryItFrame.srcdoc = getPreviewUnavailableHtml(values.framework);
     }
   });
 }

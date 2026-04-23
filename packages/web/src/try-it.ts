@@ -59,19 +59,20 @@ export function setupTryIt(
     if (isOpen) {
       section.classList.remove('fullscreen');
       section.classList.add('is-closed');
-      iframe.srcdoc = '';
       requestAnimationFrame(() => requestAnimationFrame(() => relayoutEditor()));
       return;
     }
-    const framework = getFramework();
-    if (!canTryIt(framework)) {
-      iframe.srcdoc = getPreviewUnavailableHtml(framework);
-      section.classList.remove('is-closed');
-      requestAnimationFrame(() => requestAnimationFrame(() => relayoutEditor()));
-      return;
+    // Content is kept in sync by config onChange; just show the section
+    // If iframe was cleared on close, reload content now
+    if (!iframe.srcdoc) {
+      const framework = getFramework();
+      if (!canTryIt(framework)) {
+        iframe.srcdoc = getPreviewUnavailableHtml(framework);
+      } else {
+        const files = getFiles();
+        runInIframe(iframe, files);
+      }
     }
-    const files = getFiles();
-    runInIframe(iframe, files);
     section.classList.remove('is-closed');
     requestAnimationFrame(() => requestAnimationFrame(() => relayoutEditor()));
   });
@@ -79,7 +80,6 @@ export function setupTryIt(
   closeBtn.addEventListener('click', () => {
     section.classList.remove('fullscreen');
     section.classList.add('is-closed');
-    iframe.srcdoc = '';
     requestAnimationFrame(() => requestAnimationFrame(() => relayoutEditor()));
   });
 }

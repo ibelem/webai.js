@@ -834,9 +834,9 @@ h2 {
   background: var(--webai-accent);
   color: white;
   border: none;
-  padding: var(--webai-space-3) var(--webai-space-6);
+  padding: var(--webai-space-1) var(--webai-space-3);
   border-radius: var(--webai-radius);
-  font-size: var(--webai-font-size-lg);
+  font-size: var(--webai-font-size-base);
   cursor: pointer;
   margin-bottom: var(--webai-space-4);
 }
